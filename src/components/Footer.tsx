@@ -13,7 +13,7 @@ const Footer = () => {
             <div className="flex items-center space-x-2 mb-4">
               <Camera className="w-6 h-6 text-primary" />
               <span className="text-xl font-heading font-bold bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
-                Jepreto
+                PixelPlaygorund
               </span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs">
@@ -53,7 +53,7 @@ const Footer = () => {
             <h3 className="font-heading font-semibold mb-4">Connect With Us</h3>
             <div className="flex space-x-4 mb-4">
               <a
-                href="https://instagram.com/jepreto"
+                href="https://instagram.com/pixel"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground hover:bg-primary hover:text-primary-foreground transition-all shadow-soft"
@@ -69,14 +69,14 @@ const Footer = () => {
                 <MessageCircle className="w-5 h-5" />
               </a>
               <a
-                href="mailto:hello@jepreto.com"
+                href="mailto:hello@pixel.com"
                 className="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-accent-foreground hover:bg-primary hover:text-primary-foreground transition-all shadow-soft"
               >
                 <Mail className="w-5 h-5" />
               </a>
             </div>
             <p className="text-muted-foreground text-sm">
-              hello@jepreto.com
+              hello@pixel.com
             </p>
           </div>
         </div>
@@ -84,7 +84,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="pt-8 border-t border-border text-center">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} Jepreto. Made with ❤️ in Indonesia. All rights reserved.
+            © {currentYear} pixel. Made with ❤️ in Indonesia. All rights reserved.
           </p>
         </div>
       </div>

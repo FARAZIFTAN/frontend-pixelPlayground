@@ -33,7 +33,7 @@ const Home = () => {
     {
       name: "Sarah Johnson",
       role: "Event Organizer",
-      content: "Jepreto made our wedding so much fun! Guests loved the instant photo booth and the templates were gorgeous.",
+      content: "PixelPlayground made our wedding so much fun! Guests loved the instant photo booth and the templates were gorgeous.",
       rating: 5,
     },
     {
@@ -45,7 +45,7 @@ const Home = () => {
     {
       name: "Emma Rodriguez",
       role: "Corporate Event Manager",
-      content: "Professional, reliable, and beautiful results. We use Jepreto for all our company events now.",
+      content: "Professional, reliable, and beautiful results. We use PixelPlayground for all our company events now.",
       rating: 5,
     },
   ];
@@ -65,7 +65,7 @@ const Home = () => {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6 leading-tight">
                 Capture Your Moments with{" "}
                 <span className="bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
-                  Jepreto
+                  PixelPlayground
                 </span>{" "}
                 📸
               </h1>
@@ -117,7 +117,7 @@ const Home = () => {
             className="text-center mb-16"
           >
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4">
-              Why Choose Jepreto?
+              Why Choose PixelPlayground?
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Everything you need to create stunning photo booth experiences
@@ -250,7 +250,7 @@ const Home = () => {
               Ready to Create Amazing Photos?
             </h2>
             <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Start capturing beautiful memories with Jepreto today
+              Start capturing beautiful memories with PixelPlayground today
             </p>
             <Link to="/booth">
               <Button className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-10 py-6 rounded-full shadow-soft hover:shadow-hover transition-all group">

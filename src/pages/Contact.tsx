@@ -124,9 +124,9 @@ const Contact = () => {
             {/* About */}
             <Card className="gradient-card border-0 shadow-soft">
               <CardContent className="p-6 lg:p-8">
-                <h2 className="text-2xl font-heading font-bold mb-4">About Jepreto</h2>
+                <h2 className="text-2xl font-heading font-bold mb-4">About PixelPlayground</h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
-                  Jepreto is a web-based digital photobooth platform built in Indonesia — 
+                  PixelPlayground is a web-based digital photobooth platform built in Indonesia — 
                   helping everyone create beautiful memories easily. We're passionate about 
                   making photo booth experiences accessible, fun, and memorable for everyone.
                 </p>
@@ -143,10 +143,10 @@ const Contact = () => {
                     <div>
                       <p className="font-medium">Email</p>
                       <a
-                        href="mailto:hello@jepreto.com"
+                        href="mailto:hello@Pixel.com"
                         className="text-primary hover:underline text-sm"
                       >
-                        hello@jepreto.com
+                        hello@Pixel.com
                       </a>
                     </div>
                   </div>
@@ -160,7 +160,7 @@ const Contact = () => {
                 <h2 className="text-2xl font-heading font-bold mb-6">Connect With Us</h2>
                 <div className="grid grid-cols-3 gap-4">
                   <a
-                    href="https://instagram.com/jepreto"
+                    href="https://instagram.com/pixelplayground"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center p-6 rounded-2xl bg-accent hover:bg-primary hover:text-primary-foreground transition-all group shadow-soft hover:shadow-hover"

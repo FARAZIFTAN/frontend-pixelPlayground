@@ -41,7 +41,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center space-x-2 group">
             <Camera className="w-6 h-6 lg:w-8 lg:h-8 text-primary transition-transform group-hover:scale-110" />
             <span className="text-xl lg:text-2xl font-heading font-bold bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
-              Jepreto
+              PixelPlayground
             </span>
           </Link>
 
