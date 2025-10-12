@@ -1,191 +1,130 @@
-import { useState, useEffect } from 'react';
-import { Download, Trash2, Image as ImageIcon } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { Photo } from '../types';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Image, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 
-interface GalleryProps {
-  userId: string | null;
-}
+const Gallery = () => {
+  const [selectedFilter, setSelectedFilter] = useState("all");
 
-export default function Gallery({ userId }: GalleryProps) {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const filters = ["All", "3 Photos", "4 Photos", "6 Photos", "Popular", "Newest"];
 
-  useEffect(() => {
-    loadPhotos();
-  }, [userId]);
+  const templates = [
+    { id: 1, name: "Birthday Celebration", category: "4 Photos", thumbnail: "🎂", popular: true },
+    { id: 2, name: "Wedding Elegance", category: "6 Photos", thumbnail: "💐", popular: true },
+    { id: 3, name: "Summer Vibes", category: "3 Photos", thumbnail: "🌴", popular: false },
+    { id: 4, name: "Corporate Event", category: "4 Photos", thumbnail: "💼", popular: false },
+    { id: 5, name: "Baby Shower", category: "6 Photos", thumbnail: "🍼", popular: true },
+    { id: 6, name: "Graduation Day", category: "3 Photos", thumbnail: "🎓", popular: false },
+    { id: 7, name: "Holiday Special", category: "4 Photos", thumbnail: "🎄", popular: true },
+    { id: 8, name: "Valentine's Love", category: "6 Photos", thumbnail: "💕", popular: false },
+    { id: 9, name: "New Year Party", category: "3 Photos", thumbnail: "🎉", popular: true },
+  ];
 
-  const loadPhotos = async () => {
-    try {
-      setLoading(true);
-
-      if (userId) {
-        const { data, error } = await supabase
-          .from('photos')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        setPhotos(data || []);
-      } else {
-        const localPhotos = localStorage.getItem('snapnow_photos');
-        if (localPhotos) {
-          setPhotos(JSON.parse(localPhotos));
-        }
-      }
-    } catch (error) {
-      console.error('Error loading photos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDownload = (photo: Photo) => {
-    const link = document.createElement('a');
-    link.href = photo.image_data;
-    link.download = `snapnow-${photo.id}.png`;
-    link.click();
-  };
-
-  const handleDelete = async (photo: Photo) => {
-    if (!confirm('Hapus foto ini?')) return;
-
-    try {
-      if (userId) {
-        const { error } = await supabase
-          .from('photos')
-          .delete()
-          .eq('id', photo.id);
-
-        if (error) throw error;
-      } else {
-        const updatedPhotos = photos.filter(p => p.id !== photo.id);
-        localStorage.setItem('snapnow_photos', JSON.stringify(updatedPhotos));
-        setPhotos(updatedPhotos);
-      }
-
-      setPhotos(photos.filter(p => p.id !== photo.id));
-      setSelectedPhoto(null);
-    } catch (error) {
-      console.error('Error deleting photo:', error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 py-16 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading photos...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredTemplates = templates.filter((template) => {
+    if (selectedFilter === "all") return true;
+    if (selectedFilter === "popular") return template.popular;
+    if (selectedFilter === "newest") return template.id > 6;
+    return template.category.toLowerCase() === selectedFilter.toLowerCase();
+  });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-pink-50 py-8">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Galeri Foto
+    <div className="min-h-screen pt-24 pb-20">
+      <div className="container mx-auto px-4 lg:px-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-12"
+        >
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-4">
+            Template Gallery
           </h1>
-          <p className="text-gray-600">
-            {photos.length} foto tersimpan
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Choose from our collection of beautiful photo booth templates
           </p>
-        </div>
+        </motion.div>
 
-        {photos.length === 0 ? (
-          <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
-            <div className="bg-pink-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ImageIcon className="w-12 h-12 text-pink-500" />
-            </div>
-            <h3 className="text-2xl font-bold text-gray-800 mb-2">
-              Belum Ada Foto
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Mulai ambil foto untuk mengisi galerimu!
-            </p>
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.1 }}
+          className="mb-12"
+        >
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <Filter className="w-5 h-5 text-muted-foreground" />
+            <span className="text-sm font-medium text-muted-foreground">Filter by:</span>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {photos.map((photo) => (
-              <div
-                key={photo.id}
-                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all hover:-translate-y-2 duration-300 group cursor-pointer"
-                onClick={() => setSelectedPhoto(photo)}
+          <div className="flex flex-wrap justify-center gap-3">
+            {filters.map((filter) => (
+              <Button
+                key={filter}
+                onClick={() => setSelectedFilter(filter.toLowerCase())}
+                variant={selectedFilter === filter.toLowerCase() ? "default" : "outline"}
+                className={`rounded-full transition-all ${
+                  selectedFilter === filter.toLowerCase()
+                    ? "bg-primary text-primary-foreground shadow-soft"
+                    : "hover:bg-accent"
+                }`}
               >
-                <div className="relative aspect-square overflow-hidden">
-                  <img
-                    src={photo.image_data}
-                    alt={`Photo ${photo.id}`}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                    <div className="absolute bottom-4 left-4 right-4 flex justify-between">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(photo);
-                        }}
-                        className="p-2 bg-white text-pink-500 rounded-full hover:bg-pink-50 transition-colors"
-                      >
-                        <Download className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(photo);
-                        }}
-                        className="p-2 bg-white text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
+                {filter}
+              </Button>
             ))}
           </div>
-        )}
+        </motion.div>
 
-        {selectedPhoto && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-            onClick={() => setSelectedPhoto(null)}
-          >
-            <div
-              className="bg-white rounded-3xl max-w-4xl w-full max-h-[90vh] overflow-auto"
-              onClick={(e) => e.stopPropagation()}
+        {/* Template Grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredTemplates.map((template, index) => (
+            <motion.div
+              key={template.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4, delay: index * 0.1 }}
             >
-              <div className="p-6">
-                <img
-                  src={selectedPhoto.image_data}
-                  alt="Selected"
-                  className="w-full h-auto rounded-2xl"
-                />
-                <div className="flex gap-4 mt-6">
-                  <button
-                    onClick={() => handleDownload(selectedPhoto)}
-                    className="flex-1 py-3 bg-gradient-to-r from-pink-500 to-pink-600 text-white font-semibold rounded-full hover:shadow-lg transition-all flex items-center justify-center space-x-2"
-                  >
-                    <Download className="w-5 h-5" />
-                    <span>Download</span>
-                  </button>
-                  <button
-                    onClick={() => handleDelete(selectedPhoto)}
-                    className="flex-1 py-3 bg-red-500 text-white font-semibold rounded-full hover:bg-red-600 transition-all flex items-center justify-center space-x-2"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+              <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all group overflow-hidden h-full">
+                <CardContent className="p-0">
+                  <div className="aspect-square bg-gradient-to-br from-accent to-secondary flex items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform duration-300">
+                    <span className="text-8xl">{template.thumbnail}</span>
+                    {template.popular && (
+                      <div className="absolute top-4 right-4 bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full">
+                        Popular
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-start p-6 gap-3">
+                  <div className="w-full">
+                    <h3 className="font-heading font-semibold text-lg mb-1">{template.name}</h3>
+                    <p className="text-sm text-muted-foreground">{template.category}</p>
+                  </div>
+                  <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-soft group-hover:shadow-hover transition-all">
+                    <Image className="w-4 h-4 mr-2" />
+                    Use This Template
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+
+        {/* No Results */}
+        {filteredTemplates.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-20"
+          >
+            <Image className="w-24 h-24 text-muted-foreground mx-auto mb-4 opacity-50" />
+            <h3 className="text-2xl font-heading font-semibold mb-2">No templates found</h3>
+            <p className="text-muted-foreground">Try selecting a different filter</p>
+          </motion.div>
         )}
       </div>
     </div>
   );
-}
+};
+
+export default Gallery;

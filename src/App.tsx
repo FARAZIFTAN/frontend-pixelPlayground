@@ -1,137 +1,56 @@
-import { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase';
-import { User, Page } from './types';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Landing from './pages/Landing';
-import Photobooth from './pages/Photobooth';
-import Editor from './pages/Editor';
-import Gallery from './pages/Gallery';
-import Auth from './pages/Auth';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { Toaster as HotToast } from "react-hot-toast";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Home from "./pages/Home";
+import Gallery from "./pages/Gallery";
+import Booth from "./pages/Booth";
+import Creator from "./pages/Creator";
+import Contact from "./pages/Contact";
+import NotFound from "./pages/NotFound";
 
-function App() {
-  const [user, setUser] = useState<User | null>(null);
-  const [currentPage, setCurrentPage] = useState<Page>('landing');
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [capturedFrame, setCapturedFrame] = useState<string | undefined>();
-  const [capturedFilter, setCapturedFilter] = useState<string | undefined>();
+const queryClient = new QueryClient();
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email! });
-      }
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser({ id: session.user.id, email: session.user.email! });
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const handleNavigate = (page: Page) => {
-    setCurrentPage(page);
-    setCapturedImage(null);
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setCurrentPage('landing');
-  };
-
-  const handlePhotoTaken = (imageData: string, frame?: string, filter?: string) => {
-    setCapturedImage(imageData);
-    setCapturedFrame(frame);
-    setCapturedFilter(filter);
-    setCurrentPage('editor');
-  };
-
-  const handleSavePhoto = async (editedImage: string) => {
-    try {
-      if (user) {
-        const { error } = await supabase.from('photos').insert({
-          user_id: user.id,
-          image_data: editedImage,
-          frame: capturedFrame,
-          filter: capturedFilter,
-        });
-
-        if (error) throw error;
-        alert('Foto berhasil disimpan!');
-        setCurrentPage('gallery');
-      } else {
-        const localPhotos = localStorage.getItem('snapnow_photos');
-        const photos = localPhotos ? JSON.parse(localPhotos) : [];
-        photos.unshift({
-          id: Date.now().toString(),
-          image_data: editedImage,
-          frame: capturedFrame,
-          filter: capturedFilter,
-          created_at: new Date().toISOString(),
-        });
-        localStorage.setItem('snapnow_photos', JSON.stringify(photos));
-        alert('Foto berhasil disimpan!');
-
-        const link = document.createElement('a');
-        link.href = editedImage;
-        link.download = `snapnow-${Date.now()}.png`;
-        link.click();
-      }
-    } catch (error) {
-      console.error('Error saving photo:', error);
-      alert('Gagal menyimpan foto');
-    }
-  };
-
-  const handleReset = () => {
-    setCapturedImage(null);
-    setCurrentPage('photobooth');
-  };
-
-  return (
-    <div className="min-h-screen flex flex-col">
-      {currentPage !== 'login' && currentPage !== 'register' && (
-        <Header user={user} onNavigate={handleNavigate} onLogout={handleLogout} />
-      )}
-
-      <main className="flex-grow">
-        {currentPage === 'landing' && (
-          <Landing onNavigate={() => setCurrentPage('photobooth')} />
-        )}
-
-        {currentPage === 'photobooth' && (
-          <Photobooth onPhotoTaken={handlePhotoTaken} />
-        )}
-
-        {currentPage === 'editor' && capturedImage && (
-          <Editor
-            imageData={capturedImage}
-            onSave={handleSavePhoto}
-            onReset={handleReset}
-          />
-        )}
-
-        {currentPage === 'gallery' && (
-          <Gallery userId={user?.id || null} />
-        )}
-
-        {(currentPage === 'login' || currentPage === 'register') && (
-          <Auth
-            onAuthSuccess={() => setCurrentPage('photobooth')}
-            onNavigate={handleNavigate}
-          />
-        )}
-      </main>
-
-      {currentPage !== 'login' && currentPage !== 'register' && <Footer />}
-    </div>
-  );
-}
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
+      <Sonner />
+      <HotToast
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            background: "hsl(var(--card))",
+            color: "hsl(var(--card-foreground))",
+            border: "1px solid hsl(var(--border))",
+            borderRadius: "1rem",
+            padding: "16px",
+          },
+        }}
+      />
+      <BrowserRouter>
+        <div className="flex flex-col min-h-screen">
+          <Navbar />
+          <main className="flex-1">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/gallery" element={<Gallery />} />
+              <Route path="/booth" element={<Booth />} />
+              <Route path="/creator" element={<Creator />} />
+              <Route path="/contact" element={<Contact />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </main>
+          <Footer />
+        </div>
+      </BrowserRouter>
+    </TooltipProvider>
+  </QueryClientProvider>
+);
 
 export default App;
