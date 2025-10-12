@@ -1,1 +1,1 @@
-# frontend-pixelPlayground
+web-photobooth
