@@ -51,10 +51,10 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
+                className={`px-3 lg:px-4 py-2 rounded-lg font-medium transition-all text-[color:hsl(var(--navbar-foreground))] ${
                   isActive(link.path)
-                    ? "text-primary bg-accent"
-                    : "text-foreground hover:text-primary hover:bg-accent/50"
+                    ? "bg-accent"
+                    : "hover:text-primary hover:bg-accent/50"
                 }`}
               >
                 {link.name}
@@ -92,10 +92,10 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                  className={`px-4 py-3 rounded-lg font-medium transition-all text-[color:hsl(var(--navbar-foreground))] ${
                     isActive(link.path)
-                      ? "text-primary bg-accent"
-                      : "text-foreground hover:text-primary hover:bg-accent/50"
+                      ? "bg-accent"
+                      : "hover:text-primary hover:bg-accent/50"
                   }`}
                 >
                   {link.name}

@@ -63,7 +63,9 @@ const Home = () => {
               transition={{ duration: 0.8 }}
             >
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6 leading-tight">
-                Capture Your Moments with{" "}
+                <span style={{ color: "#fff0be" }}>
+                  Capture Your Moments with{" "}
+                </span>
                 <span className="bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
           KaryaKlik
                 </span>{" "}

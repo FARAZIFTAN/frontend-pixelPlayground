@@ -64,6 +64,10 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 0 0% 98%;      /* #FAFAFA */
     --sidebar-border: 340 4% 29%;               /* #4D484A */
     --sidebar-ring: 4 71% 32%;                  /* #8C2217 */
+
+    --navbar-foreground: 48 100% 88%; /* #fff0be - kuning muda untuk navbar di background putih */
+
+    --button-foreground: 48 100% 88%; /* #fff0be */
   }
 
   .dark {
@@ -94,6 +98,10 @@ All colors MUST be HSL.
     --border: 4 71% 32%;                  /* #8C2217 */
     --input: 4 71% 32%;                   /* #8C2217 */
     --ring: 340 4% 29%;                   /* #4D484A */
+
+    --navbar-foreground: 0 0% 98%; /* #FAFAFA - tetap terang di dark mode */
+
+    --button-foreground: 48 100% 88%; /* #fff0be - tetap sama di dark mode */
   }
 }
 
@@ -138,5 +146,15 @@ All colors MUST be HSL.
   
   .glass-effect {
     @apply bg-white/80 backdrop-blur-lg border border-white/20;
+  }
+}
+
+@layer components {
+  .btn,
+  .button,
+  button,
+  [type="button"],
+  [type="submit"] {
+    color: hsl(var(--button-foreground)) !important;
   }
 }
