@@ -124,9 +124,9 @@ const Contact = () => {
             {/* About */}
             <Card className="gradient-card border-0 shadow-soft">
               <CardContent className="p-6 lg:p-8">
-                <h2 className="text-2xl font-heading font-bold mb-4">About PixelPlayground</h2>
+                <h2 className="text-2xl font-heading font-bold mb-4">About KaryaKlik</h2>
                 <p className="text-muted-foreground leading-relaxed mb-6">
-                  PixelPlayground is a web-based digital photobooth platform built in Indonesia — 
+                  KaryaKlik is a web-based digital photobooth platform built in Indonesia — 
                   helping everyone create beautiful memories easily. We're passionate about 
                   making photo booth experiences accessible, fun, and memorable for everyone.
                 </p>
@@ -160,7 +160,7 @@ const Contact = () => {
                 <h2 className="text-2xl font-heading font-bold mb-6">Connect With Us</h2>
                 <div className="grid grid-cols-3 gap-4">
                   <a
-                    href="https://instagram.com/pixelplayground"
+                    href="https://instagram.com/karyaklik"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center p-6 rounded-2xl bg-accent hover:bg-primary hover:text-primary-foreground transition-all group shadow-soft hover:shadow-hover"

@@ -13,7 +13,7 @@ const Footer = () => {
             <div className="flex items-center space-x-2 mb-4">
               <Camera className="w-6 h-6 text-primary" />
               <span className="text-xl font-heading font-bold bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
-                PixelPlaygorund
+                KaryaKlik
               </span>
             </div>
             <p className="text-muted-foreground text-sm max-w-xs">
