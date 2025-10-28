@@ -92,13 +92,13 @@ const Home = () => {
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
+              className="relative flex justify-center items-center"
             >
-              <div className="animate-float">
+              <div className="animate-float px-2 lg:px-8">
                 <img
                   src={heroCameraImage}
                   alt="Digital Camera Illustration"
-                  className="w-full max-w-lg mx-auto drop-shadow-2xl"
+                  className="w-full max-w-xl mx-auto drop-shadow-2xl"
                 />
               </div>
             </motion.div>
