@@ -63,15 +63,15 @@ const Home = () => {
               transition={{ duration: 0.8 }}
             >
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-6 leading-tight">
-                <span style={{ color: "#fff0be" }}>
+                <span style={{ color: "#FFF8DC" }}>
                   Capture Your Moments with{" "}
                 </span>
-                <span className="bg-gradient-to-r from-primary to-accent-foreground bg-clip-text text-transparent">
-          KaryaKlik
+                <span style={{ color: "#FF6B6B" }} className="drop-shadow-lg">
+                  KaryaKlik
                 </span>{" "}
                 📸
               </h1>
-              <p className="text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed">
+              <p className="text-lg md:text-xl mb-8 leading-relaxed" style={{ color: "#E0E0E0" }}>
                 A web-based digital photo booth for events, friends, and memories. Create stunning photos with beautiful templates in seconds.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -82,7 +82,10 @@ const Home = () => {
                   </Button>
                 </Link>
                 <Link to="/gallery">
-                  <Button variant="outline" className="text-lg px-8 py-6 rounded-full border-2 hover:bg-accent transition-all">
+                  <Button 
+                    variant="outline" 
+                    className="text-lg px-8 py-6 rounded-full border-2 border-white text-white hover:bg-white/10 transition-all"
+                  >
                     View Templates
                   </Button>
                 </Link>
@@ -118,10 +121,10 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
               Why Choose KaryaKlik?
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Everything you need to create stunning photo booth experiences
             </p>
           </motion.div>
@@ -137,11 +140,11 @@ const Home = () => {
               >
                 <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all h-full group cursor-pointer">
                   <CardContent className="p-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-4 group-hover:bg-primary transition-all">
-                      <feature.icon className="w-8 h-8 text-accent-foreground group-hover:text-primary-foreground transition-colors" />
+                    <div className="w-16 h-16 rounded-2xl bg-[#E53935] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-all">
+                      <feature.icon className="w-8 h-8 text-white transition-colors" />
                     </div>
-                    <h3 className="font-heading font-semibold text-xl mb-3">{feature.title}</h3>
-                    <p className="text-muted-foreground">{feature.description}</p>
+                    <h3 className="font-heading font-semibold text-xl mb-3 text-white">{feature.title}</h3>
+                    <p className="text-gray-200">{feature.description}</p>
                   </CardContent>
                 </Card>
               </motion.div>
@@ -151,7 +154,7 @@ const Home = () => {
       </section>
 
       {/* Preview Section */}
-      <section className="py-20 lg:py-32 bg-secondary/30">
+      <section className="py-20 lg:py-32 bg-[#1A1A1A]">
         <div className="container mx-auto px-4 lg:px-8">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -160,10 +163,10 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
               See It In Action
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Professional-quality photos with just a few clicks
             </p>
           </motion.div>
@@ -176,10 +179,10 @@ const Home = () => {
             className="max-w-4xl mx-auto"
           >
             <div className="gradient-card rounded-3xl shadow-hover p-8 border-0">
-              <div className="aspect-video bg-secondary rounded-2xl flex items-center justify-center">
+              <div className="aspect-video bg-[#2C2C2C] rounded-2xl flex items-center justify-center border-2 border-[#444444]">
                 <div className="text-center">
-                  <Camera className="w-24 h-24 text-primary mx-auto mb-4 opacity-50" />
-                  <p className="text-muted-foreground text-lg">
+                  <Camera className="w-24 h-24 text-[#C62828] mx-auto mb-4 opacity-70" />
+                  <p className="text-gray-300 text-lg">
                     Photo booth preview mockup
                   </p>
                 </div>
@@ -199,10 +202,10 @@ const Home = () => {
             transition={{ duration: 0.6 }}
             className="text-center mb-16"
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
               What People Say
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
               Loved by event organizers and party hosts everywhere
             </p>
           </motion.div>
@@ -218,16 +221,16 @@ const Home = () => {
               >
                 <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all h-full">
                   <CardContent className="p-6">
-                    <Quote className="w-10 h-10 text-primary mb-4 opacity-50" />
-                    <p className="text-muted-foreground mb-6 italic">"{testimonial.content}"</p>
+                    <Quote className="w-10 h-10 text-white mb-4 opacity-70" />
+                    <p className="text-gray-100 mb-6 italic">"{testimonial.content}"</p>
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold">{testimonial.name}</p>
-                        <p className="text-sm text-muted-foreground">{testimonial.role}</p>
+                        <p className="font-semibold text-white">{testimonial.name}</p>
+                        <p className="text-sm text-gray-300">{testimonial.role}</p>
                       </div>
                       <div className="flex gap-1">
                         {[...Array(testimonial.rating)].map((_, i) => (
-                          <Star key={i} className="w-4 h-4 fill-primary text-primary" />
+                          <Star key={i} className="w-4 h-4 fill-[#FFD700] text-[#FFD700]" />
                         ))}
                       </div>
                     </div>
@@ -248,10 +251,10 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-6" style={{ color: "#FFF8DC" }}>
               Ready to Create Amazing Photos?
             </h2>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl mb-8 max-w-2xl mx-auto" style={{ color: "#E0E0E0" }}>
               Start capturing beautiful memories with KaryaKlik today
             </p>
             <Link to="/booth">

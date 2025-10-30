@@ -8,100 +8,105 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 98%;           /* #FAFAFA */
-    --foreground: 60 100% 0%;         /* #010100 */
+    --background: 0 0% 6%;            /* #0F0F0F - Dark background */
+    --foreground: 0 0% 98%;           /* #FAFAFA - Light text */
 
-    --card: 340 4% 29%;               /* #4D484A */
+    --card: 0 63% 50%;                /* #D32F2F - Bright red for cards */
     --card-foreground: 0 0% 98%;      /* #FAFAFA */
 
     --popover: 340 4% 29%;            /* #4D484A */
     --popover-foreground: 0 0% 98%;   /* #FAFAFA */
 
-    --primary: 4 71% 32%;             /* #8C2217 */
-    --primary-foreground: 0 0% 98%;   /* #FAFAFA */
+    --primary: 4 71% 45%;             /* #C62828 - Main red */
+    --primary-foreground: 0 0% 100%;  /* #FFFFFF - Pure white */
 
-    --secondary: 340 4% 29%;          /* #4D484A */
-    --secondary-foreground: 0 0% 98%; /* #FAFAFA */
+    --secondary: 0 0% 10%;            /* #1A1A1A - Dark secondary */
+    --secondary-foreground: 0 0% 88%; /* #E0E0E0 - Light gray */
 
-    --muted: 340 4% 29%;              /* #4D484A */
-    --muted-foreground: 0 0% 98%;     /* #FAFAFA */
+    --muted: 0 0% 15%;                /* #262626 */
+    --muted-foreground: 0 0% 88%;     /* #E0E0E0 */
 
-    --accent: 4 71% 32%;              /* #8C2217 */
-    --accent-foreground: 0 0% 98%;    /* #FAFAFA */
+    --accent: 0 63% 55%;              /* #E53935 - Lighter red for accents */
+    --accent-foreground: 0 0% 100%;   /* #FFFFFF */
 
     --destructive: 60 100% 0%;        /* #010100 */
     --destructive-foreground: 0 0% 98%; /* #FAFAFA */
 
-    --border: 340 4% 29%;             /* #4D484A */
-    --input: 340 4% 29%;              /* #4D484A */
-    --ring: 4 71% 32%;                /* #8C2217 */
+    --border: 0 0% 20%;               /* #333333 */
+    --input: 0 0% 20%;                /* #333333 */
+    --ring: 4 71% 45%;                /* #C62828 */
 
     --radius: 1rem;
 
     /* Custom design tokens */
-    --red-dark: 4 71% 32%;            /* #8C2217 */
-    --gray-dark: 340 4% 29%;          /* #4D484A */
-    --black: 60 100% 0%;              /* #010100 */
-    --white: 0 0% 98%;                /* #FAFAFA */
+    --red-primary: 4 71% 45%;         /* #C62828 - Main red */
+    --red-light: 0 63% 55%;           /* #E53935 - Lighter red */
+    --red-accent: 0 65% 61%;          /* #FF6B6B - Bright red accent */
+    --cream: 48 100% 93%;             /* #FFF8DC - Cream */
+    --gold: 45 100% 51%;              /* #FFD700 - Gold */
+    --text-primary: 0 0% 100%;        /* #FFFFFF */
+    --text-secondary: 0 0% 88%;       /* #E0E0E0 */
 
-    /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(60, 100%, 0%) 0%, hsl(4, 71%, 32%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(4, 71%, 32%) 0%, hsl(60, 100%, 0%) 100%);
+    /* Gradients - Lebih terang dan kontras */
+    --gradient-hero: linear-gradient(135deg, hsl(0, 0%, 6%) 0%, hsl(4, 30%, 15%) 50%, hsl(4, 71%, 20%) 100%);
+    --gradient-card: linear-gradient(135deg, hsl(4, 71%, 45%) 0%, hsl(4, 71%, 30%) 100%);
+    --gradient-card-hover: linear-gradient(135deg, hsl(0, 63%, 55%) 0%, hsl(4, 71%, 40%) 100%);
 
-    /* Shadows */
-    --shadow-soft: 0 4px 20px hsla(4, 71%, 32%, 0.15);
-    --shadow-hover: 0 8px 30px hsla(4, 71%, 32%, 0.25);
+    /* Shadows - Dengan glow merah */
+    --shadow-soft: 0 4px 20px hsla(4, 71%, 45%, 0.3);
+    --shadow-hover: 0 8px 30px hsla(0, 63%, 55%, 0.5);
+    --shadow-glow: 0 0 20px hsla(4, 71%, 45%, 0.6);
 
     /* Animations */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
 
-    --sidebar-background: 340 4% 29%;           /* #4D484A */
+    --sidebar-background: 0 0% 10%;             /* #1A1A1A */
     --sidebar-foreground: 0 0% 98%;             /* #FAFAFA */
-    --sidebar-primary: 4 71% 32%;               /* #8C2217 */
+    --sidebar-primary: 4 71% 45%;               /* #C62828 */
     --sidebar-primary-foreground: 0 0% 98%;     /* #FAFAFA */
-    --sidebar-accent: 60 100% 0%;               /* #010100 */
+    --sidebar-accent: 0 0% 15%;                 /* #262626 */
     --sidebar-accent-foreground: 0 0% 98%;      /* #FAFAFA */
-    --sidebar-border: 340 4% 29%;               /* #4D484A */
-    --sidebar-ring: 4 71% 32%;                  /* #8C2217 */
+    --sidebar-border: 0 0% 20%;                 /* #333333 */
+    --sidebar-ring: 4 71% 45%;                  /* #C62828 */
 
-    --navbar-foreground: 48 100% 88%; /* #fff0be - kuning muda untuk navbar di background putih */
+    --navbar-foreground: 0 0% 98%;    /* #FAFAFA - White for navbar */
 
-    --button-foreground: 48 100% 88%; /* #fff0be */
+    --button-foreground: 0 0% 100%;   /* #FFFFFF - Pure white for buttons */
   }
 
   .dark {
-    --background: 60 100% 0%;             /* #010100 */
+    --background: 0 0% 6%;                /* #0F0F0F */
     --foreground: 0 0% 98%;               /* #FAFAFA */
 
-    --card: 4 71% 32%;                    /* #8C2217 */
+    --card: 0 63% 50%;                    /* #D32F2F */
     --card-foreground: 0 0% 98%;          /* #FAFAFA */
 
-    --popover: 4 71% 32%;                 /* #8C2217 */
+    --popover: 0 0% 15%;                  /* #262626 */
     --popover-foreground: 0 0% 98%;       /* #FAFAFA */
 
-    --primary: 340 4% 29%;                /* #4D484A */
-    --primary-foreground: 0 0% 98%;       /* #FAFAFA */
+    --primary: 4 71% 45%;                 /* #C62828 */
+    --primary-foreground: 0 0% 100%;      /* #FFFFFF */
 
-    --secondary: 60 100% 0%;              /* #010100 */
-    --secondary-foreground: 0 0% 98%;     /* #FAFAFA */
+    --secondary: 0 0% 10%;                /* #1A1A1A */
+    --secondary-foreground: 0 0% 88%;     /* #E0E0E0 */
 
-    --muted: 4 71% 32%;                   /* #8C2217 */
-    --muted-foreground: 0 0% 98%;         /* #FAFAFA */
+    --muted: 0 0% 15%;                    /* #262626 */
+    --muted-foreground: 0 0% 88%;         /* #E0E0E0 */
 
-    --accent: 340 4% 29%;                 /* #4D484A */
-    --accent-foreground: 0 0% 98%;        /* #FAFAFA */
+    --accent: 0 63% 55%;                  /* #E53935 */
+    --accent-foreground: 0 0% 100%;       /* #FFFFFF */
 
-    --destructive: 60 100% 0%;            /* #010100 */
+    --destructive: 0 63% 50%;             /* #D32F2F */
     --destructive-foreground: 0 0% 98%;   /* #FAFAFA */
 
-    --border: 4 71% 32%;                  /* #8C2217 */
-    --input: 4 71% 32%;                   /* #8C2217 */
-    --ring: 340 4% 29%;                   /* #4D484A */
+    --border: 0 0% 20%;                   /* #333333 */
+    --input: 0 0% 20%;                    /* #333333 */
+    --ring: 4 71% 45%;                    /* #C62828 */
 
-    --navbar-foreground: 0 0% 98%; /* #FAFAFA - tetap terang di dark mode */
+    --navbar-foreground: 0 0% 98%;        /* #FAFAFA */
 
-    --button-foreground: 48 100% 88%; /* #fff0be - tetap sama di dark mode */
+    --button-foreground: 0 0% 100%;       /* #FFFFFF */
   }
 }
 
@@ -128,12 +133,20 @@ All colors MUST be HSL.
     background: var(--gradient-card);
   }
   
+  .gradient-card:hover {
+    background: var(--gradient-card-hover);
+  }
+  
   .shadow-soft {
     box-shadow: var(--shadow-soft);
   }
   
   .shadow-hover {
     box-shadow: var(--shadow-hover);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
   }
   
   .transition-smooth {
@@ -146,6 +159,15 @@ All colors MUST be HSL.
   
   .glass-effect {
     @apply bg-white/80 backdrop-blur-lg border border-white/20;
+  }
+  
+  /* Text color utilities */
+  .text-cream {
+    color: hsl(var(--cream));
+  }
+  
+  .text-gold {
+    color: hsl(var(--gold));
   }
 }
 
