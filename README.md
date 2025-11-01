@@ -251,6 +251,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **FARAZIFTAN** & **violasptntels**
 - GitHub: [@FARAZIFTAN](https://github.com/FARAZIFTAN)
+- GitHub: [@violasptntels](https://github.com/violasptntels)
 - Repository: [frontend-pixelPlayground](https://github.com/FARAZIFTAN/frontend-pixelPlayground)
 
 ---
