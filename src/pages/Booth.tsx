@@ -14,27 +14,42 @@ const Booth = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [capturedImages, setCapturedImages] = useState<string[]>([]); // Array of captured photos
+  const [finalCompositeImage, setFinalCompositeImage] = useState<string | null>(null); // Final result
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0); // Current photo being captured (0-based)
   const [countdown, setCountdown] = useState<number | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [photoCount, setPhotoCount] = useState<number>(4); // Number of photos to take (2, 3, or 4)
+  const [hasLoadedTemplate, setHasLoadedTemplate] = useState(false); // Track if template is loaded
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasShownToast = useRef(false); // Track if toast has been shown
 
   // Load template from URL parameter
   useEffect(() => {
     const templateIdFromUrl = searchParams.get("template");
-    if (templateIdFromUrl) {
+    if (templateIdFromUrl && !hasLoadedTemplate) {
       const template = templates.find(t => t.id === templateIdFromUrl);
       if (template) {
         setSelectedTemplate(template);
-        toast.success(`✨ Template "${template.name}" loaded!`, {
-          duration: 3000,
-          icon: "🎨",
-        });
+        setPhotoCount(template.frameCount); // Set default to template's frameCount
+        setHasLoadedTemplate(true);
+        // Toast moved to separate effect to prevent warning
       }
     }
-  }, [searchParams]);
+  }, [searchParams, hasLoadedTemplate]);
+
+  // Show toast when template is loaded (separate effect to prevent setState warning)
+  useEffect(() => {
+    if (selectedTemplate && hasLoadedTemplate && !hasShownToast.current) {
+      hasShownToast.current = true; // Mark as shown
+      toast.success(`✨ Template "${selectedTemplate.name}" loaded!`, {
+        duration: 3000,
+        icon: "🎨",
+      });
+    }
+  }, [selectedTemplate, hasLoadedTemplate]);
 
   useEffect(() => {
     startCamera();
@@ -47,7 +62,7 @@ const Booth = () => {
         clearInterval(countdownIntervalRef.current);
       }
     };
-  }, []);
+  }, []); // Empty dependency - only run once on mount
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -100,41 +115,187 @@ const Booth = () => {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         
-        // Draw template overlay if selected
-        if (selectedTemplate) {
-          const templateImg = new Image();
-          templateImg.crossOrigin = "anonymous"; // For CORS
-          templateImg.src = selectedTemplate.frameUrl;
-          
-          templateImg.onload = () => {
-            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-            ctx.globalAlpha = 0.8; // Semi-transparent overlay
-            ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
-            ctx.globalAlpha = 1.0; // Reset alpha
-            
-            const imageData = canvas.toDataURL("image/png");
-            setCapturedImage(imageData);
-            toast.success("Photo captured with template! 📸");
-          };
-          
-          templateImg.onerror = () => {
-            // If template fails to load, save without template
-            const imageData = canvas.toDataURL("image/png");
-            setCapturedImage(imageData);
-            toast.success("Photo captured! 📸");
-          };
+        // Save the captured photo
+        const imageData = canvas.toDataURL("image/png");
+        const newCapturedImages = [...capturedImages, imageData];
+        setCapturedImages(newCapturedImages);
+        
+        const nextPhotoIndex = currentPhotoIndex + 1;
+        
+        // Check if we've captured all photos
+        if (nextPhotoIndex >= photoCount) {
+          // All photos captured, create composite
+          toast.success("All photos captured! Creating your photo strip... 🎨", {
+            duration: 2000,
+          });
+          createCompositeImage(newCapturedImages);
         } else {
-          const imageData = canvas.toDataURL("image/png");
-          setCapturedImage(imageData);
-          toast.success("Photo captured! 📸");
+          // More photos to capture
+          setCurrentPhotoIndex(nextPhotoIndex);
+          toast.success(`Photo ${nextPhotoIndex} of ${photoCount} captured! 📸`, {
+            duration: 1500,
+          });
         }
       }
     }
   };
 
+  const createCompositeImage = (photos: string[]) => {
+    console.log('🎯 Starting composite...');
+    console.log('📸 Photos count:', photos.length);
+    console.log('🖼️ Template:', selectedTemplate?.name);
+
+    if (!selectedTemplate || !canvasRef.current) {
+      toast.error("No template selected!");
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    
+    if (!ctx) {
+      console.error('❌ Canvas context not found!');
+      return;
+    }
+
+    // Load template image first
+    const templateImg = new Image();
+    templateImg.crossOrigin = "anonymous";
+    templateImg.src = selectedTemplate.frameUrl;
+
+    console.log('📦 Loading template from:', selectedTemplate.frameUrl);
+
+    templateImg.onload = () => {
+      console.log('✅ Template loaded!', templateImg.width, 'x', templateImg.height);
+      
+      // Set canvas size to template size
+      canvas.width = templateImg.width;
+      canvas.height = templateImg.height;
+
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // STEP 1: Draw template as background FIRST (not overlay!)
+      ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
+      console.log('🖼️ Template drawn as background');
+
+      let loadedPhotos = 0;
+      const photoImages: HTMLImageElement[] = [];
+
+      // Load all photos
+      photos.forEach((photoDataUrl, index) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.src = photoDataUrl;
+        
+        img.onload = () => {
+          console.log(`✅ Photo ${index + 1} loaded:`, img.width, 'x', img.height);
+          photoImages[index] = img;
+          loadedPhotos++;
+
+          // When all photos are loaded, composite them
+          if (loadedPhotos === photos.length) {
+            console.log('🎨 All photos loaded, starting composite...');
+
+            // STEP 2: Draw each photo in its position with proper aspect ratio
+            photos.forEach((_, i) => {
+              const position = selectedTemplate.layoutPositions[i];
+              if (position && photoImages[i]) {
+                const photo = photoImages[i];
+                
+                console.log(`📍 Drawing photo ${i + 1} at:`, position);
+
+                // Calculate aspect ratio to fit photo in the frame (cover fit)
+                const photoAspect = photo.width / photo.height;
+                const frameAspect = position.width / position.height;
+
+                let drawWidth, drawHeight, offsetX, offsetY;
+
+                if (photoAspect > frameAspect) {
+                  // Photo is wider - fit height
+                  drawHeight = position.height;
+                  drawWidth = drawHeight * photoAspect;
+                  offsetX = (drawWidth - position.width) / 2;
+                  offsetY = 0;
+                } else {
+                  // Photo is taller - fit width
+                  drawWidth = position.width;
+                  drawHeight = drawWidth / photoAspect;
+                  offsetX = 0;
+                  offsetY = (drawHeight - position.height) / 2;
+                }
+
+                // Save context state
+                ctx.save();
+
+                // Create clipping region for the photo area
+                ctx.beginPath();
+                ctx.rect(position.x, position.y, position.width, position.height);
+                ctx.clip();
+
+                // Draw the photo (centered and cover the area)
+                ctx.drawImage(
+                  photo,
+                  position.x - offsetX,
+                  position.y - offsetY,
+                  drawWidth,
+                  drawHeight
+                );
+
+                // Restore context state
+                ctx.restore();
+
+                console.log(`✅ Photo ${i + 1} drawn successfully`);
+              }
+            });
+
+            // DEBUG: Draw red rectangles to show photo areas for debugging
+            console.log('🔍 DEBUG: Drawing red rectangles for photo areas');
+            photos.forEach((_, i) => {
+              const position = selectedTemplate.layoutPositions[i];
+              if (position) {
+                // Draw red rectangle border
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 5;
+                ctx.strokeRect(position.x, position.y, position.width, position.height);
+                
+                // Draw text label
+                ctx.fillStyle = "red";
+                ctx.font = "bold 40px Arial";
+                ctx.fillText(`Photo ${i + 1}`, position.x + 10, position.y + 50);
+              }
+            });
+
+            // Get final composite image (no template overlay - photos are ON TOP of template now)
+            const finalImage = canvas.toDataURL("image/png", 1.0);
+            setFinalCompositeImage(finalImage);
+            console.log('🎉 Composite complete! Photos are drawn on top of template.');
+            
+            toast.success("Your photo strip is ready! 🎉", {
+              duration: 3000,
+            });
+          }
+        };
+
+        img.onerror = () => {
+          console.error(`❌ Failed to load photo ${index + 1}`);
+          toast.error(`Failed to load photo ${index + 1}`);
+        };
+      });
+    };
+
+    templateImg.onerror = () => {
+      console.error('❌ Failed to load template from:', selectedTemplate.frameUrl);
+      toast.error("Failed to load template. Please try again.");
+    };
+  };
+
   const handleRetake = () => {
-    setCapturedImage(null);
+    setCapturedImages([]);
+    setFinalCompositeImage(null);
+    setCurrentPhotoIndex(0);
     setCountdown(null);
   };
 
@@ -147,12 +308,12 @@ const Booth = () => {
       navigate("/login"); // or "/register"
       return;
     }
-    if (capturedImage) {
+    if (finalCompositeImage) {
       const link = document.createElement("a");
-      link.href = capturedImage;
-      link.download = `karyaklik-photo-${Date.now()}.png`;
+      link.href = finalCompositeImage;
+      link.download = `karyaklik-photo-strip-${Date.now()}.png`;
       link.click();
-      toast.success("Photo downloaded!");
+      toast.success("Photo strip downloaded!");
     }
   };
 
@@ -162,21 +323,21 @@ const Booth = () => {
       navigate("/login"); // or "/register"
       return;
     }
-    if (capturedImage) {
+    if (finalCompositeImage) {
       try {
-        const blob = await (await fetch(capturedImage)).blob();
-        const file = new File([blob], "karyaklik-photo.png", { type: "image/png" });
+        const blob = await (await fetch(finalCompositeImage)).blob();
+        const file = new File([blob], "karyaklik-photo-strip.png", { type: "image/png" });
         
         if (navigator.share && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: "My KaryaKlik Photo",
-            text: "Check out my photo from KaryaKlik!",
+            title: "My KaryaKlik Photo Strip",
+            text: "Check out my photo strip from KaryaKlik!",
           });
           toast.success("Shared successfully!");
         } else {
           // Fallback: Copy image data URL to clipboard
-          await navigator.clipboard.writeText(capturedImage);
+          await navigator.clipboard.writeText(finalCompositeImage);
           toast.success("Image data copied to clipboard!");
         }
       } catch (error) {
@@ -273,6 +434,49 @@ const Booth = () => {
           )}
         </motion.div>
 
+        {/* Photo Count Selection */}
+        {selectedTemplate && capturedImages.length === 0 && !finalCompositeImage && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="mb-8"
+          >
+            <Card className="gradient-card border-0 shadow-soft">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-heading font-semibold text-white mb-4 text-center">
+                  How many photos do you want to take?
+                </h3>
+                <div className="flex justify-center gap-4">
+                  {[2, 3, 4].map((count) => {
+                    const isAvailable = count <= selectedTemplate.frameCount;
+                    return (
+                      <Button
+                        key={count}
+                        onClick={() => isAvailable && setPhotoCount(count)}
+                        disabled={!isAvailable}
+                        variant={photoCount === count ? "default" : "outline"}
+                        className={`px-8 py-6 rounded-full text-lg font-semibold transition-all ${
+                          photoCount === count
+                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                            : isAvailable
+                            ? "hover:border-primary"
+                            : "opacity-50 cursor-not-allowed"
+                        }`}
+                      >
+                        {count} Photos
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-sm text-muted-foreground text-center mt-4">
+                  This template supports up to {selectedTemplate.frameCount} photos
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Camera/Preview Area */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -309,12 +513,12 @@ const Booth = () => {
                   </motion.div>
                 )}
 
-                {capturedImage ? (
+                {finalCompositeImage ? (
                   <div className="relative w-full h-full">
                     <img
-                      src={capturedImage}
-                      alt="Captured"
-                      className="w-full h-full object-cover"
+                      src={finalCompositeImage}
+                      alt="Final Photo Strip"
+                      className="w-full h-full object-contain bg-white"
                     />
                   </div>
                 ) : (
@@ -326,14 +530,26 @@ const Booth = () => {
                       muted
                       className="w-full h-full object-cover scale-x-[-1]"
                     />
-                    {/* Template Overlay on Live Preview */}
+                    {/* Photo Progress Indicator */}
                     {selectedTemplate && (
-                      <div className="absolute inset-0 pointer-events-none">
-                        <img
-                          src={selectedTemplate.frameUrl}
-                          alt="Template overlay"
-                          className="w-full h-full object-cover opacity-80"
-                        />
+                      <div className="absolute top-4 left-4 right-4 flex items-center justify-between bg-black/60 backdrop-blur-sm rounded-full px-6 py-3">
+                        <span className="text-white font-semibold">
+                          Photo {currentPhotoIndex + 1} of {photoCount}
+                        </span>
+                        <div className="flex gap-2">
+                          {Array.from({ length: photoCount }).map((_, index) => (
+                            <div
+                              key={index}
+                              className={`w-3 h-3 rounded-full transition-all ${
+                                index < capturedImages.length
+                                  ? "bg-green-500"
+                                  : index === currentPhotoIndex
+                                  ? "bg-primary animate-pulse"
+                                  : "bg-gray-500"
+                              }`}
+                            />
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -344,14 +560,14 @@ const Booth = () => {
 
               {/* Controls */}
               <div className="mt-6 flex flex-wrap justify-center gap-4">
-                {!capturedImage ? (
+                {!finalCompositeImage ? (
                   <Button
                     onClick={handleCapture}
-                    disabled={!hasPermission || isLoading}
+                    disabled={!hasPermission || isLoading || !selectedTemplate}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
                   >
                     <Camera className="w-5 h-5 mr-2" />
-                    Capture Photo
+                    {capturedImages.length === 0 ? "Start Photo Session" : `Capture Photo ${currentPhotoIndex + 1}`}
                   </Button>
                 ) : (
                   <>
@@ -361,7 +577,7 @@ const Booth = () => {
                       className="px-6 py-6 rounded-full border-2 hover:bg-accent transition-all"
                     >
                       <RotateCcw className="w-5 h-5 mr-2" />
-                      Retake
+                      Start Over
                     </Button>
                     <Button
                       onClick={handleDownload}
@@ -385,7 +601,7 @@ const Booth = () => {
         </motion.div>
 
         {/* Instructions */}
-        {!capturedImage && hasPermission && (
+        {!finalCompositeImage && hasPermission && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -394,8 +610,10 @@ const Booth = () => {
           >
             <p className="text-muted-foreground">
               {selectedTemplate 
-                ? `📸 Ready to go! Position yourself and click "Capture Photo"`
-                : `📷 Position yourself in the camera frame and click "Capture Photo" (template optional)`
+                ? capturedImages.length === 0
+                  ? `📸 Ready! You'll take ${photoCount} photos. Click "Start Photo Session" to begin.`
+                  : `� Photo ${currentPhotoIndex + 1} of ${photoCount} - Get ready for the next shot!`
+                : `⚠️ Please select a template first to start your photo session`
               }
             </p>
             {!selectedTemplate && (
@@ -404,7 +622,7 @@ const Booth = () => {
                 onClick={() => navigate('/gallery')}
                 className="text-primary hover:text-primary/80"
               >
-                Or browse templates first →
+                Browse templates →
               </Button>
             )}
           </motion.div>

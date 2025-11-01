@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import heroCameraImage from "@/assets/hero-camera.png";
 import { useState } from "react";
 
 const Home = () => {
@@ -129,7 +128,7 @@ const Home = () => {
             >
               <div className="animate-float px-2 lg:px-8">
                 <img
-                  src={heroCameraImage}
+                  src="/assets/hero-camera.png"
                   alt="Digital Camera Illustration"
                   className="w-full max-w-xl mx-auto drop-shadow-2xl"
                 />

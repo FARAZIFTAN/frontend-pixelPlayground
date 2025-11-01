@@ -1,81 +1,17 @@
-import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, TrendingUp, Star, Award, Camera } from "lucide-react";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { templates, Template, templateCategories } from "@/data/templates";
+import { templates, Template } from "@/data/templates";
 
 const Gallery = () => {
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [sortBy, setSortBy] = useState("popular");
-  const [filterType, setFilterType] = useState("all");
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
-
-  // Get category icon
-  const getCategoryIcon = (category: string) => {
-    const icons: Record<string, string> = {
-      Birthday: "🎂",
-      Wedding: "💍",
-      Education: "🎓",
-      Corporate: "💼",
-      Baby: "👶",
-      Holiday: "🎄",
-      Love: "❤️",
-    };
-    return icons[category] || "🎨";
-  };
-
-  // Get template count per category
-  const getCategoryCount = (category: string) => {
-    if (category === "All") return templates.length;
-    return templates.filter((t) => t.category === category).length;
-  };
-
-  // Calculate stats
-  const stats = useMemo(() => {
-    return {
-      total: templates.length,
-      premium: templates.filter((t) => t.isPremium).length,
-      free: templates.filter((t) => !t.isPremium).length,
-      categories: templateCategories.length,
-    };
-  }, []);
-
-  // Filter templates based on category and type
-  const filteredTemplates = useMemo(() => {
-    let filtered = templates.filter((template) => {
-      const matchesCategory = activeCategory === "All" || template.category === activeCategory;
-      const matchesType = 
-        filterType === "all" ? true :
-        filterType === "free" ? !template.isPremium :
-        filterType === "premium" ? template.isPremium : true;
-      
-      return matchesCategory && matchesType;
-    });
-
-    // Sort templates
-    filtered = [...filtered].sort((a, b) => {
-      if (sortBy === "name") {
-        return a.name.localeCompare(b.name);
-      }
-      // Default: popular (or could be by ID for now)
-      return 0;
-    });
-
-    return filtered;
-  }, [activeCategory, filterType, sortBy]);
 
   // Navigate to Booth with pre-selected template
   const handleUseTemplate = (templateId: string) => {
@@ -91,198 +27,33 @@ const Gallery = () => {
       </div>
 
       <div className="container mx-auto px-4 lg:px-8 relative z-10">
-        {/* Enhanced Header with Stats */}
+        {/* Simple & Clean Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-16"
         >
           <motion.div
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ duration: 0.5, type: "spring" }}
-            className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 mb-6"
+            className="inline-flex items-center gap-2 mb-6"
           >
-            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
-            <span className="text-sm font-medium text-primary">
-              {stats.total} Professional Templates
-            </span>
+            <Sparkles className="w-8 h-8 text-primary animate-pulse" />
           </motion.div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-4 bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
-            Discover Perfect Templates
+            Frame Templates
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Choose from our collection of professionally designed photo booth templates
+          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+            Choose a template for your photo
           </p>
-
-          {/* Quick Stats */}
-          <div className="flex flex-wrap justify-center gap-4 max-w-2xl mx-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="flex items-center gap-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-4 py-2"
-            >
-              <Award className="w-4 h-4 text-amber-500" />
-              <span className="text-sm font-medium text-white">{stats.premium} Premium</span>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
-              className="flex items-center gap-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-4 py-2"
-            >
-              <Star className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium text-white">{stats.free} Free</span>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4 }}
-              className="flex items-center gap-2 bg-secondary/50 backdrop-blur-sm border border-border rounded-full px-4 py-2"
-            >
-              <Image className="w-4 h-4 text-blue-500" />
-              <span className="text-sm font-medium text-white">{stats.categories} Categories</span>
-            </motion.div>
-          </div>
-        </motion.div>
-
-        {/* Sort & Filter Controls */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
-          className="mb-8 flex flex-col sm:flex-row gap-4 justify-between items-center max-w-4xl mx-auto"
-        >
-          <div className="flex gap-3 w-full sm:w-auto">
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full sm:w-[180px] rounded-full border-2">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="popular">
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    Popular
-                  </div>
-                </SelectItem>
-                <SelectItem value="name">
-                  <div className="flex items-center gap-2">
-                    <Star className="w-4 h-4" />
-                    Name A-Z
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-full sm:w-[180px] rounded-full border-2">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Templates</SelectItem>
-                <SelectItem value="free">Free Only</SelectItem>
-                <SelectItem value="premium">Premium Only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Active Filters Display */}
-          {(activeCategory !== "All" || filterType !== "all") && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex items-center gap-2 flex-wrap"
-            >
-              <span className="text-sm text-muted-foreground">Active:</span>
-              {activeCategory !== "All" && (
-                <Badge 
-                  variant="secondary" 
-                  className="cursor-pointer hover:bg-destructive transition-colors"
-                  onClick={() => setActiveCategory("All")}
-                >
-                  {activeCategory} ×
-                </Badge>
-              )}
-              {filterType !== "all" && (
-                <Badge 
-                  variant="secondary" 
-                  className="cursor-pointer hover:bg-destructive transition-colors"
-                  onClick={() => setFilterType("all")}
-                >
-                  {filterType === "free" ? "Free" : "Premium"} ×
-                </Badge>
-              )}
-            </motion.div>
-          )}
-        </motion.div>
-
-        {/* Visual Category Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.15 }}
-          className="mb-12"
-        >
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <Image className="w-5 h-5 text-primary" />
-            <span className="text-sm font-medium text-muted-foreground">Browse by Category</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-w-5xl mx-auto">
-            {/* All Templates Card */}
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setActiveCategory("All")}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                activeCategory === "All"
-                  ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
-                  : "bg-card border-border hover:border-primary/50"
-              }`}
-            >
-              <div className="flex flex-col items-center gap-2">
-                <div className="text-3xl">✨</div>
-                <div className="font-semibold text-sm">All Templates</div>
-                <Badge variant="secondary" className="text-xs">
-                  {getCategoryCount("All")}
-                </Badge>
-              </div>
-            </motion.button>
-
-            {/* Category Cards */}
-            {templateCategories.map((category, index) => (
-              <motion.button
-                key={category}
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.05 * index }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setActiveCategory(category)}
-                className={`p-4 rounded-xl border-2 transition-all ${
-                  activeCategory === category
-                    ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/20"
-                    : "bg-card border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="flex flex-col items-center gap-2">
-                  <div className="text-3xl">{getCategoryIcon(category)}</div>
-                  <div className="font-semibold text-sm">{category}</div>
-                  <Badge variant="secondary" className="text-xs">
-                    {getCategoryCount(category)}
-                  </Badge>
-                </div>
-              </motion.button>
-            ))}
-          </div>
         </motion.div>
 
         {/* Template Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredTemplates.map((template, index) => (
+          {templates.map((template, index) => (
             <motion.div
               key={template.id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -387,7 +158,7 @@ const Gallery = () => {
         </div>
 
         {/* Enhanced No Results */}
-        {filteredTemplates.length === 0 && (
+        {templates.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -401,38 +172,15 @@ const Gallery = () => {
                 No templates found
               </h3>
               <p className="text-muted-foreground mb-6">
-                We couldn't find any templates matching your filters
+                We couldn't find any templates
               </p>
 
-              {/* Suggestions */}
-              <div className="bg-secondary/30 border border-border rounded-lg p-4 mb-6 text-left">
-                <p className="text-sm font-semibold text-white mb-2">Try:</p>
-                <ul className="text-sm text-muted-foreground space-y-1">
-                  <li>• Selecting a different category</li>
-                  <li>• Changing the filter type (Free/Premium)</li>
-                  <li>• Clearing all active filters</li>
-                </ul>
-              </div>
-
-              <div className="flex gap-3 justify-center">
-                <Button 
-                  onClick={() => { 
-                    setActiveCategory("All");
-                    setFilterType("all");
-                  }}
-                  className="rounded-full bg-primary hover:bg-primary/90"
-                >
-                  <Sparkles className="w-4 h-4 mr-2" />
-                  Clear All Filters
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => navigate("/booth")}
-                  className="rounded-full"
-                >
-                  Go to Booth
-                </Button>
-              </div>
+              <Button 
+                onClick={() => navigate("/booth")}
+                className="rounded-full bg-primary hover:bg-primary/90"
+              >
+                Go to Booth
+              </Button>
             </div>
           </motion.div>
         )}

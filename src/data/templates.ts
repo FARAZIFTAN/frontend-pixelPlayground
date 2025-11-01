@@ -6,73 +6,51 @@ export interface Template {
   thumbnail: string;
   frameUrl: string;
   isPremium?: boolean;
+  frameCount: number; // Number of photos in the template (2, 3, or 4)
+  layoutPositions: {
+    // Position of each photo in the strip
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }[];
 }
 
-// Mock templates - Replace with real template images later
+// Templates with real images
 export const templates: Template[] = [
   {
     id: "template-1",
-    name: "Birthday Party",
-    category: "Birthday",
-    thumbnail: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=1280&h=720&fit=crop",
+    name: "Graduation",
+    category: "Education",
+    thumbnail: "/assets/templates/graduation/graduation-1.png",
+    frameUrl: "/assets/templates/graduation/graduation-1.png",
     isPremium: false,
+    frameCount: 4, // 4 photos in this template
+    layoutPositions: [
+      // Coordinates for each photo position in the template
+      // Will be adjusted based on actual template size
+      { x: 40, y: 110, width: 443, height: 266 },   // Photo 1 (top)
+      { x: 40, y: 405, width: 443, height: 266 },   // Photo 2
+      { x: 40, y: 700, width: 443, height: 266 },   // Photo 3
+      { x: 40, y: 995, width: 443, height: 266 },   // Photo 4 (bottom)
+    ],
   },
   {
     id: "template-2",
-    name: "Wedding Elegant",
-    category: "Wedding",
-    thumbnail: "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1519741497674-611481863552?w=1280&h=720&fit=crop",
+    name: "Morris",
+    category: "Artistic",
+    thumbnail: "/assets/templates/morris/morris-1.png",
+    frameUrl: "/assets/templates/morris/morris-1.png",
     isPremium: false,
-  },
-  {
-    id: "template-3",
-    name: "Graduation",
-    category: "Education",
-    thumbnail: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=1280&h=720&fit=crop",
-    isPremium: false,
-  },
-  {
-    id: "template-4",
-    name: "Corporate Event",
-    category: "Corporate",
-    thumbnail: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1511578314322-379afb476865?w=1280&h=720&fit=crop",
-    isPremium: false,
-  },
-  {
-    id: "template-5",
-    name: "Baby Shower",
-    category: "Baby",
-    thumbnail: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1515488042361-ee00e0ddd4e4?w=1280&h=720&fit=crop",
-    isPremium: false,
-  },
-  {
-    id: "template-6",
-    name: "Christmas",
-    category: "Holiday",
-    thumbnail: "https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1512389142860-9c449e58a543?w=1280&h=720&fit=crop",
-    isPremium: true,
-  },
-  {
-    id: "template-7",
-    name: "New Year",
-    category: "Holiday",
-    thumbnail: "https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1467810563316-b5476525c0f9?w=1280&h=720&fit=crop",
-    isPremium: true,
-  },
-  {
-    id: "template-8",
-    name: "Valentine",
-    category: "Love",
-    thumbnail: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=400&h=400&fit=crop",
-    frameUrl: "https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=1280&h=720&fit=crop",
-    isPremium: true,
+    frameCount: 4, // 4 photos in this template
+    layoutPositions: [
+      // Coordinates for each photo position in the template
+      // Adjusted for template size 591x1772
+      { x: 66, y: 130, width: 459, height: 276 },   // Photo 1 (top)
+      { x: 66, y: 530, width: 459, height: 276 },   // Photo 2
+      { x: 66, y: 930, width: 459, height: 276 },   // Photo 3
+      { x: 66, y: 1330, width: 459, height: 276 },  // Photo 4 (bottom)
+    ],
   },
 ];
 
@@ -82,6 +60,7 @@ export const templateCategories = [
   "Birthday",
   "Wedding",
   "Education",
+  "Artistic",
   "Corporate",
   "Baby",
   "Holiday",
