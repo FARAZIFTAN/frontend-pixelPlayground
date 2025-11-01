@@ -12,6 +12,10 @@ import Booth from "./pages/Booth";
 // import Creator from "./pages/Creator"; // Removed from public access - Admin only
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import HomeAdmin from "./pages/Home-admin";
+
 
 const queryClient = new QueryClient();
 
@@ -38,6 +42,9 @@ const App = () => (
           <Navbar />
           <main className="flex-1">
             <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/admin" element={<HomeAdmin />} />
               <Route path="/" element={<Home />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/booth" element={<Booth />} />

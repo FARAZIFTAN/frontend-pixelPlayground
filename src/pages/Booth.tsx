@@ -138,7 +138,15 @@ const Booth = () => {
     setCountdown(null);
   };
 
+  // Add authentication check (replace with your actual auth logic)
+  const isAuthenticated = false; // TODO: Replace with real auth state
+
   const handleDownload = () => {
+    if (!isAuthenticated) {
+      toast.error("Please login or register to download.");
+      navigate("/login"); // or "/register"
+      return;
+    }
     if (capturedImage) {
       const link = document.createElement("a");
       link.href = capturedImage;
@@ -149,6 +157,11 @@ const Booth = () => {
   };
 
   const handleShare = async () => {
+    if (!isAuthenticated) {
+      toast.error("Please login or register to share.");
+      navigate("/login"); // or "/register"
+      return;
+    }
     if (capturedImage) {
       try {
         const blob = await (await fetch(capturedImage)).blob();
@@ -355,7 +368,7 @@ const Booth = () => {
                       className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Download
+                      Download 
                     </Button>
                     <Button
                       onClick={handleShare}
