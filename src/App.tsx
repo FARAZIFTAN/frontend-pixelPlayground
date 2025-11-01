@@ -9,7 +9,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Gallery from "./pages/Gallery";
 import Booth from "./pages/Booth";
-import Creator from "./pages/Creator";
+// import Creator from "./pages/Creator"; // Removed from public access - Admin only
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 
@@ -41,7 +41,7 @@ const App = () => (
               <Route path="/" element={<Home />} />
               <Route path="/gallery" element={<Gallery />} />
               <Route path="/booth" element={<Booth />} />
-              <Route path="/creator" element={<Creator />} />
+              {/* <Route path="/creator" element={<Creator />} /> */} {/* Removed - Admin only */}
               <Route path="/contact" element={<Contact />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

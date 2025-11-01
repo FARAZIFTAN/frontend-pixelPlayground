@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Mail, MapPin, Instagram, MessageCircle, Send } from "lucide-react";
+import { Mail, MapPin, Instagram, MessageCircle, Send, Loader2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,26 +11,57 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
 
+// Form validation schema
+const contactFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters").max(50, "Name is too long"),
+  email: z.string().email("Please enter a valid email address"),
+  message: z.string().min(10, "Message must be at least 10 characters").max(500, "Message is too long"),
+});
+
+type ContactFormValues = z.infer<typeof contactFormSchema>;
+
 const Contact = () => {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    message: "",
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    reset,
+  } = useForm<ContactFormValues>({
+    resolver: zodResolver(contactFormSchema),
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-    // Here you would send the form data
-    toast.success("Message sent! We'll get back to you soon. 📧");
-    setFormData({ name: "", email: "", message: "" });
-  };
+  const onSubmit = async (data: ContactFormValues) => {
+    try {
+      setIsSubmitting(true);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+      // TODO: Replace with actual API endpoint when backend is ready
+      // const response = await fetch("/api/contact", {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify(data),
+      // });
+      //
+      // if (!response.ok) throw new Error("Failed to send message");
+
+      // Simulate API call for now
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      toast.success("✅ Message sent successfully! We'll get back to you within 24 hours.", {
+        duration: 5000,
+        icon: "📧",
+      });
+
+      reset(); // Clear form after successful submission
+    } catch (error) {
+      console.error("Contact form error:", error);
+      toast.error("❌ Failed to send message. Please try again or email us directly at hello@karyaklik.com", {
+        duration: 6000,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -57,57 +91,89 @@ const Contact = () => {
           >
             <Card className="gradient-card border-0 shadow-soft">
               <CardContent className="p-6 lg:p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+                  {/* Name Field */}
                   <div className="space-y-2">
                     <Label htmlFor="name" className="text-base font-medium">
-                      Your Name
+                      Your Name <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="name"
-                      name="name"
                       placeholder="John Doe"
-                      value={formData.name}
-                      onChange={handleChange}
-                      className="rounded-xl border-2 focus:border-primary transition-colors"
+                      {...register("name")}
+                      className={`rounded-xl border-2 focus:border-primary transition-colors ${
+                        errors.name ? "border-destructive focus:border-destructive" : ""
+                      }`}
+                      disabled={isSubmitting}
                     />
+                    {errors.name && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        {errors.name.message}
+                      </p>
+                    )}
                   </div>
 
+                  {/* Email Field */}
                   <div className="space-y-2">
                     <Label htmlFor="email" className="text-base font-medium">
-                      Email Address
+                      Email Address <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       id="email"
-                      name="email"
                       type="email"
                       placeholder="john@example.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="rounded-xl border-2 focus:border-primary transition-colors"
+                      {...register("email")}
+                      className={`rounded-xl border-2 focus:border-primary transition-colors ${
+                        errors.email ? "border-destructive focus:border-destructive" : ""
+                      }`}
+                      disabled={isSubmitting}
                     />
+                    {errors.email && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        {errors.email.message}
+                      </p>
+                    )}
                   </div>
 
+                  {/* Message Field */}
                   <div className="space-y-2">
                     <Label htmlFor="message" className="text-base font-medium">
-                      Message
+                      Message <span className="text-destructive">*</span>
                     </Label>
                     <Textarea
                       id="message"
-                      name="message"
                       placeholder="Tell us how we can help you..."
-                      value={formData.message}
-                      onChange={handleChange}
+                      {...register("message")}
                       rows={6}
-                      className="rounded-xl border-2 focus:border-primary transition-colors resize-none"
+                      className={`rounded-xl border-2 focus:border-primary transition-colors resize-none ${
+                        errors.message ? "border-destructive focus:border-destructive" : ""
+                      }`}
+                      disabled={isSubmitting}
                     />
+                    {errors.message && (
+                      <p className="text-sm text-destructive flex items-center gap-1">
+                        {errors.message.message}
+                      </p>
+                    )}
                   </div>
 
+                  {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
+                    disabled={isSubmitting}
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 rounded-full shadow-soft hover:shadow-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Send className="w-5 h-5 mr-2" />
-                    Send Message
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-5 h-5 mr-2" />
+                        Send Message
+                      </>
+                    )}
                   </Button>
                 </form>
               </CardContent>
@@ -143,10 +209,10 @@ const Contact = () => {
                     <div>
                       <p className="font-medium">Email</p>
                       <a
-                        href="mailto:hello@Pixel.com"
+                        href="mailto:hello@karyaklik.com"
                         className="text-primary hover:underline text-sm"
                       >
-                        hello@Pixel.com
+                        hello@karyaklik.com
                       </a>
                     </div>
                   </div>
@@ -169,7 +235,7 @@ const Contact = () => {
                     <span className="text-sm font-medium">Instagram</span>
                   </a>
                   <a
-                    href="https://wa.me/1234567890"
+                    href="https://wa.me/6281234567890"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex flex-col items-center justify-center p-6 rounded-2xl bg-accent hover:bg-primary hover:text-primary-foreground transition-all group shadow-soft hover:shadow-hover"
@@ -178,7 +244,7 @@ const Contact = () => {
                     <span className="text-sm font-medium">WhatsApp</span>
                   </a>
                   <a
-                    href="mailto:hello@jepreto.com"
+                    href="mailto:hello@karyaklik.com"
                     className="flex flex-col items-center justify-center p-6 rounded-2xl bg-accent hover:bg-primary hover:text-primary-foreground transition-all group shadow-soft hover:shadow-hover"
                   >
                     <Mail className="w-8 h-8 mb-2" />

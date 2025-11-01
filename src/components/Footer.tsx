@@ -17,7 +17,7 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-gray-400 text-sm max-w-xs">
-              A web-based digital photo booth platform built in Indonesia — helping everyone create beautiful memories easily.
+              Create stunning photos instantly with our online photo booth. No downloads needed, just pure fun!
             </p>
           </div>
 
@@ -41,8 +41,8 @@ const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/creator" className="text-gray-400 hover:text-[#C62828] transition-colors text-sm">
-                  Creator
+                <Link to="/contact" className="text-gray-400 hover:text-[#C62828] transition-colors text-sm">
+                  Contact
                 </Link>
               </li>
             </ul>
@@ -53,30 +53,33 @@ const Footer = () => {
             <h3 className="font-heading font-semibold mb-4 text-white">Connect With Us</h3>
             <div className="flex space-x-4 mb-4">
               <a
-                href="https://instagram.com/pixel"
+                href="https://instagram.com/karyaklik"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Follow us on Instagram"
                 className="w-10 h-10 rounded-full bg-[#C62828] flex items-center justify-center text-white hover:bg-[#E53935] transition-all shadow-soft"
               >
                 <Instagram className="w-5 h-5" />
               </a>
               <a
-                href="https://wa.me/1234567890"
+                href="https://wa.me/6281234567890"
                 target="_blank"
                 rel="noopener noreferrer"
+                aria-label="Contact us on WhatsApp"
                 className="w-10 h-10 rounded-full bg-[#C62828] flex items-center justify-center text-white hover:bg-[#E53935] transition-all shadow-soft"
               >
                 <MessageCircle className="w-5 h-5" />
               </a>
               <a
-                href="mailto:hello@pixel.com"
+                href="mailto:hello@karyaklik.com"
+                aria-label="Send us an email"
                 className="w-10 h-10 rounded-full bg-[#C62828] flex items-center justify-center text-white hover:bg-[#E53935] transition-all shadow-soft"
               >
                 <Mail className="w-5 h-5" />
               </a>
             </div>
             <p className="text-gray-400 text-sm">
-              hello@pixel.com
+              hello@karyaklik.com
             </p>
           </div>
         </div>
@@ -84,7 +87,7 @@ const Footer = () => {
         {/* Copyright */}
         <div className="pt-8 border-t border-[#333333] text-center">
           <p className="text-sm text-gray-400">
-            © {currentYear} pixel. Made with ❤️ in Indonesia. All rights reserved.
+            © {currentYear} KaryaKlik. Made with ❤️ in Indonesia. All rights reserved.
           </p>
         </div>
       </div>
