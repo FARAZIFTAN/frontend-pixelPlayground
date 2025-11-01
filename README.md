@@ -249,7 +249,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 👨‍💻 Author
 
-**FARAZIFTAN**
+**FARAZIFTAN** & **violasptntels**
 - GitHub: [@FARAZIFTAN](https://github.com/FARAZIFTAN)
 - Repository: [frontend-pixelPlayground](https://github.com/FARAZIFTAN/frontend-pixelPlayground)
 
