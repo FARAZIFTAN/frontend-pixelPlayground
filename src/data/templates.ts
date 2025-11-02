@@ -25,14 +25,11 @@ export const templates: Template[] = [
     thumbnail: "/assets/templates/graduation/graduation-1.png",
     frameUrl: "/assets/templates/graduation/graduation-1.png",
     isPremium: false,
-    frameCount: 4, // 4 photos in this template
+    frameCount: 3, // 3 photos in this template
     layoutPositions: [
-      // Coordinates for each photo position in the template
-      // Will be adjusted based on actual template size
-      { x: 40, y: 110, width: 443, height: 266 },   // Photo 1 (top)
-      { x: 40, y: 405, width: 443, height: 266 },   // Photo 2
-      { x: 40, y: 700, width: 443, height: 266 },   // Photo 3
-      { x: 40, y: 995, width: 443, height: 266 },   // Photo 4 (bottom)
+      { x: 27, y: 99, width: 487, height: 318 },    // Photo 1 (top)
+      { x: 28, y: 490, width: 485, height: 323 },   // Photo 2 (middle)
+      { x: 27, y: 883, width: 486, height: 317 },   // Photo 3 (bottom)
     ],
   },
   {
@@ -42,14 +39,11 @@ export const templates: Template[] = [
     thumbnail: "/assets/templates/morris/morris-1.png",
     frameUrl: "/assets/templates/morris/morris-1.png",
     isPremium: false,
-    frameCount: 4, // 4 photos in this template
+    frameCount: 3, // 3 photos in this template
     layoutPositions: [
-      // Coordinates for each photo position in the template
-      // Adjusted for template size 591x1772
-      { x: 66, y: 130, width: 459, height: 276 },   // Photo 1 (top)
-      { x: 66, y: 530, width: 459, height: 276 },   // Photo 2
-      { x: 66, y: 930, width: 459, height: 276 },   // Photo 3
-      { x: 66, y: 1330, width: 459, height: 276 },  // Photo 4 (bottom)
+      { x: 26, y: 181, width: 485, height: 315 },   // Photo 1 (top)
+      { x: 27, y: 560, width: 498, height: 317 },   // Photo 2 (middle)
+      { x: 27, y: 947, width: 486, height: 323 },   // Photo 3 (bottom)
     ],
   },
 ];
