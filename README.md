@@ -157,8 +157,13 @@ frontend-pixelPlayground/
 │   │   ├── Contact.tsx        # Contact page
 │   │   ├── Login.tsx          # Login page
 │   │   ├── Register.tsx       # Register page
-│   │   ├── Home-admin.tsx     # Admin dashboard
-│   │   └── NotFound.tsx       # 404 page
+│   │   ├── NotFound.tsx       # 404 page
+│   │   └── admin/             # Admin panel pages
+│   │       ├── Login.tsx      # Admin login
+│   │       ├── Dashboard.tsx  # Admin dashboard
+│   │       ├── Templates.tsx  # Template management
+│   │       ├── Analytics.tsx  # Analytics & reports
+│   │       └── Settings.tsx   # Admin settings
 │   │
 │   ├── data/                  # Static data
 │   │   ├── templates.ts       # Template definitions

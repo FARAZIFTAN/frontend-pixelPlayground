@@ -1,0 +1,27 @@
+import { Outlet } from "react-router-dom";
+import Sidebar from "./Sidebar.tsx";
+import Header from "./Header.tsx";
+
+const AdminLayout = () => {
+  return (
+    <div className="flex h-screen gradient-hero">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <Header />
+        
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto gradient-hero p-6">
+          <div className="max-w-7xl mx-auto">
+            <Outlet />
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLayout;

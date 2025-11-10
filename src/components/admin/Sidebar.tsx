@@ -1,0 +1,122 @@
+import { NavLink } from "react-router-dom";
+import { 
+  LayoutDashboard, 
+  Image, 
+  PlusCircle, 
+  Users, 
+  Settings, 
+  BarChart3,
+  LogOut,
+  Camera
+} from "lucide-react";
+import { useState } from "react";
+
+const Sidebar = () => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const menuItems = [
+    { 
+      path: "/admin/dashboard", 
+      icon: LayoutDashboard, 
+      label: "Dashboard" 
+    },
+    { 
+      path: "/admin/templates", 
+      icon: Image, 
+      label: "Templates" 
+    },
+    { 
+      path: "/admin/template-creator", 
+      icon: PlusCircle, 
+      label: "Create Template" 
+    },
+    { 
+      path: "/admin/analytics", 
+      icon: BarChart3, 
+      label: "Analytics" 
+    },
+    { 
+      path: "/admin/users", 
+      icon: Users, 
+      label: "Users" 
+    },
+    { 
+      path: "/admin/settings", 
+      icon: Settings, 
+      label: "Settings" 
+    },
+  ];
+
+  return (
+    <aside 
+      className={`bg-black/60 backdrop-blur-md text-white transition-all duration-300 ease-in-out ${
+        isCollapsed ? "w-20" : "w-64"
+      } flex flex-col border-r border-[#C62828]/50`}
+    >
+      {/* Logo Area */}
+      <div className="p-6 border-b border-[#C62828]/50">
+        <div className="flex items-center justify-between">
+          {!isCollapsed && (
+            <div className="flex items-center gap-2">
+              <Camera className="w-8 h-8 text-[#C62828]" />
+              <div>
+                <h1 className="text-xl font-bold">KaryaKlik</h1>
+                <p className="text-xs text-gray-400">Admin Panel</p>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="p-2 hover:bg-[#C62828]/30 rounded-lg transition-colors"
+            title={isCollapsed ? "Expand" : "Collapse"}
+          >
+            {isCollapsed ? "→" : "←"}
+          </button>
+        </div>
+      </div>
+
+      {/* Navigation Menu */}
+      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                  isActive
+                    ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
+                    : "text-gray-300 hover:bg-white/10 hover:text-white"
+                }`
+              }
+              title={isCollapsed ? item.label : ""}
+            >
+              <Icon className="w-5 h-5 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="font-medium">{item.label}</span>
+              )}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* Logout Button */}
+      <div className="p-4 border-t border-[#C62828]/50">
+        <button
+          onClick={() => {
+            // TODO: Implement logout
+            console.log("Logout clicked");
+          }}
+          className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#C62828]/80 hover:text-white transition-all duration-200 w-full"
+          title={isCollapsed ? "Logout" : ""}
+        >
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!isCollapsed && <span className="font-medium">Logout</span>}
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
