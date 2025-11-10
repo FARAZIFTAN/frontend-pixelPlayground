@@ -16,6 +16,8 @@ import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import MyGallery from "./pages/MyGallery";
+import MyAccount from "./pages/MyAccount";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -76,6 +78,16 @@ const App = () => (
                     <Route path="/register" element={<Register />} />
                     <Route path="/" element={<Home />} />
                     <Route path="/gallery" element={<Gallery />} />
+                    <Route path="/my-gallery" element={
+                      <ProtectedRoute>
+                        <MyGallery />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/my-account" element={
+                      <ProtectedRoute>
+                        <MyAccount />
+                      </ProtectedRoute>
+                    } />
                     <Route path="/booth" element={
                       <ProtectedRoute>
                         <Booth />

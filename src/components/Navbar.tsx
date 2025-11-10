@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Menu, X, User, LogOut } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -103,6 +103,22 @@ const Navbar = () => {
                         <p className="text-sm text-gray-400">Signed in as</p>
                         <p className="text-white font-medium truncate">{user.email}</p>
                       </div>
+                      <Link
+                        to="/my-account"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                      >
+                        <User className="w-4 h-4" />
+                        <span>My Account</span>
+                      </Link>
+                      <Link
+                        to="/my-gallery"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                      >
+                        <ImageIcon className="w-4 h-4" />
+                        <span>My Gallery</span>
+                      </Link>
                       <button
                         onClick={handleLogout}
                         className="w-full px-4 py-3 text-left text-white hover:bg-[#C62828] transition-colors flex items-center space-x-2"
@@ -172,6 +188,18 @@ const Navbar = () => {
                   <Link to="/booth" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button className="w-full bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-full shadow-soft">
                       Start Booth
+                    </Button>
+                  </Link>
+                  <Link to="/my-account" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full mt-2 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
+                      <User className="w-4 h-4" />
+                      <span>My Account</span>
+                    </Button>
+                  </Link>
+                  <Link to="/my-gallery" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full mt-2 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>My Gallery</span>
                     </Button>
                   </Link>
                   <button

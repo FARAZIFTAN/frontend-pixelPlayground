@@ -37,15 +37,16 @@ async function apiCall<T>(
     
     const data = await response.json();
     return data;
-  } catch (error: any) {
-    console.error(`API Error [${endpoint}]:`, error);
-    
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    console.error(`API Error [${endpoint}]:`, err);
+
     // More descriptive error messages
-    if (error.message === 'Failed to fetch') {
+    if (err.message === 'Failed to fetch') {
       throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
     }
-    
-    throw error;
+
+    throw err;
   }
 }
 
@@ -74,3 +75,48 @@ export const authAPI = {
 
 // Export API base URL for direct access if needed
 export { API_BASE_URL };
+
+// User profile API helpers
+export const userAPI = {
+  getProfile: async () => {
+    return apiCall('/users/me', { method: 'GET' });
+  },
+
+  updateProfile: async (payload: { name?: string; email?: string; bio?: string }) => {
+    return apiCall('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Upload avatar — FormData, do not set JSON content-type
+  uploadAvatar: async (file: File) => {
+    const token = localStorage.getItem('token');
+    const url = `${API_BASE_URL}/users/me/avatar`;
+
+    const form = new FormData();
+    form.append('avatar', file);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      mode: 'cors',
+      credentials: 'include',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: form,
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.message || `Upload failed with status ${res.status}`);
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return data;
+  },
+
+  deleteAccount: async () => {
+    return apiCall('/users/me', { method: 'DELETE' });
+  },
+};
