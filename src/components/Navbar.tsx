@@ -30,9 +30,8 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", path: "/" },
-    { name: "Gallery", path: "/gallery" },
+    { name: "Explore", path: "/gallery" },
     { name: "Booth", path: "/booth" },
-    // { name: "Creator", path: "/creator" }, // Removed - Admin only
     { name: "Contact", path: "/contact" },
   ];
 

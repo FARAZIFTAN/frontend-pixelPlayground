@@ -44,10 +44,10 @@ const Gallery = () => {
           </motion.div>
 
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-4 bg-gradient-to-r from-white via-primary to-purple-400 bg-clip-text text-transparent">
-            Frame Templates
+            Explore Templates
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
-            Choose a template for your photo
+            Temukan dan pilih template foto yang sempurna untuk Anda
           </p>
         </motion.div>
 
