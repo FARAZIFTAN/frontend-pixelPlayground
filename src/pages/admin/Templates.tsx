@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Image, 
   PlusCircle, 
@@ -10,46 +10,88 @@ import {
   Trash2, 
   MoreVertical,
   Download,
-  Copy
+  Copy,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
+import { templateAPI } from "@/services/api";
+import { toast } from "react-hot-toast";
+
+interface Template {
+  _id: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  frameUrl: string;
+  frameCount: number;
+  isPremium: boolean;
+  isActive: boolean;
+  layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const Templates = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Sample data - replace with real data from API
-  const templates = [
-    {
-      id: 1,
-      name: "Morris IF'25",
-      category: "Artistic",
-      thumbnail: "/assets/templates/morris/morris-1.png",
-      frameCount: 3,
-      isPremium: false,
-      isActive: true,
-      photosCount: 245,
-      createdAt: "2024-01-15"
-    },
-    {
-      id: 2,
-      name: "Graduation 2024",
-      category: "Education",
-      thumbnail: "/assets/templates/graduation/graduation-1.png",
-      frameCount: 3,
-      isPremium: false,
-      isActive: true,
-      photosCount: 189,
-      createdAt: "2024-01-10"
-    },
-  ];
+  const categories = ["All", "Education", "Artistic", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "General"];
 
-  const categories = ["All", "Education", "Artistic", "Wedding", "Birthday", "Corporate"];
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    try {
+      const response = await templateAPI.getTemplates({ limit: 100 }) as {
+        success: boolean;
+        data?: { templates: Template[] };
+      };
+      
+      if (response.success && response.data) {
+        setTemplates(response.data.templates);
+      }
+    } catch (error) {
+      console.error('Load templates error:', error);
+      toast.error('Failed to load templates');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTemplate = async (id: string, name: string) => {
+    if (!confirm(`Delete template "${name}"? This will deactivate it.`)) return;
+
+    try {
+      await templateAPI.deleteTemplate(id);
+      toast.success('Template deleted successfully');
+      loadTemplates(); // Reload
+    } catch (error) {
+      console.error('Delete template error:', error);
+      toast.error('Failed to delete template');
+    }
+  };
+
+  const handleToggleActive = async (template: Template) => {
+    try {
+      await templateAPI.updateTemplate(template._id, {
+        isActive: !template.isActive
+      });
+      toast.success(`Template ${!template.isActive ? 'activated' : 'deactivated'}`);
+      loadTemplates(); // Reload
+    } catch (error) {
+      console.error('Update template error:', error);
+      toast.error('Failed to update template');
+    }
+  };
 
   const filteredTemplates = templates.filter(template => {
     const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -134,12 +176,23 @@ const Templates = () => {
         </p>
       </div>
 
-      {/* Templates Grid/List */}
-      {viewMode === "grid" ? (
+      {/* Loading State */}
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-[#C62828]" />
+          <span className="ml-3 text-white">Loading templates...</span>
+        </div>
+      ) : filteredTemplates.length === 0 ? (
+        <div className="text-center py-20">
+          <Image className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h3 className="text-2xl font-heading font-semibold text-white">No templates found</h3>
+          <p className="text-gray-400 mt-2">Try adjusting your search or filters</p>
+        </div>
+      ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTemplates.map((template, index) => (
             <motion.div
-              key={template.id}
+              key={template._id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
@@ -157,16 +210,25 @@ const Templates = () => {
 
                   {/* Overlay on Hover */}
                   <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" title="View">
+                    <button 
+                      onClick={() => handleToggleActive(template)}
+                      className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" 
+                      title={template.isActive ? "Deactivate" : "Activate"}
+                    >
                       <Eye className="w-5 h-5 text-white" />
                     </button>
-                    <button className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" title="Edit">
+                    <button 
+                      onClick={() => navigate(`/admin/template-creator?edit=${template._id}`)}
+                      className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" 
+                      title="Edit"
+                    >
                       <Edit className="w-5 h-5 text-white" />
                     </button>
-                    <button className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" title="Copy">
-                      <Copy className="w-5 h-5 text-white" />
-                    </button>
-                    <button className="p-3 bg-[#C62828]/80 backdrop-blur-sm rounded-lg hover:bg-[#C62828] transition-colors" title="Delete">
+                    <button 
+                      onClick={() => handleDeleteTemplate(template._id, template.name)}
+                      className="p-3 bg-[#C62828]/80 backdrop-blur-sm rounded-lg hover:bg-[#C62828] transition-colors" 
+                      title="Delete"
+                    >
                       <Trash2 className="w-5 h-5 text-white" />
                     </button>
                   </div>
@@ -196,8 +258,7 @@ const Templates = () => {
                       <span>{template.frameCount} photos</span>
                     </div>
                     <div className="flex items-center gap-1 text-gray-400">
-                      <Download className="w-4 h-4" />
-                      <span>{template.photosCount}</span>
+                      <span className="text-xs">{new Date(template.createdAt).toLocaleDateString('id-ID')}</span>
                     </div>
                   </div>
                 </CardContent>
@@ -215,13 +276,13 @@ const Templates = () => {
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Category</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Photos</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Status</th>
-                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Downloads</th>
+                  <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Type</th>
                   <th className="text-left px-6 py-4 text-sm font-semibold text-gray-300">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTemplates.map((template) => (
-                  <tr key={template.id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                  <tr key={template._id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
                         <img
@@ -231,7 +292,7 @@ const Templates = () => {
                         />
                         <div>
                           <p className="font-semibold text-white">{template.name}</p>
-                          <p className="text-xs text-gray-500">{template.createdAt}</p>
+                          <p className="text-xs text-gray-500">{new Date(template.createdAt).toLocaleDateString('id-ID')}</p>
                         </div>
                       </div>
                     </td>
@@ -242,11 +303,24 @@ const Templates = () => {
                         {template.isActive ? "Active" : "Inactive"}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">{template.photosCount}</td>
+                    <td className="px-6 py-4 text-sm text-gray-400">{template.isPremium ? 'Premium' : 'Free'}</td>
                     <td className="px-6 py-4">
-                      <button className="p-2 hover:bg-white/10 rounded transition-colors">
-                        <MoreVertical className="w-5 h-5 text-gray-400" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button 
+                          onClick={() => navigate(`/admin/template-creator?edit=${template._id}`)}
+                          className="p-2 hover:bg-white/10 rounded transition-colors" 
+                          title="Edit"
+                        >
+                          <Edit className="w-4 h-4 text-gray-400" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteTemplate(template._id, template.name)}
+                          className="p-2 hover:bg-white/10 rounded transition-colors" 
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-400" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

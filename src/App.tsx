@@ -18,6 +18,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyGallery from "./pages/MyGallery";
 import MyAccount from "./pages/MyAccount";
+import PhotoSessions from "./pages/PhotoSessions";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -91,6 +92,11 @@ const App = () => (
                     <Route path="/booth" element={
                       <ProtectedRoute>
                         <Booth />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/booth/sessions" element={
+                      <ProtectedRoute>
+                        <PhotoSessions />
                       </ProtectedRoute>
                     } />
                     <Route path="/contact" element={<Contact />} />

@@ -433,7 +433,7 @@ const TemplateCreator = () => {
         {/* Left Column - Template Info & Upload */}
         <div className="lg:col-span-1 space-y-6">
           {/* Template Information */}
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6 space-y-4">
               <h2 className="text-xl font-bold text-white mb-4">Template Information</h2>
               
@@ -498,7 +498,7 @@ const TemplateCreator = () => {
           </Card>
 
           {/* Upload Section */}
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <h2 className="text-xl font-bold text-white mb-4">Upload Template</h2>
               
@@ -536,7 +536,7 @@ const TemplateCreator = () => {
 
         {/* Middle Column - Canvas */}
         <div className="lg:col-span-2">
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-white">Canvas Editor</h2>
@@ -637,7 +637,7 @@ const TemplateCreator = () => {
 
           {/* Coordinates List */}
           {rectangles.length > 0 && (
-            <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10 mt-6">
+            <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10 mt-6">
               <CardContent className="p-6">
                 <h2 className="text-xl font-bold text-white mb-4">Photo Frame Coordinates</h2>
                 <div className="space-y-4">

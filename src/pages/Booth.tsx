@@ -1,17 +1,31 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
-import { templates, Template } from "@/data/templates";
+import { sessionAPI, photoAPI, compositeAPI, templateAPI } from "@/services/api";
+import { useAuth } from "@/contexts/AuthContext";
+
+interface Template {
+  _id: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  frameUrl: string;
+  isPremium: boolean;
+  frameCount: number;
+  layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+}
 
 const Booth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImages, setCapturedImages] = useState<string[]>([]); // Array of captured photos
@@ -21,6 +35,10 @@ const Booth = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [photoCount, setPhotoCount] = useState<number>(4); // Number of photos to take (2, 3, or 4)
   const [hasLoadedTemplate, setHasLoadedTemplate] = useState(false); // Track if template is loaded
+  
+  // Backend integration states
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([]);
   
   // DEBUG MODE states
   const [debugMode, setDebugMode] = useState(false);
@@ -41,15 +59,28 @@ const Booth = () => {
   useEffect(() => {
     const templateIdFromUrl = searchParams.get("template");
     if (templateIdFromUrl && !hasLoadedTemplate) {
-      const template = templates.find(t => t.id === templateIdFromUrl);
-      if (template) {
-        setSelectedTemplate(template);
-        setPhotoCount(template.frameCount); // Set default to template's frameCount
-        setHasLoadedTemplate(true);
-        // Toast moved to separate effect to prevent warning
-      }
+      loadTemplate(templateIdFromUrl);
     }
   }, [searchParams, hasLoadedTemplate]);
+
+  const loadTemplate = async (templateId: string) => {
+    try {
+      const response = await templateAPI.getTemplate(templateId) as {
+        success: boolean;
+        data?: { template: Template };
+      };
+      
+      if (response.success && response.data) {
+        const template = response.data.template;
+        setSelectedTemplate(template);
+        setPhotoCount(template.frameCount);
+        setHasLoadedTemplate(true);
+      }
+    } catch (error) {
+      console.error('Load template error:', error);
+      toast.error('Failed to load template');
+    }
+  };
 
   // Show toast when template is loaded (separate effect to prevent setState warning)
   useEffect(() => {
@@ -64,6 +95,9 @@ const Booth = () => {
 
   useEffect(() => {
     startCamera();
+    // Create photo session when component mounts
+    createPhotoSession();
+    
     return () => {
       if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -74,6 +108,32 @@ const Booth = () => {
       }
     };
   }, []); // Empty dependency - only run once on mount
+
+  // Create photo session on backend
+  const createPhotoSession = async () => {
+    try {
+      const response = await sessionAPI.createSession({
+        sessionName: `Photo Session ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}`,
+        templateId: selectedTemplate?._id,
+        metadata: {
+          photoCount,
+          startedAt: new Date().toISOString(),
+        }
+      });
+      
+      // Extract session ID from response
+      const data = response as { data?: { session?: { _id: string } }; session?: { _id: string } };
+      const newSessionId = data.data?.session?._id || data.session?._id;
+      
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        console.log('✅ Photo session created:', newSessionId);
+      }
+    } catch (error) {
+      console.error('Failed to create photo session:', error);
+      toast.error('Failed to create session. Photos will not be saved.');
+    }
+  };
 
   const startCamera = async () => {
     setIsLoading(true);
@@ -113,7 +173,7 @@ const Booth = () => {
     }, 1000);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const canvas = canvasRef.current;
       const video = videoRef.current;
@@ -132,6 +192,32 @@ const Booth = () => {
         const imageData = canvas.toDataURL("image/png");
         const newCapturedImages = [...capturedImages, imageData];
         setCapturedImages(newCapturedImages);
+        
+        // Upload photo to backend
+        if (sessionId) {
+          try {
+            const response = await photoAPI.uploadPhoto({
+              sessionId,
+              photoUrl: imageData,
+              order: currentPhotoIndex,
+              metadata: {
+                capturedAt: new Date().toISOString(),
+                photoNumber: currentPhotoIndex + 1,
+              }
+            });
+            
+            // Extract photo ID
+            const data = response as { data?: { photo?: { _id: string } }; photo?: { _id: string } };
+            const photoId = data.data?.photo?._id || data.photo?._id;
+            if (photoId) {
+              setUploadedPhotoIds(prev => [...prev, photoId]);
+              console.log('✅ Photo uploaded:', photoId);
+            }
+          } catch (error) {
+            console.error('Failed to upload photo:', error);
+            // Don't block user, just log the error
+          }
+        }
         
         const nextPhotoIndex = currentPhotoIndex + 1;
         
@@ -298,6 +384,55 @@ const Booth = () => {
     setFinalCompositeImage(null);
     setCurrentPhotoIndex(0);
     setCountdown(null);
+    setUploadedPhotoIds([]);
+    // Create new session for retake
+    createPhotoSession();
+  };
+
+  // Save final composite to backend
+  const handleSaveComposite = async () => {
+    if (!finalCompositeImage || !sessionId) {
+      toast.error('No photo to save or session not found');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await compositeAPI.createComposite({
+        sessionId,
+        compositeUrl: finalCompositeImage,
+        templateId: selectedTemplate?._id,
+        isPublic: false, // Default to private, user can change later
+        metadata: {
+          photoCount,
+          templateName: selectedTemplate?.name,
+          createdAt: new Date().toISOString(),
+        }
+      });
+
+      // Update session status to completed
+      if (sessionId) {
+        await sessionAPI.updateSession(sessionId, {
+          status: 'completed',
+          metadata: {
+            completedAt: new Date().toISOString(),
+            photosCount: uploadedPhotoIds.length,
+          }
+        });
+      }
+
+      toast.success('🎉 Photo strip saved successfully!');
+      
+      // Redirect to PhotoSessions page after 1.5 seconds
+      setTimeout(() => {
+        navigate('/booth/sessions');
+      }, 1500);
+    } catch (error) {
+      console.error('Failed to save composite:', error);
+      toast.error('Failed to save photo strip. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // DEBUG MODE: Handle coordinate changes
@@ -415,40 +550,37 @@ const Booth = () => {
     }
   }, [debugCoords, debugPhotoIndex, debugMode]);
 
-  // Add authentication check (replace with your actual auth logic)
-  const isAuthenticated = false; // TODO: Replace with real auth state
-
   const handleDownload = () => {
-    if (!isAuthenticated) {
+    if (!user) {
       toast.error("Please login or register to download.");
-      navigate("/login"); // or "/register"
+      navigate("/login");
       return;
     }
     if (finalCompositeImage) {
       const link = document.createElement("a");
       link.href = finalCompositeImage;
-      link.download = `karyaklik-photo-strip-${Date.now()}.png`;
+      link.download = `pixelplayground-photo-strip-${Date.now()}.png`;
       link.click();
       toast.success("Photo strip downloaded!");
     }
   };
 
   const handleShare = async () => {
-    if (!isAuthenticated) {
+    if (!user) {
       toast.error("Please login or register to share.");
-      navigate("/login"); // or "/register"
+      navigate("/login");
       return;
     }
     if (finalCompositeImage) {
       try {
         const blob = await (await fetch(finalCompositeImage)).blob();
-        const file = new File([blob], "karyaklik-photo-strip.png", { type: "image/png" });
+        const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
         
         if (navigator.share && navigator.canShare({ files: [file] })) {
           await navigator.share({
             files: [file],
-            title: "My KaryaKlik Photo Strip",
-            text: "Check out my photo strip from KaryaKlik!",
+            title: "My PixelPlayground Photo Strip",
+            text: "Check out my photo strip from PixelPlayground!",
           });
           toast.success("Shared successfully!");
         } else {
@@ -525,7 +657,7 @@ const Booth = () => {
               </CardContent>
             </Card>
           ) : (
-            <Card className="gradient-card border-0 shadow-soft border-dashed border-2 border-primary/30">
+            <Card className="gradient-card shadow-soft border-dashed border-2 border-primary/30">
               <CardContent className="p-8 text-center">
                 <ImageIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4 opacity-50" />
                 <h3 className="text-lg font-heading font-semibold text-white mb-2">
@@ -694,6 +826,23 @@ const Booth = () => {
                     >
                       <RotateCcw className="w-5 h-5 mr-2" />
                       Start Over
+                    </Button>
+                    <Button
+                      onClick={handleSaveComposite}
+                      disabled={isSaving}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5 mr-2" />
+                          Save to Gallery
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={handleDownload}

@@ -1,20 +1,58 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star } from "lucide-react";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { templates, Template } from "@/data/templates";
 import { useAuth } from "@/contexts/AuthContext";
 import analytics from "@/lib/analytics";
+import { templateAPI } from "@/services/api";
+import { toast } from "react-hot-toast";
+
+interface Template {
+  _id: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  frameUrl: string;
+  isPremium: boolean;
+  frameCount: number;
+  layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+}
 
 const Gallery = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load templates from API
+  useEffect(() => {
+    loadTemplates();
+  }, []);
+
+  const loadTemplates = async () => {
+    setIsLoading(true);
+    try {
+      const response = await templateAPI.getTemplates({ limit: 100 }) as {
+        success: boolean;
+        data?: { templates: Template[] };
+      };
+      
+      if (response.success && response.data) {
+        setTemplates(response.data.templates);
+      }
+    } catch (error) {
+      console.error('Load templates error:', error);
+      toast.error('Failed to load templates');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Track page view
   useEffect(() => {
@@ -24,13 +62,13 @@ const Gallery = () => {
   // Track template preview
   const handlePreview = (template: Template) => {
     setSelectedTemplateForPreview(template);
-    analytics.templateView(template.id, template.name, user?.id);
+    analytics.templateView(template._id, template.name, user?.id);
   };
 
   // Navigate to Booth with pre-selected template
   const handleUseTemplate = (template: Template) => {
-    analytics.templateSelect(template.id, template.name, user?.id);
-    navigate(`/booth?template=${template.id}`);
+    analytics.templateSelect(template._id, template.name, user?.id);
+    navigate(`/booth?template=${template._id}`);
   };
 
   return (
@@ -67,14 +105,20 @@ const Gallery = () => {
         </motion.div>
 
         {/* Template Grid */}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-[#C62828]" />
+            <span className="ml-3 text-white">Loading templates...</span>
+          </div>
+        ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {templates.map((template, index) => (
             <motion.div
-              key={template.id}
+              key={template._id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4, delay: index * 0.05 }}
-              onHoverStart={() => setHoveredTemplate(template.id)}
+              onHoverStart={() => setHoveredTemplate(template._id)}
               onHoverEnd={() => setHoveredTemplate(null)}
             >
               <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all group overflow-hidden h-full">
@@ -100,8 +144,8 @@ const Gallery = () => {
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ 
-                          opacity: hoveredTemplate === template.id ? 1 : 0,
-                          y: hoveredTemplate === template.id ? 0 : 10
+                          opacity: hoveredTemplate === template._id ? 1 : 0,
+                          y: hoveredTemplate === template._id ? 0 : 10
                         }}
                         transition={{ duration: 0.2 }}
                         className="absolute top-3 right-3"
@@ -121,8 +165,8 @@ const Gallery = () => {
                         <motion.div
                           initial={{ y: 20, opacity: 0 }}
                           animate={{ 
-                            y: hoveredTemplate === template.id ? 0 : 20,
-                            opacity: hoveredTemplate === template.id ? 1 : 0
+                            y: hoveredTemplate === template._id ? 0 : 20,
+                            opacity: hoveredTemplate === template._id ? 1 : 0
                           }}
                           transition={{ duration: 0.3 }}
                         >
@@ -171,9 +215,10 @@ const Gallery = () => {
             </motion.div>
           ))}
         </div>
+        )}
 
         {/* Enhanced No Results */}
-        {templates.length === 0 && (
+        {!isLoading && templates.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

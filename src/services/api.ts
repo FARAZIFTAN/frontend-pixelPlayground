@@ -20,7 +20,6 @@ async function apiCall<T>(
   const config: RequestInit = {
     ...options,
     mode: 'cors',
-    credentials: 'include',
     headers: {
       ...getAuthHeaders(),
       ...options.headers,
@@ -76,6 +75,94 @@ export const authAPI = {
 // Export API base URL for direct access if needed
 export { API_BASE_URL };
 
+// Photo Session API
+export const sessionAPI = {
+  // Create new session
+  createSession: async (data: { sessionName: string; templateId?: string; metadata?: Record<string, unknown> }) => {
+    return apiCall('/sessions', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Get all sessions
+  getSessions: async (params?: { status?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.status) query.append('status', params.status);
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    
+    return apiCall(`/sessions?${query.toString()}`, { method: 'GET' });
+  },
+
+  // Get session by ID
+  getSession: async (id: string) => {
+    return apiCall(`/sessions/${id}`, { method: 'GET' });
+  },
+
+  // Update session
+  updateSession: async (id: string, data: { status?: string; sessionName?: string; metadata?: Record<string, unknown> }) => {
+    return apiCall(`/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete session
+  deleteSession: async (id: string) => {
+    return apiCall(`/sessions/${id}`, { method: 'DELETE' });
+  },
+};
+
+// Photo Upload API
+export const photoAPI = {
+  // Upload captured photo
+  uploadPhoto: async (data: {
+    sessionId: string;
+    photoUrl: string;
+    thumbnailUrl?: string;
+    order?: number;
+    metadata?: Record<string, unknown>;
+  }) => {
+    return apiCall('/photos/upload', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Get photos for session
+  getPhotos: async (sessionId: string) => {
+    return apiCall(`/photos/upload?sessionId=${sessionId}`, { method: 'GET' });
+  },
+};
+
+// Composite API
+export const compositeAPI = {
+  // Create final composite
+  createComposite: async (data: {
+    sessionId: string;
+    compositeUrl: string;
+    thumbnailUrl?: string;
+    templateId?: string;
+    isPublic?: boolean;
+    metadata?: Record<string, unknown>;
+  }) => {
+    return apiCall('/composites', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Get user's composites
+  getComposites: async (params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    
+    return apiCall(`/composites?${query.toString()}`, { method: 'GET' });
+  },
+};
+
 // User profile API helpers
 export const userAPI = {
   getProfile: async () => {
@@ -120,3 +207,62 @@ export const userAPI = {
     return apiCall('/users/me', { method: 'DELETE' });
   },
 };
+
+// Template API
+export const templateAPI = {
+  // Get all templates
+  getTemplates: async (params?: { category?: string; isPremium?: boolean; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category) query.append('category', params.category);
+    if (params?.isPremium !== undefined) query.append('isPremium', params.isPremium.toString());
+    if (params?.page) query.append('page', params.page.toString());
+    if (params?.limit) query.append('limit', params.limit.toString());
+    
+    return apiCall(`/templates?${query.toString()}`, { method: 'GET' });
+  },
+
+  // Get single template
+  getTemplate: async (id: string) => {
+    return apiCall(`/templates/${id}`, { method: 'GET' });
+  },
+
+  // Create template (admin only)
+  createTemplate: async (data: {
+    name: string;
+    category: string;
+    thumbnail: string;
+    frameUrl: string;
+    isPremium?: boolean;
+    frameCount: number;
+    layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+    isActive?: boolean;
+  }) => {
+    return apiCall('/templates', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Update template (admin only)
+  updateTemplate: async (id: string, data: {
+    name?: string;
+    category?: string;
+    thumbnail?: string;
+    frameUrl?: string;
+    isPremium?: boolean;
+    frameCount?: number;
+    layoutPositions?: Array<{ x: number; y: number; width: number; height: number }>;
+    isActive?: boolean;
+  }) => {
+    return apiCall(`/templates/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Delete template (admin only)
+  deleteTemplate: async (id: string) => {
+    return apiCall(`/templates/${id}`, { method: 'DELETE' });
+  },
+};
+
