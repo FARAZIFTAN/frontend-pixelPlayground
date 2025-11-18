@@ -75,7 +75,7 @@ const Templates = () => {
       </div>
 
       {/* Filters & Search */}
-      <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+      <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             {/* Search */}
@@ -144,7 +144,7 @@ const Templates = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              <Card className="border-0 shadow-xl hover:shadow-2xl transition-all overflow-hidden group bg-black/30 backdrop-blur-lg border border-white/10">
+              <Card className="shadow-xl hover:shadow-2xl transition-all overflow-hidden group bg-black/30 backdrop-blur-lg border border-white/10">
                 <div className="relative">
                   {/* Template Image */}
                   <div className="aspect-[2/3] bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
@@ -206,7 +206,7 @@ const Templates = () => {
           ))}
         </div>
       ) : (
-        <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+        <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
           <CardContent className="p-0">
             <table className="w-full">
               <thead className="bg-white/5 border-b border-white/10">

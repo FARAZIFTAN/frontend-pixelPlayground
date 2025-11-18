@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -7,15 +7,30 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { templates, Template } from "@/data/templates";
+import { useAuth } from "@/contexts/AuthContext";
+import analytics from "@/lib/analytics";
 
 const Gallery = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
 
+  // Track page view
+  useEffect(() => {
+    analytics.pageView('Gallery', user?.id);
+  }, [user?.id]);
+
+  // Track template preview
+  const handlePreview = (template: Template) => {
+    setSelectedTemplateForPreview(template);
+    analytics.templateView(template.id, template.name, user?.id);
+  };
+
   // Navigate to Booth with pre-selected template
-  const handleUseTemplate = (templateId: string) => {
-    navigate(`/booth?template=${templateId}`);
+  const handleUseTemplate = (template: Template) => {
+    analytics.templateSelect(template.id, template.name, user?.id);
+    navigate(`/booth?template=${template.id}`);
   };
 
   return (
@@ -95,7 +110,7 @@ const Gallery = () => {
                           size="sm"
                           variant="secondary"
                           className="rounded-full shadow-lg backdrop-blur-sm bg-black/50 hover:bg-black/70 text-white border-0"
-                          onClick={() => setSelectedTemplateForPreview(template)}
+                          onClick={() => handlePreview(template)}
                         >
                           <Eye className="w-4 h-4" />
                         </Button>
@@ -144,7 +159,7 @@ const Gallery = () => {
                   <Button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleUseTemplate(template.id);
+                      handleUseTemplate(template);
                     }}
                     className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-soft group-hover:shadow-hover transition-all"
                   >
@@ -275,7 +290,7 @@ const Gallery = () => {
                 {/* Action Buttons */}
                 <div className="flex gap-3">
                   <Button
-                    onClick={() => handleUseTemplate(selectedTemplateForPreview.id)}
+                    onClick={() => handleUseTemplate(selectedTemplateForPreview)}
                     className="flex-1 bg-primary hover:bg-primary/90 rounded-full py-6 shadow-lg shadow-primary/20"
                     size="lg"
                   >

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff, User, Camera } from "lucide-react";
+import analytics from "@/lib/analytics";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -10,8 +11,13 @@ const Login: React.FC = () => {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  // Track page view
+  useEffect(() => {
+    analytics.pageView('Login', user?.id);
+  }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,19 +34,31 @@ const Login: React.FC = () => {
     try {
       const userData = await login(email, password);
       
+      if (!userData) {
+        throw new Error("Login failed - no user data received");
+      }
+
+      // Track successful login
+      analytics.userLogin(userData.id, 'email');
+      
+      console.log('Login successful, user role:', userData.role);
+      
+      // Give a small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       // Redirect based on user role
-      if (userData?.role === 'admin') {
+      if (userData.role === 'admin') {
         console.log('✅ Admin login successful! Redirecting to admin panel...');
         // Admin user -> redirect to admin dashboard
-        navigate("/admin");
+        navigate("/admin/dashboard", { replace: true });
       } else {
         console.log('✅ User login successful! Redirecting to home...');
         // Regular user -> redirect to home
-        navigate("/");
+        navigate("/", { replace: true });
       }
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || "Login failed. Please check your credentials.");
-    } finally {
       setIsLoading(false);
     }
   };

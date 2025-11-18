@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import analytics from '@/lib/analytics';
 
 interface User {
   id: string;
@@ -120,7 +121,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       } else {
         throw new Error('Invalid response from server');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Login error:', error);
       throw error;
     }
@@ -155,10 +156,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Registration successful, user needs to login
       // Don't auto-login, let them use the login form
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Registration error:', error);
       
-      if (error.message === 'Failed to fetch') {
+      if (error instanceof Error && error.message === 'Failed to fetch') {
         throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
       }
       
@@ -168,6 +169,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Logout function
   const logout = () => {
+    // Track logout before clearing data
+    if (user?.id) {
+      analytics.userLogout(user.id);
+    }
+    
     localStorage.removeItem('token');
     setToken(null);
     setUser(null);
