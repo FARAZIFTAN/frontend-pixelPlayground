@@ -65,8 +65,34 @@ export const authAPI = {
     });
   },
 
+  logout: async () => {
+    return apiCall('/auth/logout', {
+      method: 'POST',
+    });
+  },
+
   verify: async () => {
     return apiCall('/auth/verify', {
+      method: 'GET',
+    });
+  },
+
+  forgotPassword: async (email: string) => {
+    return apiCall('/auth/forgot-password', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  resetPassword: async (token: string, newPassword: string) => {
+    return apiCall('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify({ token, newPassword }),
+    });
+  },
+
+  verifyEmail: async (token: string) => {
+    return apiCall(`/auth/verify-email?token=${token}`, {
       method: 'GET',
     });
   },
@@ -166,23 +192,23 @@ export const compositeAPI = {
 // User profile API helpers
 export const userAPI = {
   getProfile: async () => {
-    return apiCall('/users/me', { method: 'GET' });
+    return apiCall('/users/profile', { method: 'GET' });
   },
 
-  updateProfile: async (payload: { name?: string; email?: string; bio?: string }) => {
-    return apiCall('/users/me', {
+  updateProfile: async (payload: { name?: string; email?: string; phone?: string }) => {
+    return apiCall('/users/profile', {
       method: 'PUT',
       body: JSON.stringify(payload),
     });
   },
 
-  // Upload avatar — FormData, do not set JSON content-type
+  // Upload profile picture — FormData, do not set JSON content-type
   uploadAvatar: async (file: File) => {
     const token = localStorage.getItem('token');
-    const url = `${API_BASE_URL}/users/me/avatar`;
+    const url = `${API_BASE_URL}/users/profile-picture`;
 
     const form = new FormData();
-    form.append('avatar', file);
+    form.append('profilePicture', file);
 
     const res = await fetch(url, {
       method: 'POST',
@@ -203,8 +229,33 @@ export const userAPI = {
     return data;
   },
 
-  deleteAccount: async () => {
-    return apiCall('/users/me', { method: 'DELETE' });
+  deleteAvatar: async () => {
+    return apiCall('/users/profile-picture', { method: 'DELETE' });
+  },
+
+  getLoginHistory: async () => {
+    return apiCall('/users/login-history', { method: 'GET' });
+  },
+
+  deactivateAccount: async (password: string) => {
+    return apiCall('/users/deactivate', {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  deleteAccount: async (password: string) => {
+    return apiCall('/users/delete', {
+      method: 'DELETE',
+      body: JSON.stringify({ password }),
+    });
+  },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    return apiCall('/users/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
   },
 };
 

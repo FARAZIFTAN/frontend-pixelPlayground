@@ -87,7 +87,7 @@ const Register: React.FC = () => {
           </div>
           <h2 className="text-2xl font-bold mb-2 text-[#E53935]">Registration Successful!</h2>
           <p className="text-gray-300 mb-4">
-            Your account has been created successfully. Redirecting to login...
+            Your account has been created successfully. Please check your email to verify your account before logging in.
           </p>
           <Loader2 className="animate-spin mx-auto text-[#E53935]" size={32} />
         </div>

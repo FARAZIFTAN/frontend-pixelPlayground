@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2 } from "lucide-react";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -29,6 +29,11 @@ const Gallery = () => {
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+
+  // Available categories
+  const categories = ["All", "Education", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "Artistic", "General"];
 
   // Load templates from API
   useEffect(() => {
@@ -43,16 +48,36 @@ const Gallery = () => {
         data?: { templates: Template[] };
       };
       
+      console.log('📋 API Response:', response);
+      
       if (response.success && response.data) {
+        console.log('📸 Templates loaded:', response.data.templates.length);
+        console.log('📸 Template names:', response.data.templates.map(t => t.name));
         setTemplates(response.data.templates);
+      } else {
+        console.error('❌ API response not successful:', response);
       }
     } catch (error) {
-      console.error('Load templates error:', error);
+      console.error('❌ Load templates error:', error);
       toast.error('Failed to load templates');
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Filter templates based on search and category
+  const filteredTemplates = templates.filter(template => {
+    const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchCategory = selectedCategory === "All" || template.category === selectedCategory;
+    return matchSearch && matchCategory;
+  });
+
+  // Debug logging for filtered templates
+  console.log('🔍 Search query:', searchQuery);
+  console.log('🏷️ Selected category:', selectedCategory);
+  console.log('📊 Total templates:', templates.length);
+  console.log('📊 Filtered templates:', filteredTemplates.length);
+  console.log('📊 Filtered template names:', filteredTemplates.map(t => t.name));
 
   // Track page view
   useEffect(() => {
@@ -104,6 +129,51 @@ const Gallery = () => {
           </p>
         </motion.div>
 
+        {/* Search and Filter Controls */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-12"
+        >
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Search Input */}
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input
+                    type="text"
+                    placeholder="Search templates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400"
+                  />
+                </div>
+
+                {/* Category Filter */}
+                <div className="flex items-center gap-2">
+                  <Filter className="w-5 h-5 text-gray-400" />
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white"
+                  >
+                    {categories.map(cat => (
+                      <option key={cat} value={cat} className="bg-gray-900">{cat}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Results Count */}
+              <div className="mt-4 text-sm text-gray-400">
+                Showing {filteredTemplates.length} of {templates.length} templates
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
         {/* Template Grid */}
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
@@ -112,7 +182,9 @@ const Gallery = () => {
           </div>
         ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {templates.map((template, index) => (
+          {filteredTemplates.map((template, index) => {
+            console.log(`🎨 Rendering template ${index + 1}:`, template.name, template._id);
+            return (
             <motion.div
               key={template._id}
               initial={{ opacity: 0, scale: 0.9 }}
@@ -213,12 +285,13 @@ const Gallery = () => {
                 </CardFooter>
               </Card>
             </motion.div>
-          ))}
+            );
+          })}
         </div>
         )}
 
         {/* Enhanced No Results */}
-        {!isLoading && templates.length === 0 && (
+        {!isLoading && filteredTemplates.length === 0 && (
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

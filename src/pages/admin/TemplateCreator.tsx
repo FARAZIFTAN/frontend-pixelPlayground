@@ -9,12 +9,12 @@ import {
   Trash2,
   Grid3x3,
   Move,
-  X
+  X,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import toast from "react-hot-toast";
+import { templateAPI } from "@/services/api";
 
 interface Rectangle {
   id: number;
@@ -51,7 +51,7 @@ const TemplateCreator = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [resizeHandle, setResizeHandle] = useState<string | null>(null);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isSaving, setIsSaving] = useState(false);
 
   const categories = ["Artistic", "Education", "Wedding", "Birthday", "Corporate", "Graduation"];
 
@@ -349,7 +349,7 @@ const TemplateCreator = () => {
   };
 
   // Save template
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!templateName.trim()) {
       toast.error("Please enter template name");
       return;
@@ -365,30 +365,39 @@ const TemplateCreator = () => {
       return;
     }
 
-    const templateData: TemplateData = {
-      name: templateName,
-      category,
-      description,
-      frameCount,
-      imageUrl,
-      coordinates: rectangles,
-    };
+    setIsSaving(true);
 
-    // Save to localStorage for demo
-    const existingTemplates = JSON.parse(localStorage.getItem("customTemplates") || "[]");
-    existingTemplates.push({
-      ...templateData,
-      id: Date.now(),
-      createdAt: new Date().toISOString(),
-    });
-    localStorage.setItem("customTemplates", JSON.stringify(existingTemplates));
+    try {
+      // Convert imageUrl (base64) to proper URLs for API
+      // For now, we'll use placeholder URLs - in production, you'd upload images first
+      const thumbnailUrl = "/assets/templates/custom/custom-template.png";
+      const frameUrl = "/assets/templates/custom/custom-template.png";
 
-    toast.success("Template saved successfully!");
-    
-    // Navigate back to templates page after 1 second
-    setTimeout(() => {
-      navigate("/admin/templates");
-    }, 1000);
+      const templateData = {
+        name: templateName,
+        category,
+        thumbnail: thumbnailUrl,
+        frameUrl: frameUrl,
+        isPremium: false, // Default to free template
+        frameCount,
+        layoutPositions: rectangles,
+        isActive: true,
+      };
+
+      await templateAPI.createTemplate(templateData);
+      
+      toast.success("Template created successfully!");
+      
+      // Navigate back to templates page after 1 second
+      setTimeout(() => {
+        navigate("/admin/templates");
+      }, 1000);
+    } catch (error: any) {
+      console.error('Save template error:', error);
+      toast.error(error.message || "Failed to create template");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Copy coordinates to clipboard
@@ -421,10 +430,20 @@ const TemplateCreator = () => {
           </Button>
           <Button 
             onClick={handleSave}
+            disabled={isSaving}
             className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold"
           >
-            <Save className="w-4 h-4 mr-2" />
-            Save Template
+            {isSaving ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              <>
+                <Save className="w-4 h-4 mr-2" />
+                Save Template
+              </>
+            )}
           </Button>
         </div>
       </div>

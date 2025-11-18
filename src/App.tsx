@@ -19,6 +19,11 @@ import Register from "./pages/Register";
 import MyGallery from "./pages/MyGallery";
 import MyAccount from "./pages/MyAccount";
 import PhotoSessions from "./pages/PhotoSessions";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+import VerifyEmail from "./pages/VerifyEmail";
+import ChangePassword from "./pages/ChangePassword";
+import LoginHistory from "./pages/LoginHistory";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -77,6 +82,9 @@ const App = () => (
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/" element={<Home />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/my-gallery" element={
@@ -87,6 +95,16 @@ const App = () => (
                     <Route path="/my-account" element={
                       <ProtectedRoute>
                         <MyAccount />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/change-password" element={
+                      <ProtectedRoute>
+                        <ChangePassword />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/login-history" element={
+                      <ProtectedRoute>
+                        <LoginHistory />
                       </ProtectedRoute>
                     } />
                     <Route path="/booth" element={
