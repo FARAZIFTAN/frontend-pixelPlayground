@@ -40,16 +40,6 @@ const Booth = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([]);
   
-  // DEBUG MODE states
-  const [debugMode, setDebugMode] = useState(false);
-  const [debugPhotoIndex, setDebugPhotoIndex] = useState(0);
-  const [debugCoords, setDebugCoords] = useState({
-    x: 28,
-    y: 173,
-    width: 468,
-    height: 300
-  });
-  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -86,9 +76,12 @@ const Booth = () => {
   useEffect(() => {
     if (selectedTemplate && hasLoadedTemplate && !hasShownToast.current) {
       hasShownToast.current = true; // Mark as shown
-      toast.success(`✨ Template "${selectedTemplate.name}" loaded!`, {
-        duration: 3000,
-        icon: "🎨",
+      // Use queueMicrotask to defer toast until after render
+      queueMicrotask(() => {
+        toast.success(`✨ Template "${selectedTemplate.name}" loaded!`, {
+          duration: 3000,
+          icon: "🎨",
+        });
       });
     }
   }, [selectedTemplate, hasLoadedTemplate]);
@@ -107,6 +100,7 @@ const Booth = () => {
         clearInterval(countdownIntervalRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency - only run once on mount
 
   // Create photo session on backend
@@ -434,121 +428,6 @@ const Booth = () => {
       setIsSaving(false);
     }
   };
-
-  // DEBUG MODE: Handle coordinate changes
-  const handleDebugChange = (field: string, value: number) => {
-    setDebugCoords(prev => ({ ...prev, [field]: value }));
-  };
-
-  // DEBUG MODE: Redraw composite with debug coordinates
-  const redrawWithDebugCoords = () => {
-    if (!selectedTemplate || !canvasRef.current || capturedImages.length === 0) {
-      toast.error("No photos to redraw!");
-      return;
-    }
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-    
-    if (!ctx) return;
-
-    // Load template image
-    const templateImg = new Image();
-    templateImg.crossOrigin = "anonymous";
-    templateImg.src = selectedTemplate.frameUrl;
-
-    templateImg.onload = () => {
-      canvas.width = templateImg.width;
-      canvas.height = templateImg.height;
-
-      let loadedPhotos = 0;
-      const photoImages: HTMLImageElement[] = [];
-
-      // Load all photos
-      capturedImages.forEach((photoDataUrl, index) => {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.src = photoDataUrl;
-        
-        img.onload = () => {
-          photoImages[index] = img;
-          loadedPhotos++;
-
-          if (loadedPhotos === capturedImages.length) {
-            // Clear and draw white background
-            ctx.fillStyle = "white";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw each photo with DEBUG coordinates
-            capturedImages.forEach((_, i) => {
-              // Use debug coords for selected photo index, original for others
-              const position = i === debugPhotoIndex 
-                ? debugCoords 
-                : selectedTemplate.layoutPositions[i];
-              
-              if (position && photoImages[i]) {
-                const photo = photoImages[i];
-                
-                const photoAspect = photo.width / photo.height;
-                const frameAspect = position.width / position.height;
-
-                let drawWidth, drawHeight, offsetX, offsetY;
-
-                if (photoAspect > frameAspect) {
-                  drawHeight = position.height;
-                  drawWidth = drawHeight * photoAspect;
-                  offsetX = (drawWidth - position.width) / 2;
-                  offsetY = 0;
-                } else {
-                  drawWidth = position.width;
-                  drawHeight = drawWidth / photoAspect;
-                  offsetX = 0;
-                  offsetY = (drawHeight - position.height) / 2;
-                }
-
-                ctx.save();
-                ctx.beginPath();
-                ctx.rect(position.x, position.y, position.width, position.height);
-                ctx.clip();
-                ctx.drawImage(
-                  photo,
-                  position.x - offsetX,
-                  position.y - offsetY,
-                  drawWidth,
-                  drawHeight
-                );
-                ctx.restore();
-
-                // Draw debug rectangle for selected photo
-                if (i === debugPhotoIndex && debugMode) {
-                  ctx.strokeStyle = "lime";
-                  ctx.lineWidth = 4;
-                  ctx.strokeRect(position.x, position.y, position.width, position.height);
-                  ctx.fillStyle = "lime";
-                  ctx.font = "bold 30px Arial";
-                  ctx.fillText(`DEBUG Photo ${i + 1}`, position.x + 10, position.y + 40);
-                }
-              }
-            });
-
-            // Draw template overlay
-            ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
-
-            // Update final image
-            const finalImage = canvas.toDataURL("image/png", 1.0);
-            setFinalCompositeImage(finalImage);
-          }
-        };
-      });
-    };
-  };
-
-  // Redraw when debug coords change
-  useEffect(() => {
-    if (debugMode && finalCompositeImage) {
-      redrawWithDebugCoords();
-    }
-  }, [debugCoords, debugPhotoIndex, debugMode]);
 
   const handleDownload = () => {
     if (!user) {
@@ -890,175 +769,6 @@ const Booth = () => {
                 Browse templates →
               </Button>
             )}
-          </motion.div>
-        )}
-
-        {/* DEBUG PANEL */}
-        {finalCompositeImage && (
-          <motion.div
-            initial={{ opacity: 0, x: 100 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="fixed bottom-4 right-4 z-50"
-          >
-            <Card className="bg-black/90 border-2 border-yellow-400 shadow-2xl max-w-sm">
-              <CardContent className="p-4">
-                <Button
-                  onClick={() => setDebugMode(!debugMode)}
-                  className={`w-full mb-3 ${debugMode ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-gray-700 hover:bg-gray-600'}`}
-                >
-                  {debugMode ? "🔧 Hide Debug Panel" : "🔧 Show Debug Panel"}
-                </Button>
-                
-                {debugMode && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between bg-yellow-500/20 p-2 rounded">
-                      <span className="text-yellow-400 font-bold text-sm">🎯 PHOTO POSITION ADJUSTER</span>
-                    </div>
-
-                    {/* Photo Selector */}
-                    <div>
-                      <label className="text-white text-xs font-semibold block mb-1">
-                        Select Photo to Adjust:
-                      </label>
-                      <div className="flex gap-2">
-                        {Array.from({ length: photoCount }).map((_, index) => (
-                          <Button
-                            key={index}
-                            onClick={() => {
-                              setDebugPhotoIndex(index);
-                              // Load current position for this photo
-                              if (selectedTemplate && selectedTemplate.layoutPositions[index]) {
-                                setDebugCoords(selectedTemplate.layoutPositions[index]);
-                              }
-                            }}
-                            variant={debugPhotoIndex === index ? "default" : "outline"}
-                            className={`flex-1 ${debugPhotoIndex === index ? 'bg-lime-500 text-black' : ''}`}
-                            size="sm"
-                          >
-                            {index + 1}
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* X Position */}
-                    <div>
-                      <label className="text-white text-xs font-semibold flex justify-between">
-                        <span>X Position:</span>
-                        <span className="text-lime-400">{debugCoords.x}px</span>
-                      </label>
-                      <input
-                        type="range"
-                        min="0"
-                        max="150"
-                        value={debugCoords.x}
-                        onChange={(e) => handleDebugChange('x', Number(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-lime-500"
-                      />
-                      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                        <span>← Left</span>
-                        <span>Right →</span>
-                      </div>
-                    </div>
-                    
-                    {/* Y Position */}
-                    <div>
-                      <label className="text-white text-xs font-semibold flex justify-between">
-                        <span>Y Position:</span>
-                        <span className="text-lime-400">{debugCoords.y}px</span>
-                      </label>
-                      <input
-                        type="range"
-                        min="50"
-                        max="1500"
-                        value={debugCoords.y}
-                        onChange={(e) => handleDebugChange('y', Number(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-lime-500"
-                      />
-                      <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-                        <span>↑ Up</span>
-                        <span>Down ↓</span>
-                      </div>
-                    </div>
-                    
-                    {/* Width */}
-                    <div>
-                      <label className="text-white text-xs font-semibold flex justify-between">
-                        <span>Width:</span>
-                        <span className="text-lime-400">{debugCoords.width}px</span>
-                      </label>
-                      <input
-                        type="range"
-                        min="300"
-                        max="600"
-                        value={debugCoords.width}
-                        onChange={(e) => handleDebugChange('width', Number(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-lime-500"
-                      />
-                    </div>
-                    
-                    {/* Height */}
-                    <div>
-                      <label className="text-white text-xs font-semibold flex justify-between">
-                        <span>Height:</span>
-                        <span className="text-lime-400">{debugCoords.height}px</span>
-                      </label>
-                      <input
-                        type="range"
-                        min="200"
-                        max="500"
-                        value={debugCoords.height}
-                        onChange={(e) => handleDebugChange('height', Number(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-lime-500"
-                      />
-                    </div>
-                    
-                    <div className="border-t border-gray-700 pt-3 space-y-2">
-                      {/* Copy Coordinates Button */}
-                      <Button
-                        onClick={() => {
-                          const coordText = `{ x: ${debugCoords.x}, y: ${debugCoords.y}, width: ${debugCoords.width}, height: ${debugCoords.height} }`;
-                          navigator.clipboard.writeText(coordText);
-                          console.log('📋 Coordinates for Photo ' + (debugPhotoIndex + 1) + ':', coordText);
-                          toast.success('Coordinates copied to clipboard!', { duration: 2000 });
-                        }}
-                        className="w-full bg-green-600 hover:bg-green-700"
-                        size="sm"
-                      >
-                        📋 Copy Photo {debugPhotoIndex + 1} Coordinates
-                      </Button>
-
-                      {/* Copy All Coordinates */}
-                      <Button
-                        onClick={() => {
-                          const allCoords = Array.from({ length: photoCount }).map((_, i) => {
-                            const pos = i === debugPhotoIndex ? debugCoords : (selectedTemplate?.layoutPositions[i] || debugCoords);
-                            return `  { x: ${pos.x}, y: ${pos.y}, width: ${pos.width}, height: ${pos.height} },   // Photo ${i + 1}`;
-                          }).join('\n');
-                          const fullCode = `layoutPositions: [\n${allCoords}\n]`;
-                          navigator.clipboard.writeText(fullCode);
-                          console.log('📋 All Coordinates:\n', fullCode);
-                          toast.success('All coordinates copied!', { duration: 2000 });
-                        }}
-                        className="w-full bg-blue-600 hover:bg-blue-700"
-                        size="sm"
-                      >
-                        📋 Copy All Coordinates
-                      </Button>
-
-                      {/* Instructions */}
-                      <div className="text-[10px] text-gray-400 bg-gray-800/50 p-2 rounded">
-                        <p className="font-semibold text-yellow-400 mb-1">💡 How to use:</p>
-                        <p>1. Select photo to adjust</p>
-                        <p>2. Use sliders to position</p>
-                        <p>3. Copy coordinates</p>
-                        <p>4. Paste to templates.ts</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
           </motion.div>
         )}
       </div>
