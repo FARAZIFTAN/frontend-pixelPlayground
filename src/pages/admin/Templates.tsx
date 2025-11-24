@@ -51,12 +51,16 @@ const Templates = () => {
   const loadTemplates = async () => {
     setIsLoading(true);
     try {
+      console.log("Fetching templates...");
       const response = await templateAPI.getTemplates({ limit: 100 }) as {
         success: boolean;
         data?: { templates: Template[] };
       };
       
+      console.log("Templates response:", response);
+      
       if (response.success && response.data) {
+        console.log("Templates loaded:", response.data.templates.length);
         setTemplates(response.data.templates);
       }
     } catch (error) {

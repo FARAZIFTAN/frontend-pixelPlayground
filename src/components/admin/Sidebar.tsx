@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Image, 
@@ -10,9 +10,19 @@ import {
   Camera
 } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import toast from "react-hot-toast";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/login");
+  };
 
   const menuItems = [
     { 
@@ -104,10 +114,7 @@ const Sidebar = () => {
       {/* Logout Button */}
       <div className="p-4 border-t border-[#C62828]/50">
         <button
-          onClick={() => {
-            // TODO: Implement logout
-            console.log("Logout clicked");
-          }}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:bg-[#C62828]/80 hover:text-white transition-all duration-200 w-full"
           title={isCollapsed ? "Logout" : ""}
         >

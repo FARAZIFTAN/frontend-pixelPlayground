@@ -1,9 +1,20 @@
 import { Bell, Search, User, Menu } from "lucide-react";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const Header = () => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    toast.success("Logged out successfully");
+    navigate("/login");
+  };
 
   return (
     <header className="bg-black/30 backdrop-blur-md border-b border-white/10 px-6 py-4 shadow-lg">
@@ -82,8 +93,8 @@ const Header = () => {
                 <User className="w-5 h-5 text-white" />
               </div>
               <div className="hidden md:block text-left">
-                <p className="text-sm font-medium text-white">Admin User</p>
-                <p className="text-xs text-gray-400">admin@karyaklik.com</p>
+                <p className="text-sm font-medium text-white">{user?.name || "Admin User"}</p>
+                <p className="text-xs text-gray-400">{user?.email || "admin@karyaklik.com"}</p>
               </div>
             </button>
 
@@ -101,7 +112,10 @@ const Header = () => {
                     Help & Support
                   </button>
                   <hr className="my-2 border-white/10" />
-                  <button className="w-full text-left px-4 py-2 text-sm text-[#FF6B6B] hover:bg-[#C62828]/20 hover:text-[#C62828] rounded-lg font-medium transition-colors">
+                  <button 
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-[#FF6B6B] hover:bg-[#C62828]/20 hover:text-[#C62828] rounded-lg font-medium transition-colors"
+                  >
                     Logout
                   </button>
                 </div>
