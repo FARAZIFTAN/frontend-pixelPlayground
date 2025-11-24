@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
 import analytics from "@/lib/analytics";
 import { templateAPI } from "@/services/api";
@@ -30,10 +31,20 @@ const Gallery = () => {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [categorySearchQuery, setCategorySearchQuery] = useState("");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(["All"]);
 
-  // Available categories
+  // Available categories with template counts
   const categories = ["All", "Education", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "Artistic", "General"];
+  
+  // Calculate template counts per category
+  const categoryCounts = templates.reduce((acc, template) => {
+    acc[template.category] = (acc[template.category] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  
+  // All templates count
+  categoryCounts["All"] = templates.length;
 
   // Load templates from API
   useEffect(() => {
@@ -65,16 +76,16 @@ const Gallery = () => {
     }
   };
 
-  // Filter templates based on search and category
+  // Filter templates based on search and categories
   const filteredTemplates = templates.filter(template => {
     const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCategory = selectedCategory === "All" || template.category === selectedCategory;
+    const matchCategory = selectedCategories.includes("All") || selectedCategories.includes(template.category);
     return matchSearch && matchCategory;
   });
 
   // Debug logging for filtered templates
   console.log('🔍 Search query:', searchQuery);
-  console.log('🏷️ Selected category:', selectedCategory);
+  console.log('🏷️ Selected categories:', selectedCategories);
   console.log('📊 Total templates:', templates.length);
   console.log('📊 Filtered templates:', filteredTemplates.length);
   console.log('📊 Filtered template names:', filteredTemplates.map(t => t.name));
@@ -138,38 +149,279 @@ const Gallery = () => {
         >
           <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
-              <div className="flex flex-col md:flex-row gap-4">
+              <motion.div 
+                className="flex flex-col md:flex-row gap-4"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.4 }}
+              >
                 {/* Search Input */}
-                <div className="flex-1 relative">
+                <motion.div 
+                  className="flex-1 relative"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
+                  <motion.input
                     type="text"
                     placeholder="Search templates..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400"
+                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400 transition-all duration-300"
+                    whileFocus={{ 
+                      boxShadow: "0 0 0 3px rgba(198, 40, 40, 0.1)",
+                      scale: 1.01
+                    }}
+                    transition={{ duration: 0.2 }}
                   />
-                </div>
+                </motion.div>
 
-                {/* Category Filter */}
-                <div className="flex items-center gap-2">
-                  <Filter className="w-5 h-5 text-gray-400" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white"
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat} className="bg-gray-900">{cat}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                {/* Category Filter with Multi-Select */}
+                <motion.div 
+                  className="flex items-start gap-2"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Filter className="w-5 h-5 text-gray-400 mt-3" />
+                  <div className="flex-1">
+                    {/* Selected Categories Chips */}
+                    <AnimatePresence mode="popLayout">
+                      {selectedCategories.length > 0 && (
+                        <motion.div 
+                          className="flex flex-wrap gap-2 mb-2"
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <AnimatePresence>
+                            {selectedCategories.map((category) => (
+                              <motion.span
+                                key={category}
+                                layout
+                                initial={{ scale: 0, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0, opacity: 0 }}
+                                transition={{ 
+                                  type: "spring", 
+                                  stiffness: 500, 
+                                  damping: 30,
+                                  opacity: { duration: 0.2 }
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm border border-primary/30"
+                              >
+                                {category}
+                                <motion.button
+                                  whileHover={{ scale: 1.1 }}
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => {
+                                    setSelectedCategories(prev => {
+                                      const newCategories = prev.filter(c => c !== category);
+                                      // If no categories selected after removal, default to "All"
+                                      return newCategories.length === 0 ? ["All"] : newCategories;
+                                    });
+                                  }}
+                                  className="hover:bg-primary/30 rounded-full p-0.5 transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </motion.button>
+                              </motion.span>
+                            ))}
+                          </AnimatePresence>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* Custom Dropdown */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <motion.div
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          <Button
+                            variant="outline"
+                            className="w-full justify-between px-4 py-3 bg-white/10 border border-white/20 rounded-lg hover:border-white/30 text-white transition-all duration-300"
+                          >
+                            {selectedCategories.length === 0 
+                              ? "Select categories..." 
+                              : `${selectedCategories.length} selected`
+                            }
+                            <motion.div
+                              animate={{ rotate: 0 }}
+                              whileHover={{ rotate: 180 }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <ChevronDown className="w-4 h-4 opacity-50" />
+                            </motion.div>
+                          </Button>
+                        </motion.div>
+                      </PopoverTrigger>
+                      <PopoverContent 
+                        className="w-80 p-0 bg-gray-900 border border-white/20 text-white shadow-2xl"
+                        align="start"
+                        asChild
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                          transition={{ 
+                            type: "spring", 
+                            stiffness: 400, 
+                            damping: 30,
+                            duration: 0.3 
+                          }}
+                        >
+                        <div className="p-3 border-b border-white/10">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                            <input
+                              type="text"
+                              placeholder="Search categories..."
+                              value={categorySearchQuery}
+                              onChange={(e) => setCategorySearchQuery(e.target.value)}
+                              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 text-white placeholder-gray-400 text-sm"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="max-h-60 overflow-y-auto">
+                          {/* All Categories Option */}
+                          <div className="p-2">
+                            <motion.button
+                              whileHover={{ 
+                                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                scale: 1.02 
+                              }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => {
+                                setSelectedCategories(prev => {
+                                  if (prev.includes("All")) {
+                                    return [];
+                                  } else {
+                                    return ["All"];
+                                  }
+                                });
+                              }}
+                              className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                                selectedCategories.includes("All") 
+                                  ? 'bg-primary/20 text-primary border border-primary/30' 
+                                  : 'hover:bg-white/5 text-white'
+                              } ${categorySearchQuery && !("All".toLowerCase().includes(categorySearchQuery.toLowerCase())) ? 'hidden' : ''}`}
+                            >
+                              <span className="font-medium">All Categories</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-400">
+                                  ({categoryCounts["All"] || 0} templates)
+                                </span>
+                                <AnimatePresence>
+                                  {selectedCategories.includes("All") && (
+                                    <motion.div
+                                      initial={{ scale: 0, opacity: 0 }}
+                                      animate={{ scale: 1, opacity: 1 }}
+                                      exit={{ scale: 0, opacity: 0 }}
+                                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                    >
+                                      <Check className="w-4 h-4 text-primary" />
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </motion.button>
+                          </div>
+
+                          {/* Individual Categories */}
+                          <div className="border-t border-white/10">
+                            <AnimatePresence mode="popLayout">
+                              {categories
+                                .filter(cat => cat !== "All")
+                                .filter(cat => cat.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                                .map((cat, index) => (
+                                <motion.div
+                                  key={cat}
+                                  layout
+                                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                                  transition={{ 
+                                    type: "spring", 
+                                    stiffness: 400, 
+                                    damping: 30,
+                                    delay: index * 0.02 
+                                  }}
+                                >
+                                  <motion.button
+                                    whileHover={{ 
+                                      backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                      scale: 1.02 
+                                    }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() => {
+                                      setSelectedCategories(prev => {
+                                        if (prev.includes(cat)) {
+                                          // Remove category
+                                          const newCategories = prev.filter(c => c !== cat);
+                                          return newCategories.length === 0 ? ["All"] : newCategories;
+                                        } else {
+                                          // Add category, remove "All" if present
+                                          return prev.filter(c => c !== "All").concat(cat);
+                                        }
+                                      });
+                                    }}
+                                    className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
+                                      selectedCategories.includes(cat) 
+                                        ? 'bg-primary/20 text-primary border border-primary/30' 
+                                        : 'hover:bg-white/5 text-white'
+                                    }`}
+                                  >
+                                    <span className="font-medium">{cat}</span>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-gray-400">
+                                        ({categoryCounts[cat] || 0} templates)
+                                      </span>
+                                      <AnimatePresence>
+                                        {selectedCategories.includes(cat) && (
+                                          <motion.div
+                                            initial={{ scale: 0, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: 1 }}
+                                            exit={{ scale: 0, opacity: 0 }}
+                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                          >
+                                            <Check className="w-4 h-4 text-primary" />
+                                          </motion.div>
+                                        )}
+                                      </AnimatePresence>
+                                    </div>
+                                  </motion.button>
+                                </motion.div>
+                              ))}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                        </motion.div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </motion.div>
+              </motion.div>
 
               {/* Results Count */}
-              <div className="mt-4 text-sm text-gray-400">
-                Showing {filteredTemplates.length} of {templates.length} templates
-              </div>
+              <motion.div 
+                className="mt-4 text-sm text-gray-400"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4, delay: 0.6 }}
+                key={`${filteredTemplates.length}-${templates.length}`} // Re-animate when counts change
+              >
+                <motion.span
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  Showing {filteredTemplates.length} of {templates.length} templates
+                </motion.span>
+              </motion.div>
             </CardContent>
           </Card>
         </motion.div>

@@ -23,6 +23,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ChangePassword from "./pages/ChangePassword";
+import Share from "./pages/Share";
 import LoginHistory from "./pages/LoginHistory";
 
 // Admin Pages
@@ -87,6 +88,7 @@ const App = () => (
                     <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/" element={<Home />} />
                     <Route path="/gallery" element={<Gallery />} />
+                    <Route path="/share/:id" element={<Share />} />
                     <Route path="/my-gallery" element={
                       <ProtectedRoute>
                         <MyGallery />

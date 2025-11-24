@@ -99,7 +99,8 @@ export const authAPI = {
 };
 
 // Export API base URL for direct access if needed
-export { API_BASE_URL };
+// Export API base URL for direct access if needed
+export { API_BASE_URL, apiCall };
 
 // Photo Session API
 export const sessionAPI = {
@@ -186,6 +187,11 @@ export const compositeAPI = {
     if (params?.limit) query.append('limit', params.limit.toString());
     
     return apiCall(`/composites?${query.toString()}`, { method: 'GET' });
+  },
+
+  // Share composite
+  shareComposite: async (id: string) => {
+    return apiCall(`/share/${id}`, { method: 'GET' });
   },
 };
 
