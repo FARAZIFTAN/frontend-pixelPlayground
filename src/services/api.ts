@@ -263,6 +263,61 @@ export const userAPI = {
       body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
+
+  // ===== ADMIN ONLY METHODS =====
+  // Get all users (admin)
+  getAllUsers: async (options?: { limit?: number; skip?: number; role?: string }) => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.skip) params.append('skip', options.skip.toString());
+    if (options?.role) params.append('role', options.role);
+    
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiCall(`/users/all${query}`);
+  },
+
+  // Get user by ID (admin)
+  getUser: async (id: string) => {
+    return apiCall(`/users/${id}`);
+  },
+
+  // Update user role (admin)
+  updateUserRole: async (id: string, role: 'user' | 'admin') => {
+    return apiCall(`/users/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+  },
+
+  // Delete user (admin)
+  deleteUser: async (id: string) => {
+    return apiCall(`/users/${id}/delete`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Get user statistics (admin)
+  getUserStats: async () => {
+    return apiCall('/users/stats');
+  },
+};
+
+// Dashboard API
+export const dashboardAPI = {
+  // Get dashboard statistics
+  getStats: async () => {
+    return apiCall('/dashboard/stats', { method: 'GET' });
+  },
+
+  // Get recent templates
+  getRecentTemplates: async () => {
+    return apiCall('/dashboard/templates', { method: 'GET' });
+  },
+
+  // Get recent activity
+  getRecentActivity: async () => {
+    return apiCall('/dashboard/activity', { method: 'GET' });
+  },
 };
 
 // Template API

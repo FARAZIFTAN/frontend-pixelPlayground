@@ -49,42 +49,39 @@ const Booth = () => {
   useEffect(() => {
     const templateIdFromUrl = searchParams.get("template");
     if (templateIdFromUrl && !hasLoadedTemplate) {
+      const loadTemplate = async (templateId: string) => {
+        try {
+          const response = await templateAPI.getTemplate(templateId) as {
+            success: boolean;
+            data?: { template: Template };
+          };
+          
+          if (response.success && response.data) {
+            const template = response.data.template;
+            setSelectedTemplate(template);
+            setPhotoCount(template.frameCount);
+            setHasLoadedTemplate(true);
+            
+            // Show toast after state update
+            if (!hasShownToast.current) {
+              hasShownToast.current = true;
+              queueMicrotask(() => {
+                toast.success(`✨ Template "${template.name}" loaded!`, {
+                  duration: 3000,
+                  icon: "🎨",
+                });
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Load template error:', error);
+          toast.error('Failed to load template');
+        }
+      };
       loadTemplate(templateIdFromUrl);
     }
-  }, [searchParams, hasLoadedTemplate]);
-
-  const loadTemplate = async (templateId: string) => {
-    try {
-      const response = await templateAPI.getTemplate(templateId) as {
-        success: boolean;
-        data?: { template: Template };
-      };
-      
-      if (response.success && response.data) {
-        const template = response.data.template;
-        setSelectedTemplate(template);
-        setPhotoCount(template.frameCount);
-        setHasLoadedTemplate(true);
-      }
-    } catch (error) {
-      console.error('Load template error:', error);
-      toast.error('Failed to load template');
-    }
-  };
-
-  // Show toast when template is loaded (separate effect to prevent setState warning)
-  useEffect(() => {
-    if (selectedTemplate && hasLoadedTemplate && !hasShownToast.current) {
-      hasShownToast.current = true; // Mark as shown
-      // Use queueMicrotask to defer toast until after render
-      queueMicrotask(() => {
-        toast.success(`✨ Template "${selectedTemplate.name}" loaded!`, {
-          duration: 3000,
-          icon: "🎨",
-        });
-      });
-    }
-  }, [selectedTemplate, hasLoadedTemplate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     startCamera();
@@ -354,6 +351,9 @@ const Booth = () => {
             setFinalCompositeImage(finalImage);
             console.log('🎉 Composite complete! Template:', canvas.width, 'x', canvas.height);
             
+            // Auto-save composite to gallery
+            autoSaveComposite(finalImage);
+            
             toast.success("Your photo strip is ready! 🎉", {
               duration: 3000,
             });
@@ -381,6 +381,44 @@ const Booth = () => {
     setUploadedPhotoIds([]);
     // Create new session for retake
     createPhotoSession();
+  };
+
+  // Auto-save composite to gallery after generation
+  const autoSaveComposite = async (compositeImage: string) => {
+    if (!sessionId) {
+      console.warn('Session ID not available for auto-save');
+      return;
+    }
+
+    try {
+      await compositeAPI.createComposite({
+        sessionId,
+        compositeUrl: compositeImage,
+        templateId: selectedTemplate?._id,
+        isPublic: false,
+        metadata: {
+          photoCount,
+          templateName: selectedTemplate?.name,
+          createdAt: new Date().toISOString(),
+        }
+      });
+
+      // Update session status to completed
+      if (sessionId) {
+        await sessionAPI.updateSession(sessionId, {
+          status: 'completed',
+          metadata: {
+            completedAt: new Date().toISOString(),
+            photosCount: uploadedPhotoIds.length,
+          }
+        });
+      }
+
+      console.log('✅ Composite auto-saved to gallery');
+    } catch (error) {
+      console.error('Auto-save failed:', error);
+      // Don't show error toast for auto-save, user can still manually save
+    }
   };
 
   // Save final composite to backend
@@ -647,6 +685,11 @@ const Booth = () => {
                       alt="Final Photo Strip"
                       className="w-full h-full object-contain bg-white"
                     />
+                    {/* Auto-saved indicator */}
+                    <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
+                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                      Auto-saved to Gallery
+                    </div>
                   </div>
                 ) : (
                   <div className="relative w-full h-full">
@@ -719,7 +762,7 @@ const Booth = () => {
                       ) : (
                         <>
                           <Save className="w-5 h-5 mr-2" />
-                          Save to Gallery
+                          View in Gallery
                         </>
                       )}
                     </Button>

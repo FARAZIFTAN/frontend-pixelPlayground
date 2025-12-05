@@ -17,7 +17,7 @@ const Header = () => {
   };
 
   return (
-    <header className="bg-black/30 backdrop-blur-md border-b border-white/10 px-6 py-4 shadow-lg">
+    <header className="bg-black/30 backdrop-blur-md border-b border-white/10 px-6 py-4 shadow-lg relative z-40">
       <div className="flex items-center justify-between">
         {/* Left Section - Search */}
         <div className="flex items-center flex-1 max-w-md">
@@ -39,7 +39,7 @@ const Header = () => {
           </button>
 
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative z-50">
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 hover:bg-white/10 rounded-lg transition-colors"
@@ -84,7 +84,7 @@ const Header = () => {
           </div>
 
           {/* User Menu */}
-          <div className="relative">
+          <div className="relative z-50">
             <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-3 p-2 hover:bg-white/10 rounded-lg transition-colors"

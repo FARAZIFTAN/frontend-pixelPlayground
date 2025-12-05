@@ -34,6 +34,7 @@ import Templates from "./pages/admin/Templates";
 import TemplateCreator from "./pages/admin/TemplateCreator";
 import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
+import UserManagement from "./pages/admin/UserManagement";
 
 
 const queryClient = new QueryClient();
@@ -71,7 +72,7 @@ const App = () => (
               <Route path="templates" element={<Templates />} />
               <Route path="template-creator" element={<TemplateCreator />} />
               <Route path="analytics" element={<Analytics />} />
-              <Route path="users" element={<div className="text-center py-20"><h1 className="text-3xl font-bold text-white">User Management Coming Soon</h1><p className="text-gray-400 mt-2">This feature is under development</p></div>} />
+              <Route path="users" element={<UserManagement />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 

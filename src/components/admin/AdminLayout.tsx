@@ -4,12 +4,12 @@ import Header from "./Header.tsx";
 
 const AdminLayout = () => {
   return (
-    <div className="flex h-screen gradient-hero">
+    <div className="flex h-screen gradient-hero overflow-hidden">
       {/* Sidebar */}
       <Sidebar />
       
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Header */}
         <Header />
         

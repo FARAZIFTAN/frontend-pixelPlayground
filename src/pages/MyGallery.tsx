@@ -38,9 +38,12 @@ const MyGallery = () => {
   // State management
   const [composites, setComposites] = useState<Composite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [selectedComposite, setSelectedComposite] = useState<Composite | null>(null);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   // Filter and search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -48,7 +51,7 @@ const MyGallery = () => {
   const [filterBy, setFilterBy] = useState("all");
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
-  const [shareData, setShareData] = useState<any>(null);
+  const [shareData, setShareData] = useState<{ shareLink?: string; shareCode?: string; shareUrl?: string; qrCode?: string } | null>(null);
   const [sharingComposite, setSharingComposite] = useState<Composite | null>(null);
 
   // Track page view
@@ -66,10 +69,10 @@ const MyGallery = () => {
       const response = await compositeAPI.getComposites({
         page: pageNum,
         limit: 20,
-      });
+      }) as { data: { composites: Composite[]; pagination: { page: number; pages: number } } };
 
       const newComposites = response.data.composites || [];
-      const pagination = response.data.pagination || {};
+      const pagination = response.data.pagination as { page: number; pages: number } || { page: 1, pages: 1 };
 
       if (append) {
         setComposites(prev => [...prev, ...newComposites]);
@@ -79,9 +82,10 @@ const MyGallery = () => {
 
       setHasMore(pagination.page < pagination.pages);
       setPage(pageNum);
-    } catch (error: any) {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load gallery';
       console.error('Load composites error:', error);
-      setError(error.message || 'Failed to load gallery');
+      setError(message);
       toast.error('Failed to load gallery');
     } finally {
       setLoading(false);
@@ -127,7 +131,9 @@ const MyGallery = () => {
   const handleView = (composite: Composite) => {
     setSelectedComposite(composite);
     setIsViewDialogOpen(true);
-    analytics.trackEvent('gallery_view', 'composite', composite._id);
+    if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
+      ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_view', 'composite', composite._id);
+    }
   };
 
   // Handle download
@@ -141,7 +147,9 @@ const MyGallery = () => {
       document.body.removeChild(link);
 
       toast.success('Composite downloaded!');
-      analytics.trackEvent('gallery_download', 'composite', composite._id);
+      if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
+        ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_download', 'composite', composite._id);
+      }
     } catch (error) {
       toast.error('Failed to download composite');
     }
@@ -151,11 +159,13 @@ const MyGallery = () => {
   const handleShare = async (composite: Composite) => {
     setSharingComposite(composite);
     try {
-      const response = await compositeAPI.shareComposite(composite._id);
+      const response = await compositeAPI.shareComposite(composite._id) as { success: boolean; data: { shareLink?: string; shareCode?: string; shareUrl?: string; qrCode?: string } };
       if (response.success) {
         setShareData(response.data);
         setShareDialogOpen(true);
-        analytics.trackEvent('gallery_share', 'composite', composite._id);
+        if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
+          ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_share', 'composite', composite._id);
+        }
       } else {
         toast.error('Failed to generate share link');
       }
