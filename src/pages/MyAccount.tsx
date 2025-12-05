@@ -32,7 +32,7 @@ const MyAccount = () => {
       try {
         const data = await userAPI.getProfile();
         if (!mounted) return;
-        const p = data.data?.user || data.user || data;
+        const p = (data as any).data?.user || (data as any).user || data;
         setProfile(p);
         setName(p.name || "");
         setEmail(p.email || "");
@@ -268,10 +268,6 @@ const MyAccount = () => {
               </Button>
               <Button variant="outline" onClick={() => navigate('/change-password')}>
                 Change Password
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/login-history')}>
-                <History className="w-4 h-4 mr-2" />
-                Login History
               </Button>
             </div>
           </div>

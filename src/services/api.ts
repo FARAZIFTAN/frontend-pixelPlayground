@@ -239,10 +239,6 @@ export const userAPI = {
     return apiCall('/users/profile-picture', { method: 'DELETE' });
   },
 
-  getLoginHistory: async () => {
-    return apiCall('/users/login-history', { method: 'GET' });
-  },
-
   deactivateAccount: async (password: string) => {
     return apiCall('/users/deactivate', {
       method: 'PUT',
