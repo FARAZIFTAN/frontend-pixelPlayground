@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Sparkles, Smile, RotateCcw, ArrowLeft, Download, Share2 } from "lucide-react";
+import { Sparkles, RotateCcw, ArrowLeft, Download, Share2 } from "lucide-react";
 import { motion } from "framer-motion";
 
 // Filter and Sticker interfaces
@@ -38,26 +38,18 @@ interface LocationState {
 const FILTER_PRESETS: Record<string, FilterSettings> = {
   none: { name: "None", brightness: 100, contrast: 100, saturate: 100, sepia: 0, grayscale: 0, hueRotate: 0 },
   grayscale: { name: "Grayscale", brightness: 100, contrast: 100, saturate: 0, sepia: 0, grayscale: 100, hueRotate: 0 },
-  sepia: { name: "Sepia", brightness: 100, contrast: 100, saturate: 100, sepia: 100, grayscale: 0, hueRotate: 0 },
-  vintage: { name: "Vintage", brightness: 110, contrast: 90, saturate: 80, sepia: 30, grayscale: 0, hueRotate: 10 },
-  bright: { name: "Bright", brightness: 130, contrast: 110, saturate: 120, sepia: 0, grayscale: 0, hueRotate: 0 },
+  sepia: { name: "Sepia", brightness: 100, contrast: 110, saturate: 80, sepia: 100, grayscale: 0, hueRotate: 0 },
+  vintage: { name: "Vintage", brightness: 110, contrast: 90, saturate: 70, sepia: 40, grayscale: 0, hueRotate: 15 },
+  bright: { name: "Bright", brightness: 120, contrast: 110, saturate: 110, sepia: 0, grayscale: 0, hueRotate: 0 },
+  cool: { name: "Cool", brightness: 100, contrast: 105, saturate: 110, sepia: 0, grayscale: 0, hueRotate: 180 },
+  warm: { name: "Warm", brightness: 110, contrast: 100, saturate: 130, sepia: 20, grayscale: 0, hueRotate: 10 },
+  dark: { name: "Dark", brightness: 80, contrast: 120, saturate: 100, sepia: 0, grayscale: 0, hueRotate: 0 },
+  vivid: { name: "Vivid", brightness: 105, contrast: 130, saturate: 150, sepia: 0, grayscale: 0, hueRotate: 0 },
+  soft: { name: "Soft", brightness: 110, contrast: 85, saturate: 90, sepia: 10, grayscale: 0, hueRotate: 0 },
+  noir: { name: "Noir", brightness: 90, contrast: 140, saturate: 0, sepia: 0, grayscale: 100, hueRotate: 0 },
 };
 
-// Sticker categories
-const STICKER_CATEGORIES = {
-  emoji: {
-    name: "Emoji",
-    stickers: ["😀", "😂", "❤️", "🎉", "🔥", "⭐", "👍", "✨", "🎈", "🎊", "💯", "🚀"],
-  },
-  decorative: {
-    name: "Decorative",
-    stickers: ["✓", "❋", "✦", "❖", "◈", "❉", "✻", "✼", "❇️", "✵", "✶", "✷"],
-  },
-  flowers: {
-    name: "Flowers",
-    stickers: ["🌸", "🌼", "🌻", "🌷", "🌹", "🥀", "🌺", "🏵️", "💐", "🌿", "🍀", "🌱"],
-  },
-};
+
 
 const PhotoEditor = () => {
   const navigate = useNavigate();
@@ -68,7 +60,6 @@ const PhotoEditor = () => {
   const [capturedImages] = useState<string[]>(state?.capturedImages || []);
   const [selectedTemplate] = useState<Template>(state?.selectedTemplate);
   const [globalFilter, setGlobalFilter] = useState<FilterSettings>(FILTER_PRESETS.none);
-  const [selectedStickerCategory, setSelectedStickerCategory] = useState<keyof typeof STICKER_CATEGORIES>("emoji");
   const [compositePreview, setCompositePreview] = useState<string>("");
   const compositeCanvasRef = useRef<HTMLCanvasElement>(null);
   
@@ -381,47 +372,7 @@ const PhotoEditor = () => {
                 </div>
               </div>
 
-              {/* Stickers Section */}
-              <div className="bg-card rounded-2xl border-2 border-border p-6">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                  <Smile size={20} />
-                  Stickers
-                </h3>
 
-                {/* Category Tabs */}
-                <div className="flex gap-2 mb-4 border-b border-border pb-3">
-                  {Object.entries(STICKER_CATEGORIES).map(([key, category]) => (
-                    <motion.button
-                      key={key}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => setSelectedStickerCategory(key as keyof typeof STICKER_CATEGORIES)}
-                      className={`px-4 py-2 font-semibold text-sm rounded-lg transition-all ${
-                        selectedStickerCategory === key
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-muted-foreground hover:text-foreground"
-                      }`}
-                    >
-                      {category.name}
-                    </motion.button>
-                  ))}
-                </div>
-
-                {/* Sticker Grid */}
-                <div className="grid grid-cols-4 gap-3 bg-secondary/50 p-3 rounded-lg max-h-48 overflow-y-auto">
-                  {STICKER_CATEGORIES[selectedStickerCategory].stickers.map((sticker, idx) => (
-                    <motion.button
-                      key={idx}
-                      whileHover={{ scale: 1.15 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => console.log("Sticker selected:", sticker)}
-                      className="p-2 rounded-lg bg-background hover:bg-primary/20 transition-colors text-2xl flex items-center justify-center border border-border hover:border-primary"
-                    >
-                      {sticker}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
 
               {/* Action Buttons */}
               <div className="flex flex-col gap-3">

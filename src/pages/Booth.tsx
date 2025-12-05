@@ -76,6 +76,60 @@ const FILTER_PRESETS: { [key: string]: FilterSettings } = {
     grayscale: 0,
     hueRotate: 0,
   },
+  cool: {
+    name: "Cool",
+    brightness: 100,
+    contrast: 105,
+    saturate: 110,
+    sepia: 0,
+    grayscale: 0,
+    hueRotate: 180,
+  },
+  warm: {
+    name: "Warm",
+    brightness: 110,
+    contrast: 100,
+    saturate: 130,
+    sepia: 20,
+    grayscale: 0,
+    hueRotate: 10,
+  },
+  dark: {
+    name: "Dark",
+    brightness: 80,
+    contrast: 120,
+    saturate: 100,
+    sepia: 0,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+  vivid: {
+    name: "Vivid",
+    brightness: 105,
+    contrast: 130,
+    saturate: 150,
+    sepia: 0,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+  soft: {
+    name: "Soft",
+    brightness: 110,
+    contrast: 85,
+    saturate: 90,
+    sepia: 10,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+  noir: {
+    name: "Noir",
+    brightness: 90,
+    contrast: 140,
+    saturate: 0,
+    sepia: 0,
+    grayscale: 100,
+    hueRotate: 0,
+  },
 };
 
 // Sticker data
@@ -116,7 +170,6 @@ const Booth = () => {
   
   // Edit Photo states
   const [globalFilter, setGlobalFilter] = useState<FilterSettings>(FILTER_PRESETS.none);
-  const [selectedStickerCategory, setSelectedStickerCategory] = useState<keyof typeof STICKER_CATEGORIES>("emoji");
   const [allPhotosCaptured, setAllPhotosCaptured] = useState(false);
   const [showEditPanel, setShowEditPanel] = useState(false); // Show/hide edit panel
   const [showRetakeOptions, setShowRetakeOptions] = useState(false); // Show individual photo retake options
@@ -129,13 +182,7 @@ const Booth = () => {
     yPercent: number; // Position as percentage (0-100)
     size: number;
   }
-  const [stickers, setStickers] = useState<StickerElement[]>([]);
-  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
   const [compositeImageDimensions, setCompositeImageDimensions] = useState({ width: 800, height: 600 });
-  const [draggingStickerId, setDraggingStickerId] = useState<string | null>(null);
-  const [resizingStickerId, setResizingStickerId] = useState<string | null>(null);
-  const dragStartPos = useRef({ x: 0, y: 0 });
-  const dragStartSticker = useRef({ x: 0, y: 0, size: 80 });
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -143,7 +190,6 @@ const Booth = () => {
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownToast = useRef(false); // Track if toast has been shown
   const isRetakingPhotoRef = useRef(false); // Track if currently retaking a photo
-  const compositeCanvasRef = useRef<HTMLCanvasElement>(null); // Canvas for rendering stickers overlay
 
   // Load template from URL parameter
   useEffect(() => {
@@ -200,55 +246,7 @@ const Booth = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency - only run once on mount
 
-  // Handle sticker drag and resize
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (draggingStickerId) {
-        const deltaX = e.clientX - dragStartPos.current.x;
-        const deltaY = e.clientY - dragStartPos.current.y;
-        
-        // Get the composite image container
-        const imgElement = document.querySelector('img[alt="Final Photo Strip"]') as HTMLImageElement;
-        if (!imgElement) return;
-        
-        const rect = imgElement.getBoundingClientRect();
-        
-        // Convert pixel delta to percentage delta
-        const percentDeltaX = (deltaX / rect.width) * 100;
-        const percentDeltaY = (deltaY / rect.height) * 100;
-        
-        const newXPercent = Math.max(0, Math.min(dragStartSticker.current.x + percentDeltaX, 100));
-        const newYPercent = Math.max(0, Math.min(dragStartSticker.current.y + percentDeltaY, 100));
-        
-        updateSticker(draggingStickerId, { xPercent: newXPercent, yPercent: newYPercent });
-      }
-      
-      if (resizingStickerId) {
-        const deltaX = e.clientX - dragStartPos.current.x;
-        const deltaY = e.clientY - dragStartPos.current.y;
-        const delta = Math.max(deltaX, deltaY);
-        const newSize = Math.max(20, Math.min(200, dragStartSticker.current.size + delta));
-        
-        updateSticker(resizingStickerId, { size: newSize });
-      }
-    };
-    
-    const handleMouseUp = () => {
-      setDraggingStickerId(null);
-      setResizingStickerId(null);
-    };
-    
-    if (draggingStickerId || resizingStickerId) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-      };
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draggingStickerId, resizingStickerId, compositeImageDimensions]);
+
 
   // Create photo session on backend
   const createPhotoSession = async () => {
@@ -818,9 +816,6 @@ const Booth = () => {
     setUploadedPhotoIds([]);
     setAllPhotosCaptured(false);
     setGlobalFilter(FILTER_PRESETS.none);
-    setSelectedStickerCategory("emoji");
-    setStickers([]);
-    setSelectedStickerId(null);
     // Create new session for retake
     createPhotoSession();
   };
@@ -863,104 +858,7 @@ const Booth = () => {
     }
   };
 
-  // Add sticker to the composite
-  const addStickerToComposite = (emoji: string) => {
-    // Use center position in percentage
-    const newSticker: StickerElement = {
-      id: Date.now().toString(),
-      emoji,
-      xPercent: 50, // Center position in percentage
-      yPercent: 50,
-      size: 80, // Default size in pixels
-    };
-    setStickers([...stickers, newSticker]);
-    toast.success(`Sticker added! 🎨 Drag to move, resize with corner handle.`, {
-      duration: 2000,
-    });
-  };
 
-  // Update sticker position or size
-  const updateSticker = (id: string, updates: Partial<StickerElement>) => {
-    setStickers(stickers.map(s => s.id === id ? { ...s, ...updates } : s));
-  };
-
-  // Delete a sticker
-  const deleteSticker = (id: string) => {
-    setStickers(stickers.filter(s => s.id !== id));
-    if (selectedStickerId === id) {
-      setSelectedStickerId(null);
-    }
-    toast.success("Sticker removed ✓", { duration: 1000 });
-  };
-
-  // Render stickers on the composite and save the final image
-  const renderCompositeWithStickers = useCallback(async () => {
-    if (!finalCompositeImage || !compositeCanvasRef.current || !selectedTemplate) {
-      toast.error("Cannot render stickers: missing composite image");
-      return;
-    }
-
-    const canvas = compositeCanvasRef.current;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Load the base composite image
-    const baseImage = new Image();
-    baseImage.crossOrigin = "anonymous";
-    baseImage.src = finalCompositeImage;
-
-    baseImage.onload = () => {
-      // Set canvas to the same size as the composite
-      canvas.width = baseImage.width;
-      canvas.height = baseImage.height;
-
-      // Draw the base composite
-      ctx.drawImage(baseImage, 0, 0);
-
-      // Draw all stickers on top with correct positioning
-      stickers.forEach((sticker) => {
-        // Ensure we have percentage values (fallback to center if missing)
-        const xPercent = sticker.xPercent ?? 50;
-        const yPercent = sticker.yPercent ?? 50;
-        
-        // Convert percentage-based coordinates to canvas pixel coordinates
-        const newX = (xPercent / 100) * canvas.width;
-        const newY = (yPercent / 100) * canvas.height;
-        
-        ctx.save();
-        ctx.font = `bold ${sticker.size}px Arial`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        
-        // Draw sticker with proper rendering
-        ctx.globalAlpha = 1.0;
-        ctx.fillText(sticker.emoji, newX, newY);
-        ctx.restore();
-      });
-
-      // Get the final image with stickers
-      const finalImageWithStickers = canvas.toDataURL("image/png", 1.0);
-      setFinalCompositeImage(finalImageWithStickers);
-      setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
-      toast.success("Stickers applied! 🎉", { duration: 1500 });
-    };
-
-    baseImage.onerror = () => {
-      toast.error("Failed to render stickers");
-      console.error("Failed to load composite image for sticker rendering");
-    };
-  }, [finalCompositeImage, selectedTemplate, stickers]);
-
-  // Auto-apply stickers when drag/resize completes and stickers updated
-  useEffect(() => {
-    // Only auto-apply if we're not currently dragging or resizing
-    if (!draggingStickerId && !resizingStickerId && stickers.length > 0 && finalCompositeImage) {
-      const timer = setTimeout(() => {
-        renderCompositeWithStickers();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [stickers, draggingStickerId, resizingStickerId, finalCompositeImage, renderCompositeWithStickers]);
 
   // Retake a specific photo
   const handleRetakePhoto = (photoIndex: number) => {
@@ -1268,120 +1166,6 @@ const Booth = () => {
                       className="w-full h-full object-contain"
                     />
                     
-                    {/* Sticker Preview Overlay */}
-                    {stickers.length > 0 && showEditPanel && finalCompositeImage && (
-                      <div 
-                        className="absolute inset-0"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                        }}
-                      >
-                        {stickers.map((sticker) => {
-                          const isSelected = selectedStickerId === sticker.id;
-                          // Ensure we have percentage values (fallback to center if missing)
-                          const xPercent = sticker.xPercent ?? 50;
-                          const yPercent = sticker.yPercent ?? 50;
-                          
-                          return (
-                            <div
-                              key={sticker.id}
-                              className={`absolute group ${isSelected ? "opacity-100" : "opacity-75"}`}
-                              style={{
-                                left: `${xPercent}%`,
-                                top: `${yPercent}%`,
-                                transform: "translate(-50%, -50%)",
-                                cursor: isSelected ? 'move' : 'pointer',
-                                pointerEvents: 'auto',
-                              }}
-                              onClick={() => setSelectedStickerId(sticker.id)}
-                              onMouseDown={(e) => {
-                                if (isSelected && e.button === 0 && !(e.target as HTMLElement).closest('[data-tool]')) {
-                                  e.preventDefault();
-                                  dragStartPos.current = { x: e.clientX, y: e.clientY };
-                                  dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
-                                  setDraggingStickerId(sticker.id);
-                                }
-                              }}
-                            >
-                              {/* Sticker emoji */}
-                              <div
-                                style={{
-                                  fontSize: `${(sticker.size / 80) * 4}vmin`,
-                                  filter: isSelected ? "drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))" : "drop-shadow(0 0 4px rgba(0, 0, 0, 0.3))",
-                                  transition: draggingStickerId === sticker.id ? 'none' : 'filter 0.2s',
-                                }}
-                              >
-                                {sticker.emoji}
-                              </div>
-                              
-                              {/* 3 Tools Toolbar - only show when selected */}
-                              {isSelected && (
-                                <div
-                                  className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2 bg-white rounded-lg shadow-lg p-2 border border-gray-300"
-                                  style={{
-                                    pointerEvents: 'auto',
-                                  }}
-                                >
-                                  {/* Move/Drag Handle */}
-                                  <button
-                                    data-tool="move"
-                                    className="p-2 hover:bg-blue-100 rounded transition-colors cursor-move"
-                                    title="Drag to move sticker"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      dragStartPos.current = { x: e.clientX, y: e.clientY };
-                                      dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
-                                      setDraggingStickerId(sticker.id);
-                                    }}
-                                  >
-                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-                                    </svg>
-                                  </button>
-                                  
-                                  {/* Resize Handle */}
-                                  <button
-                                    data-tool="resize"
-                                    className="p-2 hover:bg-green-100 rounded transition-colors cursor-nwse-resize"
-                                    title="Drag corner to resize sticker"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault();
-                                      e.stopPropagation();
-                                      dragStartPos.current = { x: e.clientX, y: e.clientY };
-                                      dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
-                                      setResizingStickerId(sticker.id);
-                                    }}
-                                  >
-                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0L8 8M4 4l-2 2m16 12v4m0 0l-4-4m4 4l2-2M8 20H4m0 0V8m0 12l4-4m8-8v4m0 0l4 4m-4-4l2 2" />
-                                    </svg>
-                                  </button>
-                                  
-                                  {/* Delete Button */}
-                                  <button
-                                    data-tool="delete"
-                                    className="p-2 hover:bg-red-100 rounded transition-colors"
-                                    title="Delete sticker"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      deleteSticker(sticker.id);
-                                      setSelectedStickerId(null);
-                                    }}
-                                  >
-                                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                    
                     {/* Auto-saved indicator */}
                     <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
@@ -1424,7 +1208,6 @@ const Booth = () => {
 
                 <canvas ref={canvasRef} className="hidden" />
                 <canvas ref={filterCanvasRef} className="hidden" />
-                <canvas ref={compositeCanvasRef} className="hidden" />
               </div>
 
               {/* Edit Panel - Show when Edit Photos clicked and we have final composite */}
@@ -1471,89 +1254,8 @@ const Booth = () => {
                     </div>
                   </div>
 
-                  {/* Stickers Section */}
-                  <div>
-                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                      <Smile size={20} />
-                      Stickers
-                    </h3>
-
-                    {/* Category Tabs */}
-                    <div className="flex gap-2 mb-4 border-b border-border pb-3">
-                      {Object.entries(STICKER_CATEGORIES).map(([key, category]) => (
-                        <motion.button
-                          key={key}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setSelectedStickerCategory(key as keyof typeof STICKER_CATEGORIES)}
-                          className={`px-4 py-2 font-semibold text-sm rounded-lg transition-all ${
-                            selectedStickerCategory === key
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary text-muted-foreground hover:text-foreground"
-                          }`}
-                        >
-                          {category.name}
-                        </motion.button>
-                      ))}
-                    </div>
-
-                    {/* Sticker Grid */}
-                    <div className="grid grid-cols-4 gap-3 bg-secondary/50 p-3 rounded-lg max-h-48 overflow-y-auto">
-                      {STICKER_CATEGORIES[selectedStickerCategory].stickers.map((sticker, idx) => (
-                        <motion.button
-                          key={idx}
-                          whileHover={{ scale: 1.15 }}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => addStickerToComposite(sticker)}
-                          className="p-2 rounded-lg bg-background hover:bg-primary/20 transition-colors text-2xl flex items-center justify-center border border-border hover:border-primary"
-                        >
-                          {sticker}
-                        </motion.button>
-                      ))}
-                    </div>
-
-                    {/* Added Stickers List */}
-                    {stickers.length > 0 && (
-                      <div className="bg-secondary/30 p-3 rounded-lg">
-                        <p className="text-xs font-semibold text-muted-foreground mb-2">Added Stickers ({stickers.length}):</p>
-                        <div className="space-y-2">
-                          {stickers.map((sticker) => (
-                            <div
-                              key={sticker.id}
-                              className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
-                                selectedStickerId === sticker.id
-                                  ? "bg-primary/20 border-primary"
-                                  : "bg-background border-border hover:border-primary"
-                              }`}
-                              onClick={() => setSelectedStickerId(sticker.id)}
-                            >
-                              <span className="text-lg">{sticker.emoji}</span>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteSticker(sticker.id);
-                                }}
-                                className="p-1 hover:bg-red-500/20 rounded transition-colors"
-                              >
-                                <X className="w-4 h-4 text-red-500" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Info Text */}
-                    {selectedStickerId && finalCompositeImage && (
-                      <div className="bg-secondary/30 p-3 rounded-lg space-y-2">
-                        <p className="text-xs font-semibold text-muted-foreground">✓ Sticker changes applied automatically</p>
-                        <p className="text-xs text-muted-foreground">Use the tools above the sticker to move, resize, or delete</p>
-                      </div>
-                    )}
-
-                    {/* Action Buttons */}
-                    <div className="space-y-3 pt-4 border-t border-border">
-                      {/* Retake Option Toggle */}
+                  {/* Action Buttons */}
+                  <div className="space-y-3 pt-4 border-t border-border">
                       <Button
                         onClick={() => setShowRetakeOptions(!showRetakeOptions)}
                         className="w-full bg-secondary hover:bg-accent text-foreground py-3 font-semibold flex items-center justify-center gap-2"
@@ -1589,7 +1291,6 @@ const Booth = () => {
                         </motion.div>
                       )}
                     </div>
-                  </div>
                 </motion.div>
               )}
 
