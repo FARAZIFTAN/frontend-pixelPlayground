@@ -12,6 +12,7 @@ import Footer from "./components/Footer";
 import Home from "./pages/Home";
 import Gallery from "./pages/Gallery";
 import Booth from "./pages/Booth";
+import PhotoEditor from "./pages/PhotoEditor";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -113,6 +114,11 @@ const App = () => (
                     <Route path="/booth" element={
                       <ProtectedRoute>
                         <Booth />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/photo-editor" element={
+                      <ProtectedRoute>
+                        <PhotoEditor />
                       </ProtectedRoute>
                     } />
                     <Route path="/booth/sessions" element={

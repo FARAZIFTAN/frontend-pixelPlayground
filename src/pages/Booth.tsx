@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X, Smile } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +19,80 @@ interface Template {
   frameCount: number;
   layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
 }
+
+interface FilterSettings {
+  name: string;
+  brightness: number;
+  contrast: number;
+  saturate: number;
+  sepia: number;
+  grayscale: number;
+  hueRotate: number;
+}
+
+const FILTER_PRESETS: { [key: string]: FilterSettings } = {
+  none: {
+    name: "None",
+    brightness: 100,
+    contrast: 100,
+    saturate: 100,
+    sepia: 0,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+  grayscale: {
+    name: "Grayscale",
+    brightness: 100,
+    contrast: 100,
+    saturate: 0,
+    sepia: 0,
+    grayscale: 100,
+    hueRotate: 0,
+  },
+  sepia: {
+    name: "Sepia",
+    brightness: 100,
+    contrast: 110,
+    saturate: 80,
+    sepia: 100,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+  vintage: {
+    name: "Vintage",
+    brightness: 110,
+    contrast: 90,
+    saturate: 70,
+    sepia: 40,
+    grayscale: 0,
+    hueRotate: 15,
+  },
+  bright: {
+    name: "Bright",
+    brightness: 120,
+    contrast: 110,
+    saturate: 110,
+    sepia: 0,
+    grayscale: 0,
+    hueRotate: 0,
+  },
+};
+
+// Sticker data
+const STICKER_CATEGORIES = {
+  emoji: {
+    name: "Emoji",
+    stickers: ["☁️", "😸", "🐸", "🐌", "🐰", "🌸", "😢", "🎨", "💕", "🎀", "💝", "👑"],
+  },
+  decorative: {
+    name: "Decorative",
+    stickers: ["✨", "⭐", "🌟", "💫", "✈️", "🎭", "🎪", "🎨", "🎯", "🎲", "🎰", "🎸"],
+  },
+  flowers: {
+    name: "Flowers",
+    stickers: ["🌹", "🌺", "🌻", "🌷", "🌸", "💐", "🌼", "🌾", "🍀", "🎋", "🎍", "🏵️"],
+  },
+};
 
 const Booth = () => {
   const [searchParams] = useSearchParams();
@@ -40,10 +114,36 @@ const Booth = () => {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([]);
   
+  // Edit Photo states
+  const [globalFilter, setGlobalFilter] = useState<FilterSettings>(FILTER_PRESETS.none);
+  const [selectedStickerCategory, setSelectedStickerCategory] = useState<keyof typeof STICKER_CATEGORIES>("emoji");
+  const [allPhotosCaptured, setAllPhotosCaptured] = useState(false);
+  const [showEditPanel, setShowEditPanel] = useState(false); // Show/hide edit panel
+  const [showRetakeOptions, setShowRetakeOptions] = useState(false); // Show individual photo retake options
+  
+  // Sticker state
+  interface StickerElement {
+    id: string;
+    emoji: string;
+    xPercent: number; // Position as percentage (0-100)
+    yPercent: number; // Position as percentage (0-100)
+    size: number;
+  }
+  const [stickers, setStickers] = useState<StickerElement[]>([]);
+  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+  const [compositeImageDimensions, setCompositeImageDimensions] = useState({ width: 800, height: 600 });
+  const [draggingStickerId, setDraggingStickerId] = useState<string | null>(null);
+  const [resizingStickerId, setResizingStickerId] = useState<string | null>(null);
+  const dragStartPos = useRef({ x: 0, y: 0 });
+  const dragStartSticker = useRef({ x: 0, y: 0, size: 80 });
+  
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const filterCanvasRef = useRef<HTMLCanvasElement>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownToast = useRef(false); // Track if toast has been shown
+  const isRetakingPhotoRef = useRef(false); // Track if currently retaking a photo
+  const compositeCanvasRef = useRef<HTMLCanvasElement>(null); // Canvas for rendering stickers overlay
 
   // Load template from URL parameter
   useEffect(() => {
@@ -100,6 +200,56 @@ const Booth = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency - only run once on mount
 
+  // Handle sticker drag and resize
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (draggingStickerId) {
+        const deltaX = e.clientX - dragStartPos.current.x;
+        const deltaY = e.clientY - dragStartPos.current.y;
+        
+        // Get the composite image container
+        const imgElement = document.querySelector('img[alt="Final Photo Strip"]') as HTMLImageElement;
+        if (!imgElement) return;
+        
+        const rect = imgElement.getBoundingClientRect();
+        
+        // Convert pixel delta to percentage delta
+        const percentDeltaX = (deltaX / rect.width) * 100;
+        const percentDeltaY = (deltaY / rect.height) * 100;
+        
+        const newXPercent = Math.max(0, Math.min(dragStartSticker.current.x + percentDeltaX, 100));
+        const newYPercent = Math.max(0, Math.min(dragStartSticker.current.y + percentDeltaY, 100));
+        
+        updateSticker(draggingStickerId, { xPercent: newXPercent, yPercent: newYPercent });
+      }
+      
+      if (resizingStickerId) {
+        const deltaX = e.clientX - dragStartPos.current.x;
+        const deltaY = e.clientY - dragStartPos.current.y;
+        const delta = Math.max(deltaX, deltaY);
+        const newSize = Math.max(20, Math.min(200, dragStartSticker.current.size + delta));
+        
+        updateSticker(resizingStickerId, { size: newSize });
+      }
+    };
+    
+    const handleMouseUp = () => {
+      setDraggingStickerId(null);
+      setResizingStickerId(null);
+    };
+    
+    if (draggingStickerId || resizingStickerId) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draggingStickerId, resizingStickerId, compositeImageDimensions]);
+
   // Create photo session on backend
   const createPhotoSession = async () => {
     try {
@@ -134,11 +284,27 @@ const Booth = () => {
         audio: false,
       });
       setStream(mediaStream);
+      
+      // Ensure video element gets the stream
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          console.log("Camera stream loaded");
+          videoRef.current?.play();
+          
+          // If in retake mode, auto-start capture
+          if (isRetakingPhotoRef.current) {
+            console.log("Retake mode detected, auto-starting capture...");
+            setTimeout(() => {
+              handleCapture();
+              isRetakingPhotoRef.current = false; // Reset flag
+            }, 300);
+          }
+        };
       }
+      
       setHasPermission(true);
-      toast.success("Camera ready!");
+      console.log("Camera ready for photo", currentPhotoIndex + 1);
     } catch (error) {
       console.error("Camera access error:", error);
       toast.error("Could not access camera. Please grant permission.");
@@ -164,6 +330,167 @@ const Booth = () => {
     }, 1000);
   };
 
+  // Apply filter to image using canvas
+  const applyFilterToImage = (imageData: string, filter: FilterSettings): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        if (filterCanvasRef.current) {
+          const canvas = filterCanvasRef.current;
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            
+            // Apply CSS filter using canvas filter property
+            const filterString = `
+              brightness(${filter.brightness}%)
+              contrast(${filter.contrast}%)
+              saturate(${filter.saturate}%)
+              sepia(${filter.sepia}%)
+              grayscale(${filter.grayscale}%)
+              hue-rotate(${filter.hueRotate}deg)
+            `;
+            
+            ctx.filter = filterString;
+            ctx.drawImage(img, 0, 0);
+            
+            // Get filtered image data
+            const filteredData = canvas.toDataURL("image/png");
+            resolve(filteredData);
+          }
+        }
+      };
+      img.src = imageData;
+    });
+  };
+
+  // Open edit modal
+  const handleOpenEditModal = () => {
+    setShowEditPanel(!showEditPanel);
+  };
+
+  // Apply global filter to all captured images
+  const handleApplyGlobalFilter = async (filter: FilterSettings) => {
+    setGlobalFilter(filter);
+    
+    // Re-generate composite with filter applied to photos only
+    if (finalCompositeImage && selectedTemplate && canvasRef.current && capturedImages.length > 0) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+      
+      if (!ctx) return;
+
+      // Load template image first
+      const templateImg = new Image();
+      templateImg.crossOrigin = "anonymous";
+      templateImg.src = selectedTemplate.frameUrl;
+
+      templateImg.onload = () => {
+        // Set canvas size to EXACT template size
+        canvas.width = templateImg.width;
+        canvas.height = templateImg.height;
+
+        let loadedPhotos = 0;
+        const photoImages: HTMLImageElement[] = [];
+
+        // Load all photos first
+        capturedImages.forEach((photoDataUrl, index) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = photoDataUrl;
+          
+          img.onload = () => {
+            photoImages[index] = img;
+            loadedPhotos++;
+
+            // When all photos are loaded, composite them with filter
+            if (loadedPhotos === capturedImages.length) {
+              // Clear canvas completely
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+              // Draw WHITE background first
+              ctx.fillStyle = "white";
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+              // Apply filter to each photo
+              const filterString = `brightness(${filter.brightness}%) contrast(${filter.contrast}%) saturate(${filter.saturate}%) sepia(${filter.sepia}%) grayscale(${filter.grayscale}%) hue-rotate(${filter.hueRotate}deg)`;
+
+              // Draw each photo in its position with filter
+              capturedImages.forEach((_, i) => {
+                const position = selectedTemplate.layoutPositions[i];
+                if (position && photoImages[i]) {
+                  const photo = photoImages[i];
+
+                  // Calculate aspect ratio to fit photo in the frame (cover fit)
+                  const photoAspect = photo.width / photo.height;
+                  const frameAspect = position.width / position.height;
+
+                  let drawWidth, drawHeight, offsetX, offsetY;
+
+                  if (photoAspect > frameAspect) {
+                    // Photo is wider - fit by height
+                    drawHeight = position.height;
+                    drawWidth = drawHeight * photoAspect;
+                    offsetX = (drawWidth - position.width) / 2;
+                    offsetY = 0;
+                  } else {
+                    // Photo is taller - fit by width
+                    drawWidth = position.width;
+                    drawHeight = drawWidth / photoAspect;
+                    offsetX = 0;
+                    offsetY = (drawHeight - position.height) / 2;
+                  }
+
+                  // Save context state
+                  ctx.save();
+
+                  // Apply filter to canvas context
+                  ctx.filter = filterString;
+
+                  // Create clipping region for the photo area
+                  ctx.beginPath();
+                  ctx.rect(position.x, position.y, position.width, position.height);
+                  ctx.clip();
+
+                  // Draw the photo (centered and covering the area)
+                  ctx.drawImage(
+                    photo,
+                    position.x - offsetX,
+                    position.y - offsetY,
+                    drawWidth,
+                    drawHeight
+                  );
+
+                  // Restore context state
+                  ctx.restore();
+                }
+              });
+
+              // Draw template overlay ON TOP of photos (NO FILTER on template)
+              ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
+
+              // Get final composite image with filter
+              const finalImage = canvas.toDataURL("image/png", 1.0);
+              setFinalCompositeImage(finalImage);
+              setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
+            }
+          };
+
+          img.onerror = () => {
+            console.error(`Failed to load photo ${index + 1}`);
+          };
+        });
+      };
+
+      templateImg.onerror = () => {
+        console.error("Failed to load template for filter");
+      };
+    }
+  };
+
   const capturePhoto = async () => {
     if (videoRef.current && canvasRef.current) {
       const canvas = canvasRef.current;
@@ -179,7 +506,7 @@ const Booth = () => {
         ctx.drawImage(video, 0, 0);
         ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         
-        // Save the captured photo
+        // Save the captured photo (no filter yet)
         const imageData = canvas.toDataURL("image/png");
         
         // Create new captured images array - either replace or append based on currentPhotoIndex
@@ -216,7 +543,6 @@ const Booth = () => {
             }
           } catch (error) {
             console.error('Failed to upload photo:', error);
-            // Don't block user, just log the error
           }
         }
         
@@ -224,18 +550,118 @@ const Booth = () => {
         
         // Check if we've captured all photos
         if (nextPhotoIndex >= photoCount) {
-          // All photos captured, create composite
-          toast.success("All photos captured! Creating your photo strip... 🎨", {
+          // All photos captured, auto-create composite and show results
+          setAllPhotosCaptured(true);
+          toast.success("All photos captured! ✨ Creating preview...", {
             duration: 2000,
           });
-          createCompositeImage(newCapturedImages);
+          // Auto-create composite image after slight delay
+          setTimeout(() => {
+            createCompositeImage(newCapturedImages);
+          }, 500);
         } else {
-          // More photos to capture
+          // More photos to capture - auto trigger next countdown after 1 second
           setCurrentPhotoIndex(nextPhotoIndex);
           toast.success(`Photo ${nextPhotoIndex} of ${photoCount} captured! 📸`, {
             duration: 1500,
           });
+          // Auto trigger next capture countdown after 1.5 seconds
+          setTimeout(() => {
+            setCountdown(3);
+            const interval = setInterval(() => {
+              setCountdown((prev) => {
+                if (prev === 1) {
+                  clearInterval(interval);
+                  // capturePhoto akan dipanggil recursively
+                  capturePhotoAuto();
+                  return null;
+                }
+                return prev! - 1;
+              });
+            }, 1000);
+          }, 1500);
         }
+      }
+    }
+  };
+
+  // Helper function untuk auto-capture (recursive)
+  const capturePhotoAuto = async () => {
+    if (videoRef.current && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const video = videoRef.current;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const ctx = canvas.getContext("2d");
+      
+      if (ctx) {
+        // Draw video (flipped for mirror effect)
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
+        
+        // Save the captured photo
+        const imageData = canvas.toDataURL("image/png");
+        
+        // Update state with callback to handle next step
+        setCapturedImages((prevImages) => {
+          let newCapturedImages: string[];
+          const photoIdx = prevImages.length; // Use actual length instead of currentPhotoIndex
+          
+          if (photoIdx < prevImages.length) {
+            newCapturedImages = [...prevImages];
+            newCapturedImages[photoIdx] = imageData;
+          } else {
+            newCapturedImages = [...prevImages, imageData];
+          }
+          
+          // Upload photo to backend
+          if (sessionId) {
+            photoAPI.uploadPhoto({
+              sessionId,
+              photoUrl: imageData,
+              order: photoIdx,
+              metadata: {
+                capturedAt: new Date().toISOString(),
+                photoNumber: photoIdx + 1,
+              }
+            }).catch((error) => {
+              console.error('Failed to upload photo:', error);
+            });
+          }
+          
+          // Schedule next capture or finish
+          const nextPhotoIdx = photoIdx + 1;
+          if (nextPhotoIdx >= photoCount) {
+            // All photos captured - directly create composite (skip intermediate state)
+            setTimeout(() => {
+              createCompositeImage(newCapturedImages);
+            }, 500);
+          } else {
+            // Schedule next capture
+            setCurrentPhotoIndex(nextPhotoIdx);
+            toast.success(`Photo ${nextPhotoIdx} of ${photoCount} captured! 📸`, {
+              duration: 1500,
+            });
+            
+            setTimeout(() => {
+              setCountdown(3);
+              const interval = setInterval(() => {
+                setCountdown((prev) => {
+                  if (prev === 1) {
+                    clearInterval(interval);
+                    capturePhotoAuto();
+                    return null;
+                  }
+                  return prev! - 1;
+                });
+              }, 1000);
+            }, 1500);
+          }
+          
+          return newCapturedImages;
+        });
       }
     }
   };
@@ -359,6 +785,7 @@ const Booth = () => {
             // Get final composite image
             const finalImage = canvas.toDataURL("image/png", 1.0);
             setFinalCompositeImage(finalImage);
+            setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
             console.log('🎉 Composite complete! Template:', canvas.width, 'x', canvas.height);
             
             // Auto-save composite to gallery
@@ -389,6 +816,11 @@ const Booth = () => {
     setCurrentPhotoIndex(0);
     setCountdown(null);
     setUploadedPhotoIds([]);
+    setAllPhotosCaptured(false);
+    setGlobalFilter(FILTER_PRESETS.none);
+    setSelectedStickerCategory("emoji");
+    setStickers([]);
+    setSelectedStickerId(null);
     // Create new session for retake
     createPhotoSession();
   };
@@ -431,6 +863,105 @@ const Booth = () => {
     }
   };
 
+  // Add sticker to the composite
+  const addStickerToComposite = (emoji: string) => {
+    // Use center position in percentage
+    const newSticker: StickerElement = {
+      id: Date.now().toString(),
+      emoji,
+      xPercent: 50, // Center position in percentage
+      yPercent: 50,
+      size: 80, // Default size in pixels
+    };
+    setStickers([...stickers, newSticker]);
+    toast.success(`Sticker added! 🎨 Drag to move, resize with corner handle.`, {
+      duration: 2000,
+    });
+  };
+
+  // Update sticker position or size
+  const updateSticker = (id: string, updates: Partial<StickerElement>) => {
+    setStickers(stickers.map(s => s.id === id ? { ...s, ...updates } : s));
+  };
+
+  // Delete a sticker
+  const deleteSticker = (id: string) => {
+    setStickers(stickers.filter(s => s.id !== id));
+    if (selectedStickerId === id) {
+      setSelectedStickerId(null);
+    }
+    toast.success("Sticker removed ✓", { duration: 1000 });
+  };
+
+  // Render stickers on the composite and save the final image
+  const renderCompositeWithStickers = useCallback(async () => {
+    if (!finalCompositeImage || !compositeCanvasRef.current || !selectedTemplate) {
+      toast.error("Cannot render stickers: missing composite image");
+      return;
+    }
+
+    const canvas = compositeCanvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Load the base composite image
+    const baseImage = new Image();
+    baseImage.crossOrigin = "anonymous";
+    baseImage.src = finalCompositeImage;
+
+    baseImage.onload = () => {
+      // Set canvas to the same size as the composite
+      canvas.width = baseImage.width;
+      canvas.height = baseImage.height;
+
+      // Draw the base composite
+      ctx.drawImage(baseImage, 0, 0);
+
+      // Draw all stickers on top with correct positioning
+      stickers.forEach((sticker) => {
+        // Ensure we have percentage values (fallback to center if missing)
+        const xPercent = sticker.xPercent ?? 50;
+        const yPercent = sticker.yPercent ?? 50;
+        
+        // Convert percentage-based coordinates to canvas pixel coordinates
+        const newX = (xPercent / 100) * canvas.width;
+        const newY = (yPercent / 100) * canvas.height;
+        
+        ctx.save();
+        ctx.font = `bold ${sticker.size}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        
+        // Draw sticker with proper rendering
+        ctx.globalAlpha = 1.0;
+        ctx.fillText(sticker.emoji, newX, newY);
+        ctx.restore();
+      });
+
+      // Get the final image with stickers
+      const finalImageWithStickers = canvas.toDataURL("image/png", 1.0);
+      setFinalCompositeImage(finalImageWithStickers);
+      setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
+      toast.success("Stickers applied! 🎉", { duration: 1500 });
+    };
+
+    baseImage.onerror = () => {
+      toast.error("Failed to render stickers");
+      console.error("Failed to load composite image for sticker rendering");
+    };
+  }, [finalCompositeImage, selectedTemplate, stickers]);
+
+  // Auto-apply stickers when drag/resize completes and stickers updated
+  useEffect(() => {
+    // Only auto-apply if we're not currently dragging or resizing
+    if (!draggingStickerId && !resizingStickerId && stickers.length > 0 && finalCompositeImage) {
+      const timer = setTimeout(() => {
+        renderCompositeWithStickers();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [stickers, draggingStickerId, resizingStickerId, finalCompositeImage, renderCompositeWithStickers]);
+
   // Retake a specific photo
   const handleRetakePhoto = (photoIndex: number) => {
     // Remove the photo at the specified index
@@ -447,21 +978,29 @@ const Booth = () => {
     // Clear the composite and countdown
     setFinalCompositeImage(null);
     setCountdown(null);
+    setAllPhotosCaptured(false);
+    setShowEditPanel(false);
+    setShowRetakeOptions(false);
     
     toast.success(`Retaking photo ${photoIndex + 1}... 📸`, {
       duration: 1500,
     });
 
+    // Mark that we're retaking
+    isRetakingPhotoRef.current = true;
+
     // Restart camera - stop current stream and start fresh
     if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((track) => {
+        track.stop();
+      });
       setStream(null);
     }
     
-    // Delay slightly to allow state to clear, then restart camera
+    // Give browser time to release stream, then restart camera
     setTimeout(() => {
       startCamera();
-    }, 100);
+    }, 500);
   };
 
   // Save final composite to backend
@@ -722,12 +1261,127 @@ const Booth = () => {
                 )}
 
                 {finalCompositeImage ? (
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full overflow-hidden bg-white">
                     <img
                       src={finalCompositeImage}
                       alt="Final Photo Strip"
-                      className="w-full h-full object-contain bg-white"
+                      className="w-full h-full object-contain"
                     />
+                    
+                    {/* Sticker Preview Overlay */}
+                    {stickers.length > 0 && showEditPanel && finalCompositeImage && (
+                      <div 
+                        className="absolute inset-0"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                        }}
+                      >
+                        {stickers.map((sticker) => {
+                          const isSelected = selectedStickerId === sticker.id;
+                          // Ensure we have percentage values (fallback to center if missing)
+                          const xPercent = sticker.xPercent ?? 50;
+                          const yPercent = sticker.yPercent ?? 50;
+                          
+                          return (
+                            <div
+                              key={sticker.id}
+                              className={`absolute group ${isSelected ? "opacity-100" : "opacity-75"}`}
+                              style={{
+                                left: `${xPercent}%`,
+                                top: `${yPercent}%`,
+                                transform: "translate(-50%, -50%)",
+                                cursor: isSelected ? 'move' : 'pointer',
+                                pointerEvents: 'auto',
+                              }}
+                              onClick={() => setSelectedStickerId(sticker.id)}
+                              onMouseDown={(e) => {
+                                if (isSelected && e.button === 0 && !(e.target as HTMLElement).closest('[data-tool]')) {
+                                  e.preventDefault();
+                                  dragStartPos.current = { x: e.clientX, y: e.clientY };
+                                  dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
+                                  setDraggingStickerId(sticker.id);
+                                }
+                              }}
+                            >
+                              {/* Sticker emoji */}
+                              <div
+                                style={{
+                                  fontSize: `${(sticker.size / 80) * 4}vmin`,
+                                  filter: isSelected ? "drop-shadow(0 0 8px rgba(59, 130, 246, 0.8))" : "drop-shadow(0 0 4px rgba(0, 0, 0, 0.3))",
+                                  transition: draggingStickerId === sticker.id ? 'none' : 'filter 0.2s',
+                                }}
+                              >
+                                {sticker.emoji}
+                              </div>
+                              
+                              {/* 3 Tools Toolbar - only show when selected */}
+                              {isSelected && (
+                                <div
+                                  className="absolute -top-12 left-1/2 -translate-x-1/2 flex gap-2 bg-white rounded-lg shadow-lg p-2 border border-gray-300"
+                                  style={{
+                                    pointerEvents: 'auto',
+                                  }}
+                                >
+                                  {/* Move/Drag Handle */}
+                                  <button
+                                    data-tool="move"
+                                    className="p-2 hover:bg-blue-100 rounded transition-colors cursor-move"
+                                    title="Drag to move sticker"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      dragStartPos.current = { x: e.clientX, y: e.clientY };
+                                      dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
+                                      setDraggingStickerId(sticker.id);
+                                    }}
+                                  >
+                                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                                    </svg>
+                                  </button>
+                                  
+                                  {/* Resize Handle */}
+                                  <button
+                                    data-tool="resize"
+                                    className="p-2 hover:bg-green-100 rounded transition-colors cursor-nwse-resize"
+                                    title="Drag corner to resize sticker"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      dragStartPos.current = { x: e.clientX, y: e.clientY };
+                                      dragStartSticker.current = { x: xPercent, y: yPercent, size: sticker.size };
+                                      setResizingStickerId(sticker.id);
+                                    }}
+                                  >
+                                    <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0L8 8M4 4l-2 2m16 12v4m0 0l-4-4m4 4l2-2M8 20H4m0 0V8m0 12l4-4m8-8v4m0 0l4 4m-4-4l2 2" />
+                                    </svg>
+                                  </button>
+                                  
+                                  {/* Delete Button */}
+                                  <button
+                                    data-tool="delete"
+                                    className="p-2 hover:bg-red-100 rounded transition-colors"
+                                    title="Delete sticker"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteSticker(sticker.id);
+                                      setSelectedStickerId(null);
+                                    }}
+                                  >
+                                    <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    
                     {/* Auto-saved indicator */}
                     <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
                       <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
@@ -769,20 +1423,206 @@ const Booth = () => {
                 )}
 
                 <canvas ref={canvasRef} className="hidden" />
+                <canvas ref={filterCanvasRef} className="hidden" />
+                <canvas ref={compositeCanvasRef} className="hidden" />
               </div>
 
-              {/* Controls */}
+              {/* Edit Panel - Show when Edit Photos clicked and we have final composite */}
+              {finalCompositeImage && showEditPanel && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="fixed right-6 top-32 w-96 bg-card rounded-2xl border-2 border-border p-6 space-y-6 max-h-[calc(100vh-200px)] overflow-y-auto"
+                >
+                  {/* Close button */}
+                  <button
+                    onClick={() => setShowEditPanel(false)}
+                    className="absolute top-4 right-4 p-1 hover:bg-secondary rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  {/* Filters Section */}
+                  <div>
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                      <Sparkles size={20} />
+                      Filters
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.values(FILTER_PRESETS).map((filter) => (
+                        <motion.button
+                          key={filter.name}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => {
+                            setGlobalFilter(filter);
+                            handleApplyGlobalFilter(filter);
+                          }}
+                          className={`px-4 py-3 rounded-lg font-semibold text-sm transition-all ${
+                            globalFilter.name === filter.name
+                              ? "bg-primary text-primary-foreground shadow-lg"
+                              : "bg-secondary hover:bg-accent text-foreground border border-border"
+                          }`}
+                        >
+                          {filter.name}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Stickers Section */}
+                  <div>
+                    <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                      <Smile size={20} />
+                      Stickers
+                    </h3>
+
+                    {/* Category Tabs */}
+                    <div className="flex gap-2 mb-4 border-b border-border pb-3">
+                      {Object.entries(STICKER_CATEGORIES).map(([key, category]) => (
+                        <motion.button
+                          key={key}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => setSelectedStickerCategory(key as keyof typeof STICKER_CATEGORIES)}
+                          className={`px-4 py-2 font-semibold text-sm rounded-lg transition-all ${
+                            selectedStickerCategory === key
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {category.name}
+                        </motion.button>
+                      ))}
+                    </div>
+
+                    {/* Sticker Grid */}
+                    <div className="grid grid-cols-4 gap-3 bg-secondary/50 p-3 rounded-lg max-h-48 overflow-y-auto">
+                      {STICKER_CATEGORIES[selectedStickerCategory].stickers.map((sticker, idx) => (
+                        <motion.button
+                          key={idx}
+                          whileHover={{ scale: 1.15 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => addStickerToComposite(sticker)}
+                          className="p-2 rounded-lg bg-background hover:bg-primary/20 transition-colors text-2xl flex items-center justify-center border border-border hover:border-primary"
+                        >
+                          {sticker}
+                        </motion.button>
+                      ))}
+                    </div>
+
+                    {/* Added Stickers List */}
+                    {stickers.length > 0 && (
+                      <div className="bg-secondary/30 p-3 rounded-lg">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">Added Stickers ({stickers.length}):</p>
+                        <div className="space-y-2">
+                          {stickers.map((sticker) => (
+                            <div
+                              key={sticker.id}
+                              className={`flex items-center justify-between p-2 rounded-lg border cursor-pointer transition-all ${
+                                selectedStickerId === sticker.id
+                                  ? "bg-primary/20 border-primary"
+                                  : "bg-background border-border hover:border-primary"
+                              }`}
+                              onClick={() => setSelectedStickerId(sticker.id)}
+                            >
+                              <span className="text-lg">{sticker.emoji}</span>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteSticker(sticker.id);
+                                }}
+                                className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                              >
+                                <X className="w-4 h-4 text-red-500" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Info Text */}
+                    {selectedStickerId && finalCompositeImage && (
+                      <div className="bg-secondary/30 p-3 rounded-lg space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground">✓ Sticker changes applied automatically</p>
+                        <p className="text-xs text-muted-foreground">Use the tools above the sticker to move, resize, or delete</p>
+                      </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="space-y-3 pt-4 border-t border-border">
+                      {/* Retake Option Toggle */}
+                      <Button
+                        onClick={() => setShowRetakeOptions(!showRetakeOptions)}
+                        className="w-full bg-secondary hover:bg-accent text-foreground py-3 font-semibold flex items-center justify-center gap-2"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        {showRetakeOptions ? "Hide Retake Options" : "Retake Photo"}
+                      </Button>
+
+                      {/* Individual Photo Retake Options */}
+                      {showRetakeOptions && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="space-y-2 bg-secondary/50 p-3 rounded-lg"
+                        >
+                          <p className="text-sm text-muted-foreground font-semibold mb-3">Select photo to retake:</p>
+                          <div className="space-y-2">
+                            {capturedImages.map((_, idx) => (
+                              <Button
+                                key={idx}
+                                onClick={() => {
+                                  handleRetakePhoto(idx);
+                                  setShowEditPanel(false);
+                                  setShowRetakeOptions(false);
+                                }}
+                                className="w-full bg-primary/80 hover:bg-primary text-primary-foreground py-2 text-sm"
+                              >
+                                Retake Photo {idx + 1}
+                              </Button>
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Controls - Show button only at start and final result */}
               <div className="mt-6 flex flex-wrap justify-center gap-4">
-                {!finalCompositeImage ? (
+                {/* Only show START button when at initial state */}
+                {capturedImages.length === 0 && !finalCompositeImage ? (
                   <Button
                     onClick={handleCapture}
                     disabled={!hasPermission || isLoading || !selectedTemplate}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
                   >
                     <Camera className="w-5 h-5 mr-2" />
-                    {capturedImages.length === 0 ? "Start Photo Session" : `Capture Photo ${currentPhotoIndex + 1}`}
+                    Start Photo Session
                   </Button>
-                ) : (
+                ) : allPhotosCaptured && !finalCompositeImage ? (
+                  <>
+                    <Button
+                      onClick={() => handleOpenEditModal()}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
+                    >
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Edit Photos
+                    </Button>
+                    <Button
+                      onClick={() => createCompositeImage(capturedImages)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
+                    >
+                      <ArrowRight className="w-5 h-5 mr-2" />
+                      Create Preview
+                    </Button>
+                  </>
+                ) : finalCompositeImage ? (
                   <>
                     <Button
                       onClick={handleRetake}
@@ -793,21 +1633,11 @@ const Booth = () => {
                       Start Over
                     </Button>
                     <Button
-                      onClick={handleSaveComposite}
-                      disabled={isSaving}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
+                      onClick={() => handleOpenEditModal()}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
                     >
-                      {isSaving ? (
-                        <>
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-5 h-5 mr-2" />
-                          View in Gallery
-                        </>
-                      )}
+                      <Sparkles className="w-5 h-5 mr-2" />
+                      Edit Photos
                     </Button>
                     <Button
                       onClick={handleDownload}
@@ -824,51 +1654,8 @@ const Booth = () => {
                       Share
                     </Button>
                   </>
-                )}
+                ) : null}
               </div>
-
-              {/* Captured Photos Preview - Show when composite is ready */}
-              {finalCompositeImage && capturedImages.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 space-y-3"
-                >
-                  <div className="text-sm font-semibold text-foreground">
-                    Individual Photos - Retake if needed:
-                  </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {capturedImages.map((image, index) => (
-                      <motion.div
-                        key={index}
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="relative group rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all"
-                      >
-                        <img
-                          src={image}
-                          alt={`Photo ${index + 1}`}
-                          className="w-full h-24 object-cover"
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
-                          <Button
-                            onClick={() => handleRetakePhoto(index)}
-                            size="sm"
-                            variant="destructive"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-2"
-                            title={`Retake photo ${index + 1}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
-                          {index + 1}
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -900,6 +1687,7 @@ const Booth = () => {
             )}
           </motion.div>
         )}
+        
       </div>
     </div>
   );
