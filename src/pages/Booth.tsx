@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -181,7 +181,17 @@ const Booth = () => {
         
         // Save the captured photo
         const imageData = canvas.toDataURL("image/png");
-        const newCapturedImages = [...capturedImages, imageData];
+        
+        // Create new captured images array - either replace or append based on currentPhotoIndex
+        let newCapturedImages: string[];
+        if (currentPhotoIndex < capturedImages.length) {
+          // Replacing a photo (retake scenario)
+          newCapturedImages = [...capturedImages];
+          newCapturedImages[currentPhotoIndex] = imageData;
+        } else {
+          // Appending a new photo (normal capture scenario)
+          newCapturedImages = [...capturedImages, imageData];
+        }
         setCapturedImages(newCapturedImages);
         
         // Upload photo to backend
@@ -419,6 +429,39 @@ const Booth = () => {
       console.error('Auto-save failed:', error);
       // Don't show error toast for auto-save, user can still manually save
     }
+  };
+
+  // Retake a specific photo
+  const handleRetakePhoto = (photoIndex: number) => {
+    // Remove the photo at the specified index
+    const updatedImages = capturedImages.filter((_, index) => index !== photoIndex);
+    setCapturedImages(updatedImages);
+    
+    // Update uploaded photo IDs to remove the corresponding ID
+    const updatedIds = uploadedPhotoIds.filter((_, index) => index !== photoIndex);
+    setUploadedPhotoIds(updatedIds);
+    
+    // Go back to the photo that needs retaking
+    setCurrentPhotoIndex(photoIndex);
+    
+    // Clear the composite and countdown
+    setFinalCompositeImage(null);
+    setCountdown(null);
+    
+    toast.success(`Retaking photo ${photoIndex + 1}... 📸`, {
+      duration: 1500,
+    });
+
+    // Restart camera - stop current stream and start fresh
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    
+    // Delay slightly to allow state to clear, then restart camera
+    setTimeout(() => {
+      startCamera();
+    }, 100);
   };
 
   // Save final composite to backend
@@ -783,6 +826,49 @@ const Booth = () => {
                   </>
                 )}
               </div>
+
+              {/* Captured Photos Preview - Show when composite is ready */}
+              {finalCompositeImage && capturedImages.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 space-y-3"
+                >
+                  <div className="text-sm font-semibold text-foreground">
+                    Individual Photos - Retake if needed:
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {capturedImages.map((image, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="relative group rounded-lg overflow-hidden border-2 border-border hover:border-primary transition-all"
+                      >
+                        <img
+                          src={image}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-24 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
+                          <Button
+                            onClick={() => handleRetakePhoto(index)}
+                            size="sm"
+                            variant="destructive"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity rounded-full p-2"
+                            title={`Retake photo ${index + 1}`}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        <div className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
+                          {index + 1}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
             </CardContent>
           </Card>
         </motion.div>
