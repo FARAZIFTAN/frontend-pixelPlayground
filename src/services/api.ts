@@ -374,3 +374,43 @@ export const templateAPI = {
   },
 };
 
+// AI API
+export const aiAPI = {
+  // Chat with AI for template creation
+  chatAI: async (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => {
+    return apiCall('/ai/chat', {
+      method: 'POST',
+      body: JSON.stringify({ messages }),
+    });
+  },
+
+  // Generate image from text prompt
+  generateImage: async (prompt: string, negativePrompt?: string): Promise<{ image: string; contentType: string; success: boolean }> => {
+    return apiCall('/ai/generate-image', {
+      method: 'POST',
+      body: JSON.stringify({
+        prompt,
+        negative_prompt: negativePrompt,
+        num_inference_steps: 10,
+      }),
+    });
+  },
+
+  // Generate frame template as image
+  generateFrame: async (frameCount: number, layout: string = 'vertical', backgroundColor: string = '#FDE2E4', borderColor: string = '#F7A9A8', gradientFrom?: string, gradientTo?: string): Promise<{ image: string; contentType: string; success: boolean }> => {
+    return apiCall('/ai/generate-frame', {
+      method: 'POST',
+      body: JSON.stringify({
+        frameCount,
+        layout,
+        backgroundColor,
+        borderColor,
+        borderThickness: 2,
+        borderRadius: 8,
+        gradientFrom: gradientFrom || backgroundColor,
+        gradientTo: gradientTo || backgroundColor,
+      }),
+    });
+  },
+};
+

@@ -1,0 +1,434 @@
+import { useState, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Send, Loader2, Copy, Check, AlertCircle, Sparkles, ImagePlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { aiAPI } from '@/services/api';
+
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+interface FrameSpec {
+  frameCount: number;
+  layoutType: string;
+  width: number;
+  height: number;
+  backgroundColor: string;
+  borderStyle: string;
+  borderColor: string;
+  borderThickness: number;
+  description: string;
+  photoPositions: Array<{
+    id: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    borderRadius: number;
+    rotation: number;
+  }>;
+  designElements: {
+    pattern: string;
+    shadow: string;
+    decorations: string;
+  };
+}
+
+interface AIResponse {
+  message: string;
+}
+
+interface AIFrameSpec {
+  frameCount: number;
+  layout: 'vertical' | 'horizontal' | 'grid';
+  backgroundColor: string;
+  borderColor: string;
+  gradientFrom: string;
+  gradientTo: string;
+}
+
+interface ChatAIResponse {
+  message: string;
+  frameSpec?: AIFrameSpec;
+}
+
+const AITemplateCreator = () => {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      role: 'assistant',
+      content: `👋 Welcome to AI Template Creator!
+
+I'm here to help you design custom photo frames using AI. Just describe the frame you want, and I'll generate the specifications and visual frame for you.
+
+**What you can ask for:**
+- "Create a 3-photo vertical frame with a blue gradient background"
+- "Design a 2-photo frame with rounded borders and a modern look"
+- "Make a 4-photo grid frame with a trendy color scheme"
+
+**Frame constraints:**
+- Frame Count: 2, 3, or 4 photos
+- Layout Types: vertical, horizontal, grid, or mixed
+- Dimensions: 800x600 to 1200x900 pixels
+- Colors: Hex color codes (e.g., #FF5733)
+
+Go ahead and describe your ideal frame! ✨`,
+    },
+  ]);
+
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [selectedSpec, setSelectedSpec] = useState<FrameSpec | null>(null);
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
+  const [lastPrompt, setLastPrompt] = useState<string>('');
+  const [frameSpec, setFrameSpec] = useState<AIFrameSpec | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim()) return;
+
+    const userMessage = inputValue.trim();
+    setInputValue('');
+    setLastPrompt(userMessage);
+
+    // Add user message to chat
+    const updatedMessages: Message[] = [
+      ...messages,
+      { role: 'user', content: userMessage },
+    ];
+    setMessages(updatedMessages);
+    setIsLoading(true);
+
+    try {
+      const response = await aiAPI.chatAI(updatedMessages);
+      const chatResponse = response as ChatAIResponse;
+      const assistantMessage = chatResponse.message;
+      const spec = chatResponse.frameSpec;
+
+      // Store frame spec if provided by AI
+      if (spec) {
+        setFrameSpec(spec);
+        console.log('Received frame spec from AI:', spec);
+      }
+
+      // Add assistant message
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: assistantMessage },
+      ]);
+
+      toast({
+        title: 'Frame Idea Received',
+        description: spec ? 'Your frame is ready! Click "Generate Visual Frame" to create it.' : 'Click "Generate Visual Frame" to create the frame image!',
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to get AI response. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateVisualFrame = async () => {
+    if (!frameSpec) {
+      toast({
+        title: 'Error',
+        description: 'No frame specification available. Please confirm your frame design in the chat first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingImage(true);
+    try {
+      console.log('Generating frame with AI spec:', frameSpec);
+
+      const response = await aiAPI.generateFrame(
+        frameSpec.frameCount,
+        frameSpec.layout,
+        frameSpec.backgroundColor,
+        frameSpec.borderColor,
+        frameSpec.gradientFrom,
+        frameSpec.gradientTo
+      );
+
+      if (response.image) {
+        setGeneratedImage(`data:image/svg+xml;base64,${response.image}`);
+        toast({
+          title: 'Success',
+          description: `Visual frame generated! (${frameSpec.frameCount}-photo ${frameSpec.layout} frame)`,
+        });
+      } else {
+        throw new Error('No image in response');
+      }
+    } catch (error) {
+      console.error('Error generating frame:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      let displayMessage = 'Failed to generate visual frame. Please try again.';
+      if (errorMessage.includes('timeout') || errorMessage.includes('504')) {
+        displayMessage = 'Image generation timed out. Try with a simpler description.';
+      } else if (errorMessage.includes('Cannot connect')) {
+        displayMessage = 'Cannot connect to server. Make sure backend is running.';
+      }
+
+      toast({
+        title: 'Error',
+        description: displayMessage,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, index: number) => {
+    navigator.clipboard.writeText(text);
+    setCopiedIndex(index);
+    toast({
+      title: 'Copied',
+      description: 'Frame specification copied to clipboard!',
+    });
+    setTimeout(() => setCopiedIndex(null), 2000);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#0F0F0F] p-6 pt-24">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Sparkles className="w-8 h-8 text-[#C62828]" />
+            <h1 className="text-4xl font-bold text-white">AI Template Creator</h1>
+          </div>
+          <p className="text-gray-400 text-lg">
+            Design custom photo frames using AI-powered assistance
+          </p>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Chat Section */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="lg:col-span-2"
+          >
+            <Card className="h-[600px] flex flex-col bg-[#1A1A1A] border-[#C62828]/30">
+              <CardHeader className="border-b border-[#C62828]/20 bg-[#0F0F0F]/50">
+                <CardTitle className="text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-[#C62828]" />
+                  Chat with AI
+                </CardTitle>
+              </CardHeader>
+
+              {/* Messages */}
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.map((msg, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
+                        msg.role === 'user'
+                          ? 'bg-[#C62828] text-white'
+                          : 'bg-[#2A2A2A] text-gray-100'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap break-words">
+                        {msg.content}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+
+                {isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex gap-2 items-center text-gray-400"
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin text-[#C62828]" />
+                    <span>AI is thinking...</span>
+                  </motion.div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </CardContent>
+
+              {/* Input */}
+              <div className="border-t border-[#C62828]/20 p-4 bg-[#0F0F0F]/50">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={inputValue}
+                    onChange={(e) => setInputValue(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !isLoading) {
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Describe your ideal frame..."
+                    className="flex-1 px-4 py-2 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:outline-none transition-colors"
+                    disabled={isLoading}
+                  />
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={isLoading || !inputValue.trim()}
+                    className="bg-[#C62828] hover:bg-[#E53935] text-white"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Preview Section */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <Card className="bg-[#1A1A1A] border-[#C62828]/30 sticky top-24">
+              <CardHeader className="bg-[#0F0F0F]/50 border-b border-[#C62828]/20">
+                <CardTitle className="text-white text-lg flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-[#C62828]" />
+                  Frame Preview
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-4">
+                {generatedImage ? (
+                  <>
+                    {/* Generated Visual Frame */}
+                    <div className="border-2 border-[#C62828]/40 rounded-lg overflow-hidden bg-[#0F0F0F]">
+                      <img 
+                        src={generatedImage} 
+                        alt="Generated Frame" 
+                        className="w-full h-auto rounded-lg"
+                      />
+                      <p className="text-xs text-gray-400 mt-2 px-2">Your Photo Booth Frame</p>
+                    </div>
+
+                    {/* Download/Save Button */}
+                    <Button
+                      onClick={async () => {
+                        try {
+                          // For SVG images, we can download directly
+                          if (generatedImage.includes('svg+xml')) {
+                            // Create a canvas and draw the SVG
+                            const img = new Image();
+                            img.onload = () => {
+                              const canvas = document.createElement('canvas');
+                              canvas.width = img.width;
+                              canvas.height = img.height;
+                              const ctx = canvas.getContext('2d');
+                              if (ctx) {
+                                // Draw white background (optional, for transparency support)
+                                ctx.fillStyle = '#FFFFFF';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0);
+                                
+                                canvas.toBlob((blob) => {
+                                  if (blob) {
+                                    const url = URL.createObjectURL(blob);
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.download = `photo-frame-${Date.now()}.png`;
+                                    link.click();
+                                    URL.revokeObjectURL(url);
+                                  }
+                                }, 'image/png');
+                              }
+                            };
+                            img.src = generatedImage;
+                          } else {
+                            // For other image types
+                            const link = document.createElement('a');
+                            link.href = generatedImage;
+                            link.download = `photo-frame-${Date.now()}.png`;
+                            link.click();
+                          }
+                          
+                          toast({
+                            title: 'Success',
+                            description: 'Frame downloaded! Ready to use.',
+                          });
+                        } catch (error) {
+                          console.error('Download error:', error);
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to download frame.',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                      className="w-full bg-[#27AE60] hover:bg-[#229954] text-white font-semibold"
+                    >
+                      Download Frame
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    {/* Generate Visual Frame Button */}
+                    <Button
+                      onClick={handleGenerateVisualFrame}
+                      disabled={isGeneratingImage || !lastPrompt}
+                      className="w-full bg-[#E53935] hover:bg-[#C62828] text-white font-semibold"
+                    >
+                      {isGeneratingImage ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generating Frame...
+                        </>
+                      ) : (
+                        <>
+                          <ImagePlus className="w-4 h-4 mr-2" />
+                          Generate Visual Frame
+                        </>
+                      )}
+                    </Button>
+
+                    <div className="text-center text-gray-500 py-8">
+                      <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                      <p>Describe your frame idea, then click "Generate Visual Frame"</p>
+                    </div>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AITemplateCreator;

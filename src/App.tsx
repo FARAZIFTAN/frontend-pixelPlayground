@@ -24,6 +24,7 @@ import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import ChangePassword from "./pages/ChangePassword";
 import Share from "./pages/Share";
+import AITemplateCreator from "./pages/AITemplateCreator";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -115,6 +116,11 @@ const App = () => (
                       </ProtectedRoute>
                     } />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/ai-template-creator" element={
+                      <ProtectedRoute>
+                        <AITemplateCreator />
+                      </ProtectedRoute>
+                    } />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
                 </main>

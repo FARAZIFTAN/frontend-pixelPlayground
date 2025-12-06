@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X, Smile } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,6 +28,9 @@ interface FilterSettings {
   sepia: number;
   grayscale: number;
   hueRotate: number;
+  blur?: number;
+  invert?: number;
+  opacity?: number;
 }
 
 const FILTER_PRESETS: { [key: string]: FilterSettings } = {
@@ -42,8 +45,8 @@ const FILTER_PRESETS: { [key: string]: FilterSettings } = {
   },
   grayscale: {
     name: "Grayscale",
-    brightness: 100,
-    contrast: 100,
+    brightness: 105,
+    contrast: 110,
     saturate: 0,
     sepia: 0,
     grayscale: 100,
@@ -51,100 +54,39 @@ const FILTER_PRESETS: { [key: string]: FilterSettings } = {
   },
   sepia: {
     name: "Sepia",
-    brightness: 100,
-    contrast: 110,
-    saturate: 80,
+    brightness: 105,
+    contrast: 115,
+    saturate: 85,
     sepia: 100,
     grayscale: 0,
     hueRotate: 0,
   },
   vintage: {
     name: "Vintage",
-    brightness: 110,
-    contrast: 90,
-    saturate: 70,
-    sepia: 40,
+    brightness: 108,
+    contrast: 105,
+    saturate: 85,
+    sepia: 35,
     grayscale: 0,
-    hueRotate: 15,
+    hueRotate: 8,
   },
   bright: {
     name: "Bright",
-    brightness: 120,
+    brightness: 115,
     contrast: 110,
-    saturate: 110,
+    saturate: 105,
     sepia: 0,
     grayscale: 0,
     hueRotate: 0,
-  },
-  cool: {
-    name: "Cool",
-    brightness: 100,
-    contrast: 105,
-    saturate: 110,
-    sepia: 0,
-    grayscale: 0,
-    hueRotate: 180,
   },
   warm: {
     name: "Warm",
     brightness: 110,
-    contrast: 100,
-    saturate: 130,
-    sepia: 20,
+    contrast: 105,
+    saturate: 115,
+    sepia: 15,
     grayscale: 0,
-    hueRotate: 10,
-  },
-  dark: {
-    name: "Dark",
-    brightness: 80,
-    contrast: 120,
-    saturate: 100,
-    sepia: 0,
-    grayscale: 0,
-    hueRotate: 0,
-  },
-  vivid: {
-    name: "Vivid",
-    brightness: 105,
-    contrast: 130,
-    saturate: 150,
-    sepia: 0,
-    grayscale: 0,
-    hueRotate: 0,
-  },
-  soft: {
-    name: "Soft",
-    brightness: 110,
-    contrast: 85,
-    saturate: 90,
-    sepia: 10,
-    grayscale: 0,
-    hueRotate: 0,
-  },
-  noir: {
-    name: "Noir",
-    brightness: 90,
-    contrast: 140,
-    saturate: 0,
-    sepia: 0,
-    grayscale: 100,
-    hueRotate: 0,
-  },
-};
-
-// Sticker data
-const STICKER_CATEGORIES = {
-  emoji: {
-    name: "Emoji",
-    stickers: ["☁️", "😸", "🐸", "🐌", "🐰", "🌸", "😢", "🎨", "💕", "🎀", "💝", "👑"],
-  },
-  decorative: {
-    name: "Decorative",
-    stickers: ["✨", "⭐", "🌟", "💫", "✈️", "🎭", "🎪", "🎨", "🎯", "🎲", "🎰", "🎸"],
-  },
-  flowers: {
-    name: "Flowers",
-    stickers: ["🌹", "🌺", "🌻", "🌷", "🌸", "💐", "🌼", "🌾", "🍀", "🎋", "🎍", "🏵️"],
+    hueRotate: 5,
   },
 };
 
@@ -174,14 +116,6 @@ const Booth = () => {
   const [showEditPanel, setShowEditPanel] = useState(false); // Show/hide edit panel
   const [showRetakeOptions, setShowRetakeOptions] = useState(false); // Show individual photo retake options
   
-  // Sticker state
-  interface StickerElement {
-    id: string;
-    emoji: string;
-    xPercent: number; // Position as percentage (0-100)
-    yPercent: number; // Position as percentage (0-100)
-    size: number;
-  }
   const [compositeImageDimensions, setCompositeImageDimensions] = useState({ width: 800, height: 600 });
   
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -290,13 +224,14 @@ const Booth = () => {
           console.log("Camera stream loaded");
           videoRef.current?.play();
           
-          // If in retake mode, auto-start capture
+          // If in retake mode, auto-start capture with countdown
           if (isRetakingPhotoRef.current) {
-            console.log("Retake mode detected, auto-starting capture...");
+            console.log("Retake mode detected, starting countdown for frame", currentPhotoIndex + 1);
+            // Use handleCapture which starts the countdown, don't call capturePhoto directly
             setTimeout(() => {
               handleCapture();
-              isRetakingPhotoRef.current = false; // Reset flag
-            }, 300);
+              isRetakingPhotoRef.current = false; // Reset flag after triggering countdown
+            }, 500);
           }
         };
       }
@@ -313,12 +248,18 @@ const Booth = () => {
   };
 
   const handleCapture = () => {
+    // Clear any existing countdown first
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+    }
+    
     setCountdown(3);
     countdownIntervalRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev === 1) {
           if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
+            countdownIntervalRef.current = null; // Clear ref
           }
           capturePhoto();
           return null;
@@ -350,6 +291,8 @@ const Booth = () => {
               sepia(${filter.sepia}%)
               grayscale(${filter.grayscale}%)
               hue-rotate(${filter.hueRotate}deg)
+              ${filter.blur ? `blur(${filter.blur}px)` : ""}
+              ${filter.invert ? `invert(${filter.invert}%)` : ""}
             `;
             
             ctx.filter = filterString;
@@ -862,29 +805,37 @@ const Booth = () => {
 
   // Retake a specific photo
   const handleRetakePhoto = (photoIndex: number) => {
-    // Remove the photo at the specified index
-    const updatedImages = capturedImages.filter((_, index) => index !== photoIndex);
-    setCapturedImages(updatedImages);
+    // Clear any existing countdown/intervals first
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
+    }
+    setCountdown(null);
     
-    // Update uploaded photo IDs to remove the corresponding ID
-    const updatedIds = uploadedPhotoIds.filter((_, index) => index !== photoIndex);
-    setUploadedPhotoIds(updatedIds);
-    
-    // Go back to the photo that needs retaking
+    // Set currentPhotoIndex first to match which frame we're retaking
     setCurrentPhotoIndex(photoIndex);
     
-    // Clear the composite and countdown
+    // Clear only that specific photo, maintaining array structure
+    const updatedImages = [...capturedImages];
+    updatedImages[photoIndex] = ""; // Mark as empty/to be retaken, don't remove
+    setCapturedImages(updatedImages);
+    
+    // Update uploaded photo IDs similarly - keep array structure
+    const updatedIds = [...uploadedPhotoIds];
+    updatedIds[photoIndex] = ""; // Mark as empty
+    setUploadedPhotoIds(updatedIds.filter(id => id !== "")); // Only keep actual IDs
+    
+    // Clear the composite and UI state
     setFinalCompositeImage(null);
-    setCountdown(null);
     setAllPhotosCaptured(false);
     setShowEditPanel(false);
     setShowRetakeOptions(false);
     
-    toast.success(`Retaking photo ${photoIndex + 1}... 📸`, {
+    toast.success(`Retaking frame ${photoIndex + 1}... 📸`, {
       duration: 1500,
     });
 
-    // Mark that we're retaking
+    // Mark that we're retaking and will auto-capture
     isRetakingPhotoRef.current = true;
 
     // Restart camera - stop current stream and start fresh
@@ -896,6 +847,7 @@ const Booth = () => {
     }
     
     // Give browser time to release stream, then restart camera
+    // Don't manually call handleCapture - let startCamera do it
     setTimeout(() => {
       startCamera();
     }, 500);
@@ -1079,49 +1031,6 @@ const Booth = () => {
           )}
         </motion.div>
 
-        {/* Photo Count Selection */}
-        {selectedTemplate && capturedImages.length === 0 && !finalCompositeImage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="mb-8"
-          >
-            <Card className="gradient-card border-0 shadow-soft">
-              <CardContent className="p-6">
-                <h3 className="text-lg font-heading font-semibold text-white mb-4 text-center">
-                  How many photos do you want to take?
-                </h3>
-                <div className="flex justify-center gap-4">
-                  {[2, 3, 4].map((count) => {
-                    const isAvailable = count <= selectedTemplate.frameCount;
-                    return (
-                      <Button
-                        key={count}
-                        onClick={() => isAvailable && setPhotoCount(count)}
-                        disabled={!isAvailable}
-                        variant={photoCount === count ? "default" : "outline"}
-                        className={`px-8 py-6 rounded-full text-lg font-semibold transition-all ${
-                          photoCount === count
-                            ? "bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
-                            : isAvailable
-                            ? "hover:border-primary"
-                            : "opacity-50 cursor-not-allowed"
-                        }`}
-                      >
-                        {count} Photos
-                      </Button>
-                    );
-                  })}
-                </div>
-                <p className="text-sm text-muted-foreground text-center mt-4">
-                  This template supports up to {selectedTemplate.frameCount} photos
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
         {/* Camera/Preview Area */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -1272,21 +1181,41 @@ const Booth = () => {
                           exit={{ opacity: 0, height: 0 }}
                           className="space-y-2 bg-secondary/50 p-3 rounded-lg"
                         >
-                          <p className="text-sm text-muted-foreground font-semibold mb-3">Select photo to retake:</p>
+                          <p className="text-sm text-muted-foreground font-semibold mb-3">Select frame to retake:</p>
                           <div className="space-y-2">
-                            {capturedImages.map((_, idx) => (
-                              <Button
-                                key={idx}
-                                onClick={() => {
-                                  handleRetakePhoto(idx);
-                                  setShowEditPanel(false);
-                                  setShowRetakeOptions(false);
-                                }}
-                                className="w-full bg-primary/80 hover:bg-primary text-primary-foreground py-2 text-sm"
-                              >
-                                Retake Photo {idx + 1}
-                              </Button>
-                            ))}
+                            {capturedImages.map((image, idx) => {
+                              const position = selectedTemplate?.layoutPositions[idx];
+                              const frameLabel = selectedTemplate?.frameCount === 2 
+                                ? (idx === 0 ? "Top Frame" : "Bottom Frame")
+                                : selectedTemplate?.frameCount === 3
+                                ? (idx === 0 ? "Top Frame" : idx === 1 ? "Middle Frame" : "Bottom Frame")
+                                : `Frame ${idx + 1}`;
+                              
+                              return (
+                                <div key={idx} className="flex items-center gap-2">
+                                  <div className="flex-1">
+                                    <Button
+                                      onClick={() => {
+                                        handleRetakePhoto(idx);
+                                        setShowEditPanel(false);
+                                        setShowRetakeOptions(false);
+                                      }}
+                                      className="w-full bg-primary/80 hover:bg-primary text-primary-foreground py-2 text-sm text-left justify-start"
+                                    >
+                                      <span className="text-xs bg-primary/50 px-2 py-1 rounded mr-2">
+                                        {frameLabel}
+                                      </span>
+                                      Retake
+                                    </Button>
+                                  </div>
+                                  {image && (
+                                    <div className="w-12 h-12 rounded border border-border overflow-hidden">
+                                      <img src={image} alt={`Frame ${idx + 1}`} className="w-full h-full object-cover" />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
                           </div>
                         </motion.div>
                       )}

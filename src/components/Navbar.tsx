@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Menu, X, User, LogOut, Image as ImageIcon } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -118,6 +118,14 @@ const Navbar = () => {
                         <ImageIcon className="w-4 h-4" />
                         <span>My Gallery</span>
                       </Link>
+                      <Link
+                        to="/ai-template-creator"
+                        onClick={() => setShowUserMenu(false)}
+                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                      >
+                        <Sparkles className="w-4 h-4 text-yellow-400" />
+                        <span>AI Template Creator</span>
+                      </Link>
                       <button
                         onClick={handleLogout}
                         className="w-full px-4 py-3 text-left text-white hover:bg-[#C62828] transition-colors flex items-center space-x-2"
@@ -199,6 +207,12 @@ const Navbar = () => {
                     <Button className="w-full mt-2 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
                       <ImageIcon className="w-4 h-4" />
                       <span>My Gallery</span>
+                    </Button>
+                  </Link>
+                  <Link to="/ai-template-creator" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full mt-2 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      <span>AI Template Creator</span>
                     </Button>
                   </Link>
                   <button
