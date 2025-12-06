@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Send, Loader2, Copy, Check, AlertCircle, Sparkles, ImagePlus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -56,6 +57,7 @@ interface ChatAIResponse {
 }
 
 const AITemplateCreator = () => {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -341,46 +343,58 @@ Go ahead and describe your ideal frame! ✨`,
                     <Button
                       onClick={async () => {
                         try {
-                          // For SVG images, we can download directly
+                          // For SVG images, convert to PNG properly
                           if (generatedImage.includes('svg+xml')) {
-                            // Create a canvas and draw the SVG
                             const img = new Image();
                             img.onload = () => {
                               const canvas = document.createElement('canvas');
-                              canvas.width = img.width;
-                              canvas.height = img.height;
+                              // Set higher resolution for better quality
+                              canvas.width = 800;
+                              canvas.height = 1200;
                               const ctx = canvas.getContext('2d');
                               if (ctx) {
-                                // Draw white background (optional, for transparency support)
+                                // Draw white background
                                 ctx.fillStyle = '#FFFFFF';
                                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                                ctx.drawImage(img, 0, 0);
+                                // Draw the image centered and scaled
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                                 
                                 canvas.toBlob((blob) => {
                                   if (blob) {
                                     const url = URL.createObjectURL(blob);
                                     const link = document.createElement('a');
                                     link.href = url;
-                                    link.download = `photo-frame-${Date.now()}.png`;
+                                    link.download = `frame-${frameSpec?.layout}-${frameSpec?.frameCount}foto-${Date.now()}.png`;
                                     link.click();
                                     URL.revokeObjectURL(url);
+                                    
+                                    toast({
+                                      title: 'Success',
+                                      description: 'Frame downloaded as PNG!',
+                                    });
                                   }
-                                }, 'image/png');
+                                }, 'image/png', 0.95);
                               }
+                            };
+                            img.onerror = () => {
+                              toast({
+                                title: 'Error',
+                                description: 'Failed to load image for download',
+                                variant: 'destructive',
+                              });
                             };
                             img.src = generatedImage;
                           } else {
-                            // For other image types
                             const link = document.createElement('a');
                             link.href = generatedImage;
-                            link.download = `photo-frame-${Date.now()}.png`;
+                            link.download = `frame-${frameSpec?.layout}-${frameSpec?.frameCount}foto-${Date.now()}.png`;
                             link.click();
+                            
+                            toast({
+                              title: 'Success',
+                              description: 'Frame downloaded!',
+                            });
                           }
-                          
-                          toast({
-                            title: 'Success',
-                            description: 'Frame downloaded! Ready to use.',
-                          });
                         } catch (error) {
                           console.error('Download error:', error);
                           toast({
@@ -392,7 +406,79 @@ Go ahead and describe your ideal frame! ✨`,
                       }}
                       className="w-full bg-[#27AE60] hover:bg-[#229954] text-white font-semibold"
                     >
-                      Download Frame
+                      ⬇️ Download Frame
+                    </Button>
+
+                    {/* Use Frame Button - untuk ke booth editor */}
+                    <Button
+                      onClick={() => {
+                        if (!frameSpec || !generatedImage) {
+                          toast({
+                            title: 'Error',
+                            description: 'Frame data is missing.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        // Pass frame spec via query parameter (smaller data)
+                        const specParam = encodeURIComponent(JSON.stringify(frameSpec));
+                        const imageBlobParam = encodeURIComponent(generatedImage);
+                        
+                        // Use sessionStorage for temporary storage (better than localStorage for large data)
+                        sessionStorage.setItem('aiFrameSpec', JSON.stringify(frameSpec));
+                        sessionStorage.setItem('aiFrameImage', generatedImage);
+                        
+                        toast({
+                          title: 'Success',
+                          description: 'Frame ready! Opening Booth...',
+                        });
+                        
+                        // Redirect to booth with aiFrame indicator
+                        setTimeout(() => {
+                          navigate('/booth?aiFrame=true');
+                        }, 500);
+                      }}
+                      className="w-full bg-[#3498DB] hover:bg-[#2980B9] text-white font-semibold"
+                    >
+                      🎉 Use This Frame in Booth
+                    </Button>
+
+                    {/* Frame Specifications */}
+                    {frameSpec && (
+                      <div className="bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg p-3 text-sm">
+                        <h4 className="text-gray-300 font-semibold mb-2">Frame Specs:</h4>
+                        <ul className="space-y-1 text-gray-400 text-xs">
+                          <li>📷 Count: {frameSpec.frameCount} photos</li>
+                          <li>📐 Layout: {frameSpec.layout}</li>
+                          <li>🎨 Background: {frameSpec.backgroundColor}</li>
+                          <li>🖼️ Border: {frameSpec.borderColor}</li>
+                          {frameSpec.gradientFrom && frameSpec.gradientTo && (
+                            <li>🌈 Gradient: {frameSpec.gradientFrom} → {frameSpec.gradientTo}</li>
+                          )}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Reset Button */}
+                    <Button
+                      onClick={() => {
+                        setGeneratedImage(null);
+                        setFrameSpec(null);
+                        setMessages([
+                          {
+                            role: 'assistant',
+                            content: `👋 Welcome to AI Template Creator!\n\nI'm here to help you design custom photo frames using AI. Just describe the frame you want, and I'll generate the specifications and visual frame for you.\n\n**What you can ask for:**\n- "Create a 3-photo vertical frame with a blue gradient background"\n- "Design a 2-photo frame with rounded borders and a modern look"\n- "Make a 4-photo grid frame with a trendy color scheme"\n\n**Frame constraints:**\n- Frame Count: 2, 3, or 4 photos\n- Layout Types: vertical, horizontal, grid, or mixed\n- Dimensions: 800x600 to 1200x900 pixels\n- Colors: Hex color codes (e.g., #FF5733)\n\nGo ahead and describe your ideal frame! ✨`,
+                          },
+                        ]);
+                        toast({
+                          title: 'Reset',
+                          description: 'Ready to design a new frame!',
+                        });
+                      }}
+                      className="w-full bg-[#7F8C8D] hover:bg-[#95A5A6] text-white font-semibold"
+                    >
+                      ↻ Start New Frame
                     </Button>
                   </>
                 ) : (
@@ -400,8 +486,8 @@ Go ahead and describe your ideal frame! ✨`,
                     {/* Generate Visual Frame Button */}
                     <Button
                       onClick={handleGenerateVisualFrame}
-                      disabled={isGeneratingImage || !lastPrompt}
-                      className="w-full bg-[#E53935] hover:bg-[#C62828] text-white font-semibold"
+                      disabled={isGeneratingImage || !frameSpec}
+                      className="w-full bg-[#E53935] hover:bg-[#C62828] text-white font-semibold disabled:opacity-50"
                     >
                       {isGeneratingImage ? (
                         <>

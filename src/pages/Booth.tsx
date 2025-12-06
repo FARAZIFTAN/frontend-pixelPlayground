@@ -90,6 +90,72 @@ const FILTER_PRESETS: { [key: string]: FilterSettings } = {
   },
 };
 
+// Helper function to generate layout positions from AI frame spec
+const generateLayoutPositions = (
+  frameCount: number,
+  layout: string,
+  frameWidth: number = 600,
+  frameHeight: number = 900
+): Array<{ x: number; y: number; width: number; height: number }> => {
+  const padding = 20; // Space around frame border
+  const positions: Array<{ x: number; y: number; width: number; height: number }> = [];
+
+  if (layout === 'vertical') {
+    // Stack photos vertically
+    const photoHeight = (frameHeight - padding * (frameCount + 1)) / frameCount;
+    const photoWidth = frameWidth - padding * 2;
+
+    for (let i = 0; i < frameCount; i++) {
+      const y = padding + i * (photoHeight + padding);
+      positions.push({
+        x: padding,
+        y: y,
+        width: photoWidth,
+        height: photoHeight,
+      });
+    }
+  } else if (layout === 'horizontal') {
+    // Photos side by side
+    const photoWidth = (frameWidth - padding * (frameCount + 1)) / frameCount;
+    const photoHeight = frameHeight - padding * 2;
+
+    for (let i = 0; i < frameCount; i++) {
+      const x = padding + i * (photoWidth + padding);
+      positions.push({
+        x: x,
+        y: padding,
+        width: photoWidth,
+        height: photoHeight,
+      });
+    }
+  } else if (layout === 'grid') {
+    // Grid layout
+    const cols = frameCount === 4 ? 2 : frameCount === 6 ? 3 : 2;
+    const rows = Math.ceil(frameCount / cols);
+    const photoWidth = (frameWidth - padding * (cols + 1)) / cols;
+    const photoHeight = (frameHeight - padding * (rows + 1)) / rows;
+
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const photoNum = row * cols + col;
+        if (photoNum >= frameCount) break;
+
+        const x = padding + col * (photoWidth + padding);
+        const y = padding + row * (photoHeight + padding);
+
+        positions.push({
+          x: x,
+          y: y,
+          width: photoWidth,
+          height: photoHeight,
+        });
+      }
+    }
+  }
+
+  return positions;
+};
+
 const Booth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -125,9 +191,65 @@ const Booth = () => {
   const hasShownToast = useRef(false); // Track if toast has been shown
   const isRetakingPhotoRef = useRef(false); // Track if currently retaking a photo
 
-  // Load template from URL parameter
+  // Load template from URL parameter or AI generated frame
   useEffect(() => {
     const templateIdFromUrl = searchParams.get("template");
+    const aiFrameFromUrl = searchParams.get("aiFrame");
+    
+    if (aiFrameFromUrl === "true" && !hasLoadedTemplate) {
+      // Load AI generated frame from sessionStorage
+      const aiFrameSpec = sessionStorage.getItem('aiFrameSpec');
+      const aiFrameImage = sessionStorage.getItem('aiFrameImage');
+      
+      if (aiFrameSpec && aiFrameImage) {
+        try {
+          const spec = JSON.parse(aiFrameSpec);
+          
+          // Generate layout positions based on frame spec
+          const layoutPositions = generateLayoutPositions(
+            spec.frameCount,
+            spec.layout,
+            600, // frame width (SVG default)
+            900  // frame height (SVG default)
+          );
+          
+          // Create a mock template object from AI frame spec
+          const aiTemplate: Template = {
+            _id: 'ai-generated-' + Date.now(),
+            name: `AI ${spec.frameCount}-Photo ${spec.layout} Frame`,
+            category: 'AI Generated',
+            thumbnail: aiFrameImage,
+            frameUrl: aiFrameImage,
+            isPremium: false,
+            frameCount: spec.frameCount,
+            layoutPositions: layoutPositions,
+          };
+          
+          setSelectedTemplate(aiTemplate);
+          setPhotoCount(spec.frameCount);
+          setHasLoadedTemplate(true);
+          
+          if (!hasShownToast.current) {
+            hasShownToast.current = true;
+            queueMicrotask(() => {
+              toast.success(`✨ AI Generated Frame Loaded!`, {
+                duration: 3000,
+                icon: "🤖",
+              });
+            });
+          }
+          
+          // Clean up sessionStorage after loading
+          sessionStorage.removeItem('aiFrameSpec');
+          sessionStorage.removeItem('aiFrameImage');
+        } catch (error) {
+          console.error('Load AI frame error:', error);
+          toast.error('Failed to load AI frame');
+        }
+      }
+      return;
+    }
+    
     if (templateIdFromUrl && !hasLoadedTemplate) {
       const loadTemplate = async (templateId: string) => {
         try {
