@@ -296,6 +296,29 @@ export const userAPI = {
   getUserStats: async () => {
     return apiCall('/users/stats');
   },
+
+  // Get user detail with statistics (admin)
+  getUserDetail: async (id: string) => {
+    return apiCall(`/users/${id}`);
+  },
+
+  // Block/Unblock user (admin)
+  blockUser: async (id: string, isActive: boolean) => {
+    return apiCall(`/users/${id}/block`, {
+      method: 'POST',
+      body: JSON.stringify({ isActive }),
+    });
+  },
+
+  // Get user activities (admin)
+  getUserActivities: async (id: string, options?: { limit?: number; skip?: number }) => {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.skip) params.append('skip', options.skip.toString());
+    
+    const query = params.toString() ? `?${params.toString()}` : '';
+    return apiCall(`/users/${id}/activities${query}`);
+  },
 };
 
 // Dashboard API
@@ -371,6 +394,11 @@ export const templateAPI = {
   // Delete template (admin only)
   deleteTemplate: async (id: string) => {
     return apiCall(`/templates/${id}`, { method: 'DELETE' });
+  },
+
+  // Get template statistics (admin only)
+  getTemplateStats: async (id: string) => {
+    return apiCall(`/templates/${id}/stats`, { method: 'GET' });
   },
 };
 

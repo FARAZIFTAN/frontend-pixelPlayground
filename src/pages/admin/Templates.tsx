@@ -16,6 +16,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useNavigate } from "react-router-dom";
 import { templateAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
@@ -41,6 +48,9 @@ const Templates = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [templates, setTemplates] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   const categories = ["All", "Education", "Artistic", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "General"];
 
@@ -94,6 +104,34 @@ const Templates = () => {
     } catch (error) {
       console.error('Update template error:', error);
       toast.error('Failed to update template');
+    }
+  };
+
+  const handleEditTemplate = (template: Template) => {
+    setEditingTemplate(template);
+    setShowEditDialog(true);
+  };
+
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTemplate) return;
+
+    setIsSaving(true);
+    try {
+      await templateAPI.updateTemplate(editingTemplate._id, {
+        name: editingTemplate.name,
+        category: editingTemplate.category,
+        isPremium: editingTemplate.isPremium,
+        isActive: editingTemplate.isActive,
+      });
+      toast.success('Template updated successfully');
+      setShowEditDialog(false);
+      loadTemplates();
+    } catch (error) {
+      console.error('Save template error:', error);
+      toast.error('Failed to update template');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -222,8 +260,8 @@ const Templates = () => {
                       <Eye className="w-5 h-5 text-white" />
                     </button>
                     <button 
-                      onClick={() => navigate(`/admin/template-creator?edit=${template._id}`)}
-                      className="p-3 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20" 
+                      onClick={() => handleEditTemplate(template)}
+                      className="p-3 bg-blue-500/80 backdrop-blur-sm rounded-lg hover:bg-blue-500 transition-colors" 
                       title="Edit"
                     >
                       <Edit className="w-5 h-5 text-white" />
@@ -311,7 +349,7 @@ const Templates = () => {
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button 
-                          onClick={() => navigate(`/admin/template-creator?edit=${template._id}`)}
+                          onClick={() => handleEditTemplate(template)}
                           className="p-2 hover:bg-white/10 rounded transition-colors" 
                           title="Edit"
                         >
@@ -333,6 +371,132 @@ const Templates = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Edit Template Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="bg-black/95 border border-white/10 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <Edit className="w-6 h-6 text-blue-400" />
+              Edit Template
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Update template information and settings
+            </DialogDescription>
+          </DialogHeader>
+          
+          {editingTemplate && (
+            <form onSubmit={handleSaveTemplate} className="space-y-4">
+              {/* Template Preview */}
+              <div className="flex items-start gap-4 p-4 bg-white/5 border border-white/10 rounded-lg">
+                <img
+                  src={editingTemplate.thumbnail}
+                  alt={editingTemplate.name}
+                  className="w-32 h-48 object-cover rounded-lg border border-white/20"
+                />
+                <div className="flex-1 space-y-2">
+                  <p className="text-sm text-gray-400">Template ID: {editingTemplate._id}</p>
+                  <p className="text-sm text-gray-400">Frame Count: {editingTemplate.frameCount}</p>
+                  <p className="text-sm text-gray-400">Created: {new Date(editingTemplate.createdAt).toLocaleDateString()}</p>
+                </div>
+              </div>
+
+              {/* Template Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Template Name *
+                </label>
+                <input
+                  type="text"
+                  value={editingTemplate.name}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, name: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white placeholder-gray-500"
+                  required
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={editingTemplate.category}
+                  onChange={(e) => setEditingTemplate({ ...editingTemplate, category: e.target.value })}
+                  className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                  required
+                >
+                  {categories.filter(c => c !== "All").map(cat => (
+                    <option key={cat} value={cat} className="bg-gray-900">{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Switches */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
+                  <div>
+                    <p className="font-medium text-white">Premium</p>
+                    <p className="text-xs text-gray-400">Requires payment</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingTemplate.isPremium}
+                      onChange={(e) => setEditingTemplate({ ...editingTemplate, isPremium: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
+                  <div>
+                    <p className="font-medium text-white">Active</p>
+                    <p className="text-xs text-gray-400">Visible to users</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingTemplate.isActive}
+                      onChange={(e) => setEditingTemplate({ ...editingTemplate, isActive: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-500"></div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
+                <Button
+                  type="button"
+                  onClick={() => setShowEditDialog(false)}
+                  variant="outline"
+                  className="border-white/20 text-gray-300 hover:bg-white/10"
+                  disabled={isSaving}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

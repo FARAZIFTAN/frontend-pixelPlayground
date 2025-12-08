@@ -43,16 +43,55 @@ interface User {
   downloadsCount?: number;
 }
 
+interface UserDetail {
+  user: User;
+  statistics: {
+    totalSessions: number;
+    totalComposites: number;
+    totalEvents: number;
+    totalViews: number;
+    totalLikes: number;
+  };
+  recentSessions: Array<{
+    _id: string;
+    sessionName: string;
+    status: string;
+    startedAt: string;
+    completedAt?: string;
+  }>;
+  recentComposites: Array<{
+    _id: string;
+    templateId: string;
+    compositeUrl: string;
+    thumbnailUrl: string;
+    createdAt: string;
+    likes: number;
+    views: number;
+  }>;
+}
+
+interface Activity {
+  type: string;
+  action: string;
+  description: string;
+  timestamp: string;
+  metadata?: any;
+}
+
 const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "user" | "admin">("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
+  const [userActivities, setUserActivities] = useState<Activity[]>([]);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showUserDetailDialog, setShowUserDetailDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "activity">("overview");
 
   useEffect(() => {
     loadUsers();
@@ -119,6 +158,62 @@ const UserManagement = () => {
     } catch (error) {
       console.error("Error updating user role:", error);
       toast.error("Failed to update user role");
+    }
+  };
+
+  const handleToggleBlock = async (user: User) => {
+    try {
+      const newStatus = !user.isActive;
+      const response = await userAPI.blockUser(user._id, newStatus) as {
+        success: boolean;
+      };
+      if (response.success) {
+        setUsers(
+          users.map((u) =>
+            u._id === user._id ? { ...u, isActive: newStatus } : u
+          )
+        );
+        toast.success(
+          `User ${newStatus ? "unblocked" : "blocked"} successfully`
+        );
+      }
+    } catch (error) {
+      console.error("Error blocking/unblocking user:", error);
+      toast.error("Failed to update user status");
+    }
+  };
+
+  const handleViewUserDetail = async (user: User) => {
+    setSelectedUser(user);
+    setShowUserDetailDialog(true);
+    setIsLoadingDetail(true);
+    setActiveTab("overview");
+    
+    try {
+      // Load user detail with statistics
+      const detailResponse = await userAPI.getUserDetail(user._id) as {
+        success: boolean;
+        data: UserDetail;
+      };
+      
+      if (detailResponse.success) {
+        setUserDetail(detailResponse.data);
+      }
+
+      // Load user activities
+      const activitiesResponse = await userAPI.getUserActivities(user._id, { limit: 20 }) as {
+        success: boolean;
+        data: { activities: Activity[] };
+      };
+      
+      if (activitiesResponse.success) {
+        setUserActivities(activitiesResponse.data.activities);
+      }
+    } catch (error) {
+      console.error("Error loading user detail:", error);
+      toast.error("Failed to load user details");
+    } finally {
+      setIsLoadingDetail(false);
     }
   };
 
@@ -355,15 +450,26 @@ const UserManagement = () => {
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <Button
-                                onClick={() => {
-                                  setSelectedUser(user);
-                                  setShowUserDetailDialog(true);
-                                }}
+                                onClick={() => handleViewUserDetail(user)}
                                 size="sm"
                                 variant="outline"
                                 className="border-blue-500/50 text-blue-400 hover:bg-blue-500/20"
+                                title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                onClick={() => handleToggleBlock(user)}
+                                size="sm"
+                                variant="outline"
+                                className={`${
+                                  user.isActive
+                                    ? "border-red-500/50 text-red-400 hover:bg-red-500/20"
+                                    : "border-green-500/50 text-green-400 hover:bg-green-500/20"
+                                }`}
+                                title={user.isActive ? "Block User" : "Unblock User"}
+                              >
+                                {user.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </Button>
                               <Button
                                 onClick={() => handleToggleRole(user)}
@@ -402,71 +508,220 @@ const UserManagement = () => {
         </Card>
       </motion.div>
 
-      {/* User Detail Dialog */}
+      {/* User Detail Dialog - Enhanced */}
       <Dialog open={showUserDetailDialog} onOpenChange={setShowUserDetailDialog}>
-        <DialogContent className="bg-black/90 border border-white/10 text-white">
+        <DialogContent className="bg-black/95 border border-white/10 text-white max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <User className="w-5 h-5 text-blue-400" />
+            <DialogTitle className="flex items-center gap-2 text-2xl">
+              <User className="w-6 h-6 text-blue-400" />
               User Details
             </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              Complete user information, statistics, and activity history
+            </DialogDescription>
           </DialogHeader>
-          {selectedUser && (
-            <div className="space-y-4">
-              <div className="bg-white/5 rounded-lg p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-400">Name:</span>
-                  <span className="font-medium">{selectedUser.name}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                  <span className="text-gray-400">Email:</span>
-                  <span className="font-medium">{selectedUser.email}</span>
-                </div>
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                  <span className="text-gray-400">Role:</span>
-                  <Badge
-                    className={
-                      selectedUser.role === "admin"
-                        ? "bg-purple-500/20 text-purple-300 border border-purple-500/50"
-                        : "bg-blue-500/20 text-blue-300 border border-blue-500/50"
-                    }
-                  >
-                    {selectedUser.role}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                  <span className="text-gray-400">Status:</span>
-                  <Badge
-                    className={
-                      selectedUser.isActive
-                        ? "bg-green-500/20 text-green-300 border border-green-500/50"
-                        : "bg-red-500/20 text-red-300 border border-red-500/50"
-                    }
-                  >
-                    {selectedUser.isActive ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                  <span className="text-gray-400">Member Since:</span>
-                  <span className="font-medium">
-                    {new Date(selectedUser.createdAt).toLocaleDateString(
-                      "id-ID"
-                    )}
-                  </span>
-                </div>
-                {selectedUser.lastLogin && (
-                  <div className="flex items-center justify-between border-t border-white/10 pt-3">
-                    <span className="text-gray-400">Last Login:</span>
-                    <span className="font-medium">
-                      {new Date(selectedUser.lastLogin).toLocaleDateString(
-                        "id-ID"
-                      )}
-                    </span>
+          
+          {isLoadingDetail ? (
+            <div className="py-12 text-center">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-400 mb-4"></div>
+              <p className="text-gray-400">Loading user details...</p>
+            </div>
+          ) : selectedUser && userDetail ? (
+            <div className="space-y-6">
+              {/* User Info Card */}
+              <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center text-2xl font-bold">
+                    {selectedUser.name.charAt(0).toUpperCase()}
                   </div>
-                )}
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-white mb-2">{selectedUser.name}</h3>
+                    <p className="text-gray-300 flex items-center gap-2 mb-3">
+                      <Mail className="w-4 h-4" />
+                      {selectedUser.email}
+                    </p>
+                    <div className="flex gap-2">
+                      <Badge className={selectedUser.role === "admin" ? "bg-purple-500/20 text-purple-300 border-purple-500/50" : "bg-blue-500/20 text-blue-300 border-blue-500/50"}>
+                        <Shield className="w-3 h-3 mr-1" />
+                        {selectedUser.role}
+                      </Badge>
+                      <Badge className={selectedUser.isActive ? "bg-green-500/20 text-green-300 border-green-500/50" : "bg-red-500/20 text-red-300 border-red-500/50"}>
+                        {selectedUser.isActive ? "Active" : "Blocked"}
+                      </Badge>
+                      <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/50">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Joined {new Date(selectedUser.createdAt).toLocaleDateString()}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Statistics Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { label: "Sessions", value: userDetail.statistics.totalSessions, icon: Camera, color: "blue" },
+                  { label: "Composites", value: userDetail.statistics.totalComposites, icon: Image, color: "green" },
+                  { label: "Total Views", value: userDetail.statistics.totalViews, icon: Eye, color: "purple" },
+                  { label: "Total Likes", value: userDetail.statistics.totalLikes, icon: Award, color: "orange" },
+                  { label: "Events", value: userDetail.statistics.totalEvents, icon: Activity, color: "pink" },
+                ].map((stat, idx) => {
+                  const Icon = stat.icon;
+                  return (
+                    <div key={idx} className="bg-white/5 border border-white/10 rounded-lg p-4">
+                      <div className={`w-8 h-8 rounded-lg bg-${stat.color}-500/20 flex items-center justify-center mb-2`}>
+                        <Icon className={`w-4 h-4 text-${stat.color}-400`} />
+                      </div>
+                      <p className="text-2xl font-bold text-white">{stat.value.toLocaleString()}</p>
+                      <p className="text-xs text-gray-400">{stat.label}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 border-b border-white/10">
+                <button
+                  onClick={() => setActiveTab("overview")}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === "overview"
+                      ? "text-blue-400 border-b-2 border-blue-400"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Overview
+                </button>
+                <button
+                  onClick={() => setActiveTab("activity")}
+                  className={`px-4 py-2 font-medium transition-colors ${
+                    activeTab === "activity"
+                      ? "text-blue-400 border-b-2 border-blue-400"
+                      : "text-gray-400 hover:text-white"
+                  }`}
+                >
+                  Activity Log
+                </button>
+              </div>
+
+              {/* Tab Content */}
+              {activeTab === "overview" ? (
+                <div className="space-y-4">
+                  {/* Recent Sessions */}
+                  {userDetail.recentSessions.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <Camera className="w-5 h-5 text-blue-400" />
+                        Recent Sessions
+                      </h4>
+                      <div className="space-y-2">
+                        {userDetail.recentSessions.map((session) => (
+                          <div key={session._id} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-white">{session.sessionName}</p>
+                              <p className="text-xs text-gray-400">{new Date(session.startedAt).toLocaleString()}</p>
+                            </div>
+                            <Badge className={session.status === "completed" ? "bg-green-500/20 text-green-300" : "bg-yellow-500/20 text-yellow-300"}>
+                              {session.status}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recent Composites */}
+                  {userDetail.recentComposites.length > 0 && (
+                    <div>
+                      <h4 className="text-lg font-semibold text-white mb-3 flex items-center gap-2">
+                        <Image className="w-5 h-5 text-green-400" />
+                        Recent Composites
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {userDetail.recentComposites.map((composite) => (
+                          <div key={composite._id} className="bg-white/5 border border-white/10 rounded-lg p-2">
+                            <img 
+                              src={composite.thumbnailUrl || composite.compositeUrl} 
+                              alt="Composite" 
+                              className="w-full h-32 object-cover rounded-lg mb-2"
+                            />
+                            <div className="flex items-center justify-between text-xs text-gray-400">
+                              <span className="flex items-center gap-1">
+                                <Eye className="w-3 h-3" />
+                                {composite.views}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Award className="w-3 h-3" />
+                                {composite.likes}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {userActivities.length > 0 ? (
+                    userActivities.map((activity, idx) => (
+                      <div key={idx} className="bg-white/5 border border-white/10 rounded-lg p-3 flex items-start gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                          activity.type === "event" ? "bg-blue-500/20" :
+                          activity.type === "session" ? "bg-purple-500/20" :
+                          "bg-green-500/20"
+                        }`}>
+                          {activity.type === "event" ? <Activity className="w-4 h-4 text-blue-400" /> :
+                           activity.type === "session" ? <Camera className="w-4 h-4 text-purple-400" /> :
+                           <Image className="w-4 h-4 text-green-400" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-white font-medium">{activity.description}</p>
+                          <p className="text-xs text-gray-400">{new Date(activity.timestamp).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-400 py-8">No activities found</p>
+                  )}
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 justify-end pt-4 border-t border-white/10">
+                <Button
+                  onClick={() => handleToggleBlock(selectedUser)}
+                  variant="outline"
+                  className={`${
+                    selectedUser.isActive
+                      ? "border-red-500/50 text-red-400 hover:bg-red-500/20"
+                      : "border-green-500/50 text-green-400 hover:bg-green-500/20"
+                  }`}
+                >
+                  {selectedUser.isActive ? <><EyeOff className="w-4 h-4 mr-2" /> Block User</> : <><Eye className="w-4 h-4 mr-2" /> Unblock User</>}
+                </Button>
+                <Button
+                  onClick={() => handleToggleRole(selectedUser)}
+                  variant="outline"
+                  className="border-purple-500/50 text-purple-400 hover:bg-purple-500/20"
+                >
+                  <Shield className="w-4 h-4 mr-2" />
+                  {selectedUser.role === "admin" ? "Demote to User" : "Promote to Admin"}
+                </Button>
+                <Button
+                  onClick={() => {
+                    setUserToDelete(selectedUser);
+                    setShowUserDetailDialog(false);
+                    setShowDeleteDialog(true);
+                  }}
+                  variant="outline"
+                  className="border-red-500/50 text-red-400 hover:bg-red-500/20"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete User
+                </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
 

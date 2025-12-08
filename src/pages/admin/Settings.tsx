@@ -1,9 +1,81 @@
 import { motion } from "framer-motion";
-import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings as SettingsIcon, User, Bell, Shield, Palette, Globe, Loader2, CheckCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { userAPI } from "@/services/api";
+import toast from "react-hot-toast";
 
 const Settings = () => {
+  const { user, checkAuth } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Profile Settings
+  const [profileData, setProfileData] = useState({
+    name: "",
+    email: "",
+  });
+
+  // Notification Settings
+  const [notificationSettings, setNotificationSettings] = useState({
+    emailNotifications: true,
+    templateAlerts: true,
+    weeklyReports: false,
+  });
+
+  // Theme Settings
+  const [themeSettings, setThemeSettings] = useState({
+    theme: "dark",
+    language: "en",
+  });
+
+  useEffect(() => {
+    if (user) {
+      setProfileData({
+        name: user.name || "",
+        email: user.email || "",
+      });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSaving(true);
+
+    try {
+      const response = await userAPI.updateProfile(profileData) as {
+        success: boolean;
+        message: string;
+      };
+
+      if (response.success) {
+        toast.success("Profile updated successfully!");
+        await checkAuth(); // Refresh user data
+      } else {
+        toast.error(response.message || "Failed to update profile");
+      }
+    } catch (error: any) {
+      console.error("Error updating profile:", error);
+      toast.error(error.message || "Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveNotifications = () => {
+    // Since there's no backend API for this yet, just save locally
+    localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
+    toast.success("Notification preferences saved!");
+  };
+
+  const handleSaveTheme = () => {
+    // Save theme settings locally
+    localStorage.setItem("themeSettings", JSON.stringify(themeSettings));
+    toast.success("Appearance settings saved!");
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -32,15 +104,17 @@ const Settings = () => {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <form onSubmit={handleSaveProfile} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Full Name
                   </label>
                   <input
                     type="text"
-                    defaultValue="Admin User"
+                    value={profileData.name}
+                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-500"
+                    required
                   />
                 </div>
                 <div>
@@ -49,14 +123,30 @@ const Settings = () => {
                   </label>
                   <input
                     type="email"
-                    defaultValue="admin@karyaklik.com"
+                    value={profileData.email}
+                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                     className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-500"
+                    required
                   />
                 </div>
-                <Button className="w-full bg-[#C62828] hover:bg-[#E53935] text-white font-semibold">
-                  Save Changes
+                <Button 
+                  type="submit" 
+                  className="w-full bg-[#C62828] hover:bg-[#E53935] text-white font-semibold"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
                 </Button>
-              </div>
+              </form>
             </CardContent>
           </Card>
         </motion.div>
@@ -85,22 +175,44 @@ const Settings = () => {
                     <p className="font-medium text-white">Email Notifications</p>
                     <p className="text-sm text-gray-400">Receive email updates</p>
                   </div>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" />
+                  <input 
+                    type="checkbox" 
+                    checked={notificationSettings.emailNotifications}
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, emailNotifications: e.target.checked })}
+                    className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" 
+                  />
                 </label>
                 <label className="flex items-center justify-between cursor-pointer p-3 rounded-lg hover:bg-white/5 transition-colors">
                   <div>
                     <p className="font-medium text-white">Template Alerts</p>
                     <p className="text-sm text-gray-400">Notify when template is used</p>
                   </div>
-                  <input type="checkbox" defaultChecked className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" />
+                  <input 
+                    type="checkbox" 
+                    checked={notificationSettings.templateAlerts}
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, templateAlerts: e.target.checked })}
+                    className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" 
+                  />
                 </label>
                 <label className="flex items-center justify-between cursor-pointer p-3 rounded-lg hover:bg-white/5 transition-colors">
                   <div>
                     <p className="font-medium text-white">Weekly Reports</p>
                     <p className="text-sm text-gray-400">Receive weekly analytics</p>
                   </div>
-                  <input type="checkbox" className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" />
+                  <input 
+                    type="checkbox" 
+                    checked={notificationSettings.weeklyReports}
+                    onChange={(e) => setNotificationSettings({ ...notificationSettings, weeklyReports: e.target.checked })}
+                    className="w-5 h-5 text-[#C62828] rounded focus:ring-[#C62828] bg-white/10 border-white/20" 
+                  />
                 </label>
+                <Button 
+                  onClick={handleSaveNotifications}
+                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold mt-4"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Preferences
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -162,21 +274,36 @@ const Settings = () => {
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Theme
                   </label>
-                  <select className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white">
-                    <option className="bg-gray-900">Light</option>
-                    <option className="bg-gray-900">Dark</option>
-                    <option className="bg-gray-900">Auto</option>
+                  <select 
+                    value={themeSettings.theme}
+                    onChange={(e) => setThemeSettings({ ...themeSettings, theme: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white"
+                  >
+                    <option className="bg-gray-900" value="light">Light</option>
+                    <option className="bg-gray-900" value="dark">Dark</option>
+                    <option className="bg-gray-900" value="auto">Auto</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Language
                   </label>
-                  <select className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white">
-                    <option className="bg-gray-900">English</option>
-                    <option className="bg-gray-900">Bahasa Indonesia</option>
+                  <select 
+                    value={themeSettings.language}
+                    onChange={(e) => setThemeSettings({ ...themeSettings, language: e.target.value })}
+                    className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white"
+                  >
+                    <option className="bg-gray-900" value="en">English</option>
+                    <option className="bg-gray-900" value="id">Bahasa Indonesia</option>
                   </select>
                 </div>
+                <Button 
+                  onClick={handleSaveTheme}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Save Appearance
+                </Button>
               </div>
             </CardContent>
           </Card>
