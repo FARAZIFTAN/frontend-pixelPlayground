@@ -60,6 +60,13 @@ const App = () => (
         />
         <BrowserRouter>
           <Routes>
+            {/* Auth Routes (No Navbar/Footer) */}
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+
             {/* Admin Routes (No Navbar/Footer) */}
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/*" element={
@@ -82,11 +89,6 @@ const App = () => (
                 <Navbar />
                 <main className="flex-1">
                   <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/" element={<Home />} />
                     <Route path="/gallery" element={<Gallery />} />
                     <Route path="/share/:id" element={<Share />} />

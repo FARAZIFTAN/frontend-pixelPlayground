@@ -287,8 +287,6 @@ const Booth = () => {
 
   useEffect(() => {
     startCamera();
-    // Create photo session when component mounts
-    createPhotoSession();
     
     return () => {
       if (stream) {
@@ -302,31 +300,92 @@ const Booth = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency - only run once on mount
 
+  // Create session when template is loaded
+  useEffect(() => {
+    if (selectedTemplate && !sessionId) {
+      console.log('📋 Template loaded, creating photo session...', selectedTemplate.name);
+      createPhotoSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTemplate]);
+
 
 
   // Create photo session on backend
   const createPhotoSession = async () => {
+    if (!selectedTemplate) {
+      console.warn('⚠️ Cannot create session: No template selected');
+      return;
+    }
+
+    // Check if user is logged in
+    if (!user) {
+      console.warn('⚠️ User not logged in, cannot create session');
+      toast.error('Please login to save your photos', {
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
+      console.log('🔄 Creating photo session with template:', selectedTemplate.name);
+      console.log('👤 User ID:', user.id);
+      
       const response = await sessionAPI.createSession({
         sessionName: `Photo Session ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}`,
-        templateId: selectedTemplate?._id,
+        templateId: selectedTemplate._id,
         metadata: {
           photoCount,
+          templateName: selectedTemplate.name,
           startedAt: new Date().toISOString(),
         }
       });
       
-      // Extract session ID from response
-      const data = response as { data?: { session?: { _id: string } }; session?: { _id: string } };
-      const newSessionId = data.data?.session?._id || data.session?._id;
+      console.log('📦 Session API Response:', response);
+      
+      // Extract session ID from response - handle multiple possible structures
+      const data = response as { 
+        success?: boolean;
+        data?: { _id?: string; session?: { _id: string } }; 
+        session?: { _id: string };
+        _id?: string;
+      };
+      
+      const newSessionId = 
+        data.data?._id || 
+        data.data?.session?._id || 
+        data.session?._id || 
+        data._id;
       
       if (newSessionId) {
         setSessionId(newSessionId);
-        console.log('✅ Photo session created:', newSessionId);
+        console.log('✅ Photo session created successfully:', newSessionId);
+        toast.success('Session created! Ready to capture photos 📸', {
+          duration: 2000,
+        });
+      } else {
+        console.error('❌ No session ID found in response:', data);
+        throw new Error('No session ID in response');
       }
     } catch (error) {
-      console.error('Failed to create photo session:', error);
-      toast.error('Failed to create session. Photos will not be saved.');
+      console.error('❌ Failed to create photo session:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error details:', errorMessage);
+      
+      // More specific error messages
+      if (errorMessage.includes('Unauthorized')) {
+        toast.error('Please login to save your photos', {
+          duration: 3000,
+        });
+      } else if (errorMessage.includes('Cannot connect')) {
+        toast.error('Cannot connect to server. Backend may be offline.', {
+          duration: 3000,
+        });
+      } else {
+        toast.error('Failed to create session. Photos may not be saved.', {
+          duration: 3000,
+        });
+      }
     }
   };
 
@@ -851,12 +910,16 @@ const Booth = () => {
             setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
             console.log('🎉 Composite complete! Template:', canvas.width, 'x', canvas.height);
             
-            // Auto-save composite to gallery
-            autoSaveComposite(finalImage);
-            
-            toast.success("Your photo strip is ready! 🎉", {
-              duration: 3000,
-            });
+            // Show success message with save options
+            if (user) {
+              toast.success("✅ Photo ready! Click 'Save to My Gallery' or 'Download'", {
+                duration: 4000,
+              });
+            } else {
+              toast.success("✅ Photo ready! Click 'Download' to save to device", {
+                duration: 4000,
+              });
+            }
           }
         };
 
@@ -881,45 +944,91 @@ const Booth = () => {
     setUploadedPhotoIds([]);
     setAllPhotosCaptured(false);
     setGlobalFilter(FILTER_PRESETS.none);
-    // Create new session for retake
-    createPhotoSession();
+    // Create new session for retake (only if template exists)
+    if (selectedTemplate) {
+      console.log('🔄 Retaking photos, creating new session...');
+      createPhotoSession();
+    }
   };
 
-  // Auto-save composite to gallery after generation
-  const autoSaveComposite = async (compositeImage: string) => {
-    if (!sessionId) {
-      console.warn('Session ID not available for auto-save');
+  // Manual save composite to gallery
+  const handleSaveToGallery = async () => {
+    if (!finalCompositeImage) {
+      toast.error('No photo to save. Please create composite first.');
       return;
     }
 
-    try {
-      await compositeAPI.createComposite({
-        sessionId,
-        compositeUrl: compositeImage,
-        templateId: selectedTemplate?._id,
-        isPublic: false,
-        metadata: {
-          photoCount,
-          templateName: selectedTemplate?.name,
-          createdAt: new Date().toISOString(),
-        }
+    // Check if user is logged in first
+    if (!user) {
+      console.warn('⚠️ User not logged in, cannot save to gallery');
+      toast.error('Please login to save photos to your gallery', {
+        duration: 4000,
+        icon: '🔒',
       });
+      navigate('/login');
+      return;
+    }
 
-      // Update session status to completed
-      if (sessionId) {
-        await sessionAPI.updateSession(sessionId, {
-          status: 'completed',
-          metadata: {
-            completedAt: new Date().toISOString(),
-            photosCount: uploadedPhotoIds.length,
-          }
-        });
+    // If no session ID, try to create one as fallback
+    if (!sessionId) {
+      console.warn('⚠️ Session ID not available, trying to create session...');
+      
+      // Try to create session if we have a template
+      if (selectedTemplate) {
+        await createPhotoSession();
+        // Wait a bit for session to be created
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
+      
+      // If still no session after retry, show error
+      if (!sessionId) {
+        console.error('❌ Cannot create session for auto-save');
+        toast.error('Cannot save to gallery - Not logged in. Use Download button to save to device.', {
+          duration: 5000,
+          icon: '⚠️',
+        });
+        return;
+      }
+    }
 
-      console.log('✅ Composite auto-saved to gallery');
+    try {
+      console.log('💾 Saving composite to gallery...');
+      console.log('📋 Session ID:', sessionId);
+      console.log('🖼️ Template:', selectedTemplate?.name);
+      
+      setIsSaving(true);
+      
+      // Upload composite image as file (not base64 string)
+      const response = await compositeAPI.uploadCompositeImage(
+        finalCompositeImage,
+        sessionId,
+        selectedTemplate?._id
+      );
+
+      console.log('✅ Composite saved to gallery:', response);
+      
+      setIsSaving(false);
+      
+      // Show success notification
+      toast.success('✅ Photo saved to My Gallery!', {
+        duration: 3000,
+      });
+      
+      // Navigate to gallery after short delay
+      setTimeout(() => {
+        navigate('/my-gallery');
+      }, 1500);
     } catch (error) {
-      console.error('Auto-save failed:', error);
-      // Don't show error toast for auto-save, user can still manually save
+      console.error('❌ Save to gallery failed:', error);
+      setIsSaving(false);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error details:', errorMessage);
+      
+      // Show error notification but allow user to continue
+      toast.error('Failed to save to gallery. Try again or download to device.', {
+        duration: 5000,
+        icon: '❌',
+      });
     }
   };
 
@@ -1022,47 +1131,65 @@ const Booth = () => {
   };
 
   const handleDownload = () => {
-    if (!user) {
-      toast.error("Please login or register to download.");
-      navigate("/login");
+    if (!finalCompositeImage) {
+      toast.error("No photo to download. Please take photos first.");
       return;
     }
-    if (finalCompositeImage) {
+    
+    try {
       const link = document.createElement("a");
       link.href = finalCompositeImage;
       link.download = `pixelplayground-photo-strip-${Date.now()}.png`;
+      document.body.appendChild(link); // Add to DOM for better browser compatibility
       link.click();
-      toast.success("Photo strip downloaded!");
+      document.body.removeChild(link); // Clean up
+      
+      toast.success("📥 Photo downloaded to your device!", {
+        duration: 3000,
+        icon: "✅",
+      });
+      
+      console.log('✅ Photo downloaded successfully');
+    } catch (error) {
+      console.error('❌ Download failed:', error);
+      toast.error("Failed to download. Please try again.", {
+        duration: 3000,
+      });
     }
   };
 
   const handleShare = async () => {
-    if (!user) {
-      toast.error("Please login or register to share.");
-      navigate("/login");
+    if (!finalCompositeImage) {
+      toast.error("No photo to share. Please take photos first.");
       return;
     }
-    if (finalCompositeImage) {
-      try {
-        const blob = await (await fetch(finalCompositeImage)).blob();
-        const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
-        
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: "My PixelPlayground Photo Strip",
-            text: "Check out my photo strip from PixelPlayground!",
-          });
-          toast.success("Shared successfully!");
-        } else {
-          // Fallback: Copy image data URL to clipboard
-          await navigator.clipboard.writeText(finalCompositeImage);
-          toast.success("Image data copied to clipboard!");
-        }
-      } catch (error) {
-        console.error("Share error:", error);
-        toast.error("Could not share. Try downloading instead.");
+    
+    try {
+      const blob = await (await fetch(finalCompositeImage)).blob();
+      const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
+      
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "My PixelPlayground Photo Strip",
+          text: "Check out my photo strip from PixelPlayground!",
+        });
+        toast.success("📤 Shared successfully!", {
+          duration: 3000,
+          icon: "✅",
+        });
+      } else {
+        // Fallback: Copy image data URL to clipboard
+        await navigator.clipboard.writeText(finalCompositeImage);
+        toast.success("📋 Image data copied to clipboard!", {
+          duration: 3000,
+        });
       }
+    } catch (error) {
+      console.error("❌ Share error:", error);
+      toast.error("Could not share. Use Download button instead.", {
+        duration: 3000,
+      });
     }
   };
 
@@ -1391,12 +1518,28 @@ const Booth = () => {
                       <Sparkles className="w-5 h-5 mr-2" />
                       Edit Photos
                     </Button>
+                    {user && (
+                      <Button
+                        onClick={handleSaveToGallery}
+                        disabled={isSaving}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Save to your online gallery"
+                      >
+                        {isSaving ? (
+                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-5 h-5 mr-2" />
+                        )}
+                        {isSaving ? 'Saving...' : 'Save to My Gallery'}
+                      </Button>
+                    )}
                     <Button
                       onClick={handleDownload}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
+                      title="Save photo to your device/computer"
                     >
                       <Download className="w-5 h-5 mr-2" />
-                      Download 
+                      Download to Device
                     </Button>
                     <Button
                       onClick={handleShare}

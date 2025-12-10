@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff, User, Camera } from "lucide-react";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import analytics from "@/lib/analytics";
+import { authAPI } from "@/services/api";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -63,38 +65,74 @@ const Login: React.FC = () => {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    alert("Google OAuth will be implemented soon!");
+  const handleGoogleSuccess = async (credentialResponse: CredentialResponse) => {
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Send Google token to backend
+      const response = await authAPI.googleAuth(credentialResponse.credential!);
+      
+      // Store token and user data
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("user", JSON.stringify(response.user));
+      
+      // Update auth context
+      const userData = response.user;
+      
+      // Track successful login
+      analytics.userLogin(userData.id, 'google');
+      
+      console.log('✅ Google login successful:', userData.email);
+      
+      // Redirect based on role
+      if (userData.role === 'admin') {
+        navigate("/admin/dashboard", { replace: true });
+      } else {
+        navigate("/", { replace: true });
+      }
+      
+      // Reload to update auth context
+      window.location.reload();
+    } catch (err: any) {
+      console.error('❌ Google login error:', err);
+      setError(err.message || "Google login failed. Please try again.");
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    console.error('❌ Google login failed');
+    setError("Google login failed. Please try again.");
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a0e0e] via-[#2d1818] to-[#0F0F0F] p-4">
       <form
         onSubmit={handleSubmit}
-        className="bg-[#0F0F0F]/80 backdrop-blur-xl border border-[#C62828]/30 rounded-2xl shadow-2xl p-8 w-full max-w-md"
+        className="bg-[#0F0F0F]/90 backdrop-blur-xl border border-[#C62828]/30 rounded-2xl shadow-2xl p-6 w-full max-w-md"
       >
-        <div className="flex justify-center mb-6">
-          <div className="bg-[#C62828] p-3 rounded-full">
-            <User className="w-8 h-8 text-white" />
+        <div className="flex justify-center mb-4">
+          <div className="bg-gradient-to-br from-[#C62828] to-[#E53935] p-3 rounded-full shadow-lg">
+            <User className="w-7 h-7 text-white" />
           </div>
         </div>
-        <h2 className="text-3xl font-bold mb-2 text-white text-center">Welcome Back!</h2>
-        <p className="text-gray-400 text-center mb-6">Login to your KaryaKlik account</p>
+        <h2 className="text-2xl font-bold mb-1 text-white text-center">Welcome Back!</h2>
+        <p className="text-gray-400 text-center mb-5 text-sm">Login to your KaryaKlik account</p>
 
         {error && (
-          <div className="mb-4 p-3 bg-[#C62828]/20 border border-[#C62828]/50 text-red-300 rounded-lg text-sm backdrop-blur-sm">
+          <div className="mb-3 p-2.5 bg-[#C62828]/20 border border-[#C62828]/50 text-red-300 rounded-lg text-xs backdrop-blur-sm">
             {error}
           </div>
         )}
 
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">
             Email Address
           </label>
           <input
             type="email"
-            className="w-full px-4 py-3 bg-[#1a1a1a] border border-[#C62828]/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition placeholder-gray-500"
+            className="w-full px-3 py-2.5 bg-[#1a1a1a] border border-[#C62828]/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition placeholder-gray-500 text-sm"
             placeholder="your@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -103,14 +141,14 @@ const Login: React.FC = () => {
           />
         </div>
 
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-300 mb-2">
+        <div className="mb-4">
+          <label className="block text-xs font-medium text-gray-400 mb-1.5">
             Password
           </label>
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
-              className="w-full px-4 py-3 pr-10 bg-[#1a1a1a] border border-[#C62828]/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition placeholder-gray-500"
+              className="w-full px-3 py-2.5 pr-10 bg-[#1a1a1a] border border-[#C62828]/30 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent transition placeholder-gray-500 text-sm"
               placeholder="Enter your password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -130,11 +168,11 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={isLoading}
-          className="w-full bg-gradient-to-r from-[#C62828] to-[#E53935] text-white py-3 rounded-lg font-semibold hover:from-[#E53935] hover:to-[#FF6B6B] transition-all shadow-lg shadow-[#C62828]/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full bg-gradient-to-r from-[#C62828] to-[#E53935] text-white py-2.5 rounded-lg font-semibold hover:from-[#E53935] hover:to-[#FF6B6B] transition-all shadow-lg shadow-[#C62828]/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm"
         >
           {isLoading ? (
             <>
-              <Loader2 className="animate-spin" size={20} />
+              <Loader2 className="animate-spin" size={18} />
               Logging in...
             </>
           ) : (
@@ -142,7 +180,7 @@ const Login: React.FC = () => {
           )}
         </button>
 
-        <div className="mt-4 text-center">
+        <div className="mt-3 text-center">
           <p className="text-sm text-gray-400">
             Don't have an account?{" "}
             <Link to="/register" className="text-[#FF6B6B] font-semibold hover:text-[#C62828] transition">
@@ -156,31 +194,26 @@ const Login: React.FC = () => {
           </p>
         </div>
 
-        <div className="relative my-6">
+        <div className="relative my-4">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-[#C62828]/30"></div>
           </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-2 bg-[#0F0F0F]/80 text-gray-400">Or continue with</span>
+          <div className="relative flex justify-center text-xs">
+            <span className="px-2 bg-[#0F0F0F]/90 text-gray-500">Or continue with</span>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={handleGoogleLogin}
-          disabled={isLoading}
-          className="w-full bg-[#1a1a1a] border-2 border-[#C62828]/30 text-white py-3 rounded-lg font-semibold hover:bg-[#252525] hover:border-[#C62828]/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-          <svg width="20" height="20" viewBox="0 0 48 48">
-            <g>
-              <path fill="#4285F4" d="M24 9.5c3.54 0 6.73 1.22 9.24 3.22l6.9-6.9C35.44 2.34 29.97 0 24 0 14.64 0 6.4 5.48 2.44 13.44l8.06 6.27C12.7 13.02 17.91 9.5 24 9.5z"/>
-              <path fill="#34A853" d="M46.09 24.55c0-1.64-.15-3.22-.42-4.76H24v9.04h12.44c-.54 2.92-2.17 5.4-4.62 7.08l7.19 5.59C43.94 37.02 46.09 31.23 46.09 24.55z"/>
-              <path fill="#FBBC05" d="M10.5 28.71c-1.13-3.32-1.13-6.87 0-10.19l-8.06-6.27C.82 16.62 0 20.22 0 24c0 3.78.82 7.38 2.44 10.75l8.06-6.27z"/>
-              <path fill="#EA4335" d="M24 48c6.48 0 11.93-2.14 15.91-5.84l-7.19-5.59c-2.01 1.35-4.59 2.16-8.72 2.16-6.09 0-11.3-3.52-13.5-8.71l-8.06 6.27C6.4 42.52 14.64 48 24 48z"/>
-            </g>
-          </svg>
-          Login with Google
-        </button>
+        <div className="w-full">
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={handleGoogleError}
+            theme="filled_black"
+            size="large"
+            text="signin_with"
+            width="100%"
+            logo_alignment="left"
+          />
+        </div>
       </form>
     </div>
   );

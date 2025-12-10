@@ -96,6 +96,13 @@ export const authAPI = {
       method: 'GET',
     });
   },
+
+  googleAuth: async (googleToken: string) => {
+    return apiCall('/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ token: googleToken }),
+    });
+  },
 };
 
 // Export API base URL for direct access if needed
@@ -165,6 +172,42 @@ export const photoAPI = {
 
 // Composite API
 export const compositeAPI = {
+  // Upload composite image as file
+  uploadCompositeImage: async (base64Image: string, sessionId: string, templateId?: string) => {
+    // Convert base64 to blob
+    const base64Data = base64Image.split(',')[1];
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/png' });
+    
+    // Create FormData
+    const formData = new FormData();
+    formData.append('image', blob, `composite-${Date.now()}.png`);
+    formData.append('sessionId', sessionId);
+    if (templateId) formData.append('templateId', templateId);
+    
+    // Upload without JSON.stringify (FormData handles its own encoding)
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${API_BASE_URL}/composites/upload`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: formData, // Don't stringify FormData!
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Upload failed');
+    }
+    
+    return response.json();
+  },
+
   // Create final composite
   createComposite: async (data: {
     sessionId: string;

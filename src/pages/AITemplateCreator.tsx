@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Send, Loader2, Copy, Check, AlertCircle, Sparkles, ImagePlus } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Send, Loader2, Copy, Check, AlertCircle, Sparkles, ImagePlus, Download, Zap, Layout, Grid3x3, Layers, User, Bot } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiAPI } from '@/services/api';
 
@@ -56,6 +57,12 @@ interface ChatAIResponse {
   frameSpec?: AIFrameSpec;
 }
 
+const QUICK_PROMPTS = [
+  { icon: Layers, text: '3-photo vertical frame with gradient', prompt: 'Create a 3-photo vertical frame with blue to purple gradient background' },
+  { icon: Grid3x3, text: '4-photo grid layout', prompt: 'Design a 4-photo grid frame with modern style and soft colors' },
+  { icon: Layout, text: '2-photo horizontal frame', prompt: 'Make a 2-photo horizontal frame with elegant border and pastel colors' },
+];
+
 const AITemplateCreator = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
@@ -88,6 +95,7 @@ Go ahead and describe your ideal frame! ✨`,
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [lastPrompt, setLastPrompt] = useState<string>('');
   const [frameSpec, setFrameSpec] = useState<AIFrameSpec | null>(null);
+  const [showQuickPrompts, setShowQuickPrompts] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -99,12 +107,14 @@ Go ahead and describe your ideal frame! ✨`,
     scrollToBottom();
   }, [messages]);
 
-  const handleSendMessage = async () => {
-    if (!inputValue.trim()) return;
+  const handleSendMessage = async (customMessage?: string) => {
+    const messageToSend = customMessage || inputValue.trim();
+    if (!messageToSend) return;
 
-    const userMessage = inputValue.trim();
+    const userMessage = messageToSend;
     setInputValue('');
     setLastPrompt(userMessage);
+    setShowQuickPrompts(false);
 
     // Add user message to chat
     const updatedMessages: Message[] = [
@@ -245,36 +255,107 @@ Go ahead and describe your ideal frame! ✨`,
               </CardHeader>
 
               {/* Messages */}
-              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4">
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
                 {messages.map((msg, index) => (
                   <motion.div
                     key={index}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    transition={{ duration: 0.3 }}
+                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div
-                      className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg ${
-                        msg.role === 'user'
-                          ? 'bg-[#C62828] text-white'
-                          : 'bg-[#2A2A2A] text-gray-100'
-                      }`}
-                    >
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {msg.content}
-                      </p>
+                    {msg.role === 'assistant' && (
+                      <div className="flex-shrink-0 w-8 h-8 bg-[#C62828] rounded-full flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-white" />
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-1">
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg shadow-lg ${
+                          msg.role === 'user'
+                            ? 'bg-gradient-to-br from-[#C62828] to-[#E53935] text-white rounded-br-none'
+                            : 'bg-[#2A2A2A] text-gray-100 rounded-bl-none border border-[#C62828]/20'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
+                          {msg.content}
+                        </p>
+                      </div>
+                      <span className={`text-xs text-gray-500 px-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                        {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
                     </div>
+                    {msg.role === 'user' && (
+                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-[#3498DB] to-[#2980B9] rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
+                    )}
                   </motion.div>
                 ))}
+
+                {/* Quick Prompts */}
+                <AnimatePresence>
+                  {showQuickPrompts && messages.length === 1 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      className="flex flex-col gap-2 py-4"
+                    >
+                      <p className="text-xs text-gray-500 mb-2 flex items-center gap-2">
+                        <Zap className="w-3 h-3" />
+                        Quick Suggestions:
+                      </p>
+                      {QUICK_PROMPTS.map((prompt, idx) => {
+                        const Icon = prompt.icon;
+                        return (
+                          <Button
+                            key={idx}
+                            variant="outline"
+                            onClick={() => handleSendMessage(prompt.prompt)}
+                            className="w-full justify-start text-left bg-[#2A2A2A] hover:bg-[#C62828]/20 border-[#C62828]/30 text-gray-300 hover:text-white transition-all"
+                          >
+                            <Icon className="w-4 h-4 mr-2 text-[#C62828]" />
+                            <span className="text-sm">{prompt.text}</span>
+                          </Button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {isLoading && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex gap-2 items-center text-gray-400"
+                    className="flex gap-3 items-start"
                   >
-                    <Loader2 className="w-4 h-4 animate-spin text-[#C62828]" />
-                    <span>AI is thinking...</span>
+                    <div className="flex-shrink-0 w-8 h-8 bg-[#C62828] rounded-full flex items-center justify-center">
+                      <Bot className="w-4 h-4 text-white" />
+                    </div>
+                    <div className="flex flex-col gap-2 bg-[#2A2A2A] px-4 py-3 rounded-lg rounded-bl-none border border-[#C62828]/20">
+                      <div className="flex gap-2 items-center text-gray-400">
+                        <Loader2 className="w-4 h-4 animate-spin text-[#C62828]" />
+                        <span className="text-sm">AI is thinking...</span>
+                      </div>
+                      <div className="flex gap-1">
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1, delay: 0 }}
+                          className="w-2 h-2 bg-[#C62828] rounded-full"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
+                          className="w-2 h-2 bg-[#C62828] rounded-full"
+                        />
+                        <motion.div
+                          animate={{ scale: [1, 1.2, 1] }}
+                          transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
+                          className="w-2 h-2 bg-[#C62828] rounded-full"
+                        />
+                      </div>
+                    </div>
                   </motion.div>
                 )}
 
@@ -282,33 +363,39 @@ Go ahead and describe your ideal frame! ✨`,
               </CardContent>
 
               {/* Input */}
-              <div className="border-t border-[#C62828]/20 p-4 bg-[#0F0F0F]/50">
+              <div className="border-t border-[#C62828]/20 p-4 bg-gradient-to-b from-[#0F0F0F]/50 to-[#1A1A1A]">
                 <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !isLoading) {
-                        handleSendMessage();
-                      }
-                    }}
-                    placeholder="Describe your ideal frame..."
-                    className="flex-1 px-4 py-2 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:outline-none transition-colors"
-                    disabled={isLoading}
-                  />
+                  <div className="flex-1 relative">
+                    <input
+                      type="text"
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter' && !isLoading) {
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="Describe your ideal frame... (e.g., '3-photo vertical with blue gradient')"
+                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all placeholder:text-gray-500"
+                      disabled={isLoading}
+                    />
+                  </div>
                   <Button
-                    onClick={handleSendMessage}
+                    onClick={() => handleSendMessage()}
                     disabled={isLoading || !inputValue.trim()}
-                    className="bg-[#C62828] hover:bg-[#E53935] text-white"
+                    className="bg-gradient-to-r from-[#C62828] to-[#E53935] hover:from-[#E53935] hover:to-[#C62828] text-white px-6 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
                     {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      <Send className="w-5 h-5" />
                     )}
                   </Button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Press Enter to send or use quick suggestions above
+                </p>
               </div>
             </Card>
           </motion.div>
@@ -404,9 +491,10 @@ Go ahead and describe your ideal frame! ✨`,
                           });
                         }
                       }}
-                      className="w-full bg-[#27AE60] hover:bg-[#229954] text-white font-semibold"
+                      className="w-full bg-gradient-to-r from-[#27AE60] to-[#229954] hover:from-[#229954] hover:to-[#27AE60] text-white font-semibold shadow-lg transition-all"
                     >
-                      ⬇️ Download Frame
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Frame
                     </Button>
 
                     {/* Use Frame Button - untuk ke booth editor */}
@@ -502,10 +590,22 @@ Go ahead and describe your ideal frame! ✨`,
                       )}
                     </Button>
 
-                    <div className="text-center text-gray-500 py-8">
-                      <Sparkles className="w-8 h-8 mx-auto mb-3 opacity-50" />
-                      <p>Describe your frame idea, then click "Generate Visual Frame"</p>
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="text-center text-gray-500 py-8 px-4"
+                    >
+                      <div className="bg-[#2A2A2A] rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
+                        <Sparkles className="w-10 h-10 text-[#C62828] opacity-50" />
+                      </div>
+                      <h3 className="text-white font-semibold mb-2">No Frame Yet</h3>
+                      <p className="text-sm leading-relaxed">Chat with AI to design your frame, then click "Generate Visual Frame" to create it!</p>
+                      {frameSpec && (
+                        <Badge className="mt-3 bg-[#C62828]/20 text-[#C62828] border-[#C62828]/30">
+                          Frame ready to generate!
+                        </Badge>
+                      )}
+                    </motion.div>
                   </>
                 )}
               </CardContent>

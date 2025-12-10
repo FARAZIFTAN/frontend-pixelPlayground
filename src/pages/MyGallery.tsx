@@ -9,9 +9,18 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
-import { compositeAPI } from "@/services/api";
+import { compositeAPI, API_BASE_URL } from "@/services/api";
 import { toast } from "react-hot-toast";
 import analytics from "@/lib/analytics";
+
+// Helper function to get full image URL
+const getImageUrl = (url: string) => {
+  if (!url) return '';
+  if (url.startsWith('http') || url.startsWith('data:')) return url;
+  // Remove /api from base URL for static files
+  const baseUrl = API_BASE_URL.replace('/api', '');
+  return `${baseUrl}${url}`;
+};
 
 interface Composite {
   _id: string;
@@ -300,7 +309,7 @@ const MyGallery = () => {
                   <Card className="overflow-hidden bg-white/5 border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
                     <div className="aspect-[3/4] relative overflow-hidden">
                       <img
-                        src={composite.compositeUrl}
+                        src={getImageUrl(composite.compositeUrl)}
                         alt="Photo composite"
                         className="w-full h-full object-cover"
                         loading="lazy"
@@ -422,7 +431,7 @@ const MyGallery = () => {
               <div className="space-y-4">
                 <div className="flex justify-center">
                   <img
-                    src={sharingComposite.compositeUrl}
+                    src={getImageUrl(sharingComposite.compositeUrl)}
                     alt="Photo composite"
                     className="w-32 h-32 object-cover rounded-lg"
                   />
