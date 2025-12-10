@@ -2,12 +2,11 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, 
   Image, 
-  PlusCircle, 
-  Users, 
-  Settings, 
   BarChart3,
+  Settings,
   LogOut,
-  Camera
+  Camera,
+  ChevronDown
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +14,8 @@ import toast from "react-hot-toast";
 
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showTemplatesSubmenu, setShowTemplatesSubmenu] = useState(false);
+  const [showAnalyticsSubmenu, setShowAnalyticsSubmenu] = useState(false);
   const { logout } = useAuth();
   const navigate = useNavigate();
 
@@ -33,22 +34,18 @@ const Sidebar = () => {
     { 
       path: "/admin/templates", 
       icon: Image, 
-      label: "Templates" 
-    },
-    { 
-      path: "/admin/template-creator", 
-      icon: PlusCircle, 
-      label: "Create Template" 
+      label: "Templates",
+      submenu: [
+        { path: "/admin/template-creator", label: "Download Template" }
+      ]
     },
     { 
       path: "/admin/analytics", 
       icon: BarChart3, 
-      label: "Analytics" 
-    },
-    { 
-      path: "/admin/users", 
-      icon: Users, 
-      label: "Users" 
+      label: "Analytics",
+      submenu: [
+        { path: "/admin/users", label: "Users" }
+      ]
     },
     { 
       path: "/admin/settings", 
@@ -89,24 +86,85 @@ const Sidebar = () => {
       <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
+          const hasSubmenu = item.submenu && item.submenu.length > 0;
+          const isTemplates = item.label === "Templates";
+          const isAnalytics = item.label === "Analytics";
+          const showSubmenu = isTemplates ? showTemplatesSubmenu : isAnalytics ? showAnalyticsSubmenu : false;
+
           return (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
-                  isActive
-                    ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
-                    : "text-gray-300 hover:bg-white/10 hover:text-white"
-                }`
-              }
-              title={isCollapsed ? item.label : ""}
-            >
-              <Icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <span className="font-medium">{item.label}</span>
+            <div key={item.path}>
+              {hasSubmenu ? (
+                <div>
+                  <NavLink
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 relative group ${
+                        isActive
+                          ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
+                          : "text-gray-300 hover:bg-white/10 hover:text-white"
+                      }`
+                    }
+                    title={isCollapsed ? item.label : ""}
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    {!isCollapsed && (
+                      <>
+                        <span className="font-medium flex-1">{item.label}</span>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            if (isTemplates) setShowTemplatesSubmenu(!showTemplatesSubmenu);
+                            if (isAnalytics) setShowAnalyticsSubmenu(!showAnalyticsSubmenu);
+                          }}
+                          className="p-1 hover:bg-white/20 rounded transition-colors"
+                        >
+                          <ChevronDown className={`w-4 h-4 transition-transform ${showSubmenu ? "rotate-180" : ""}`} />
+                        </button>
+                      </>
+                    )}
+                  </NavLink>
+                </div>
+              ) : (
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      isActive
+                        ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
+                        : "text-gray-300 hover:bg-white/10 hover:text-white"
+                    }`
+                  }
+                  title={isCollapsed ? item.label : ""}
+                >
+                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  {!isCollapsed && (
+                    <span className="font-medium">{item.label}</span>
+                  )}
+                </NavLink>
               )}
-            </NavLink>
+
+              {/* Submenu Items */}
+              {hasSubmenu && showSubmenu && !isCollapsed && (
+                <div className="ml-4 space-y-1 mt-1">
+                  {item.submenu.map((subitem) => (
+                    <NavLink
+                      key={subitem.path}
+                      to={subitem.path}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                          isActive
+                            ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
+                            : "text-gray-300 hover:bg-white/10 hover:text-white"
+                        }`
+                      }
+                    >
+                      <div className="w-2 h-2 bg-current rounded-full"></div>
+                      <span className="font-medium">{subitem.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

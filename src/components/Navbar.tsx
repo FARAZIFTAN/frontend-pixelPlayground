@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -9,6 +9,7 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showExploreMenu, setShowExploreMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
@@ -30,8 +31,6 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "Home", path: "/" },
-    { name: "Explore", path: "/gallery" },
-    { name: "Booth", path: "/booth" },
     { name: "Contact", path: "/contact" },
   ];
 
@@ -59,30 +58,107 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-1 lg:space-x-2">
-            {navLinks.map((link) => (
+            {/* Home Link */}
+            <Link
+              to="/"
+              className={`px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
+                isActive("/")
+                  ? "bg-[#C62828] text-white"
+                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+              }`}
+            >
+              Home
+            </Link>
+
+            {/* Explore with Dropdown - Only for Authenticated Users */}
+            {isAuthenticated && user && (
+              <div className="relative">
+                <button
+                  onClick={() => setShowExploreMenu(!showExploreMenu)}
+                  className={`flex items-center space-x-1 px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
+                    isActive("/gallery") || isActive("/booth") || isActive("/my-gallery") || isActive("/ai-template-creator")
+                      ? "bg-[#C62828] text-white"
+                      : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+                  }`}
+                >
+                  <span>Explore</span>
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+
+                {showExploreMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="absolute left-0 mt-2 w-56 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
+                  >
+                    <Link
+                      to="/gallery"
+                      onClick={() => setShowExploreMenu(false)}
+                      className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Explore</span>
+                    </Link>
+                    <Link
+                      to="/booth"
+                      onClick={() => setShowExploreMenu(false)}
+                      className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                    >
+                      <Camera className="w-4 h-4" />
+                      <span>Booth</span>
+                    </Link>
+                    <Link
+                      to="/my-gallery"
+                      onClick={() => setShowExploreMenu(false)}
+                      className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                    >
+                      <ImageIcon className="w-4 h-4" />
+                      <span>My Gallery</span>
+                    </Link>
+                    <Link
+                      to="/ai-template-creator"
+                      onClick={() => setShowExploreMenu(false)}
+                      className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                    >
+                      <Sparkles className="w-4 h-4 text-yellow-400" />
+                      <span>AI Template Creator</span>
+                    </Link>
+                  </motion.div>
+                )}
+              </div>
+            )}
+
+            {/* Explore Link for Guest Users */}
+            {!isAuthenticated && (
               <Link
-                key={link.path}
-                to={link.path}
+                to="/gallery"
                 className={`px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
-                  isActive(link.path)
+                  isActive("/gallery")
                     ? "bg-[#C62828] text-white"
                     : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
                 }`}
               >
-                {link.name}
+                Explore
               </Link>
-            ))}
+            )}
+
+            {/* Contact Link */}
+            <Link
+              to="/contact"
+              className={`px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
+                isActive("/contact")
+                  ? "bg-[#C62828] text-white"
+                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+              }`}
+            >
+              Contact
+            </Link>
           </div>
 
           {/* Auth Buttons - Desktop */}
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated && user ? (
               <>
-                <Link to="/booth">
-                  <Button className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-full px-6 shadow-soft hover:shadow-glow transition-all">
-                    Start Booth
-                  </Button>
-                </Link>
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
@@ -109,22 +185,6 @@ const Navbar = () => {
                       >
                         <User className="w-4 h-4" />
                         <span>My Account</span>
-                      </Link>
-                      <Link
-                        to="/my-gallery"
-                        onClick={() => setShowUserMenu(false)}
-                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
-                      >
-                        <ImageIcon className="w-4 h-4" />
-                        <span>My Gallery</span>
-                      </Link>
-                      <Link
-                        to="/ai-template-creator"
-                        onClick={() => setShowUserMenu(false)}
-                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
-                      >
-                        <Sparkles className="w-4 h-4 text-yellow-400" />
-                        <span>AI Template Creator</span>
                       </Link>
                       <button
                         onClick={handleLogout}

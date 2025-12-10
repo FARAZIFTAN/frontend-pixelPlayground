@@ -56,9 +56,10 @@ const Settings = () => {
       } else {
         toast.error(response.message || "Failed to update profile");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error updating profile:", error);
-      toast.error(error.message || "Failed to update profile");
+      const errorMessage = error instanceof Error ? error.message : "Failed to update profile";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
@@ -92,7 +93,7 @@ const Settings = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-blue-500/20 backdrop-blur-sm rounded-lg border border-blue-500/30">
@@ -157,7 +158,7 @@ const Settings = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
         >
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-purple-500/20 backdrop-blur-sm rounded-lg border border-purple-500/30">
@@ -224,7 +225,7 @@ const Settings = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.2 }}
         >
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-[#C62828]/20 backdrop-blur-sm rounded-lg border border-[#C62828]/30">
@@ -257,7 +258,7 @@ const Settings = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.3 }}
         >
-          <Card className="border-0 shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
+          <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-3 bg-green-500/20 backdrop-blur-sm rounded-lg border border-green-500/30">
