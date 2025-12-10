@@ -19,7 +19,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<User | null>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
-  checkAuth: () => Promise<void>;
+  checkAuth: (silent?: boolean) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,18 +53,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   // Check if token is valid and get user data
-  const checkAuth = async () => {
+  const checkAuth = async (silent = false) => {
     const savedToken = localStorage.getItem('token');
     if (!savedToken) {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/auth/verify', {
+      // Add cache-busting to ensure fresh data
+      const timestamp = Date.now();
+      const response = await fetch(`http://localhost:3001/api/auth/verify?t=${timestamp}`, {
         mode: 'cors',
         headers: {
           'Authorization': `Bearer ${savedToken}`,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
         },
       });
 
@@ -74,18 +80,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(data.data.user);
         setToken(savedToken);
       } else {
-        // Token invalid or expired
-        localStorage.removeItem('token');
-        setToken(null);
-        setUser(null);
+        // Only logout if not silent mode (i.e., initial load or explicit check)
+        if (!silent) {
+          localStorage.removeItem('token');
+          setToken(null);
+          setUser(null);
+        } else {
+          console.warn('Auth check failed but keeping user logged in (silent mode)');
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-      setToken(null);
-      setUser(null);
+      // On silent mode, don't logout on network errors
+      if (!silent) {
+        localStorage.removeItem('token');
+        setToken(null);
+        setUser(null);
+      } else {
+        console.warn('Network error during silent auth check, keeping user logged in');
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   };
 

@@ -10,9 +10,17 @@ const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showExploreMenu, setShowExploreMenu] = useState(false);
+  const [profilePicVersion, setProfilePicVersion] = useState(Date.now());
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Update profile pic version when user changes
+  useEffect(() => {
+    if (user?.profilePicture) {
+      setProfilePicVersion(Date.now());
+    }
+  }, [user?.profilePicture]);
 
   const handleLogout = () => {
     logout();
@@ -164,7 +172,22 @@ const Navbar = () => {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all"
                   >
-                    <User className="w-5 h-5 text-white" />
+                    {user.profilePicture ? (
+                      <img 
+                        src={user.profilePicture.startsWith('http') 
+                          ? `${user.profilePicture}?t=${profilePicVersion}` 
+                          : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
+                        } 
+                        alt={user.name}
+                        className="w-8 h-8 rounded-full object-cover"
+                        onError={(e) => {
+                          console.error('Navbar profile pic load error');
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )}
                     <span className="text-white font-medium">{user.name}</span>
                   </button>
                   

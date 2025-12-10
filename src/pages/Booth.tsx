@@ -910,12 +910,41 @@ const Booth = () => {
             setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
             console.log('🎉 Composite complete! Template:', canvas.width, 'x', canvas.height);
             
-            // Show success message with save options
-            if (user) {
-              toast.success("✅ Photo ready! Click 'Save to My Gallery' or 'Download'", {
-                duration: 4000,
+            // Auto-save to gallery if user is logged in
+            if (user && sessionId) {
+              console.log('💾 Auto-saving to gallery...');
+              toast.success("✅ Photo ready! Saving to gallery...", {
+                duration: 2000,
               });
+              
+              // Auto-save after short delay
+              setTimeout(async () => {
+                try {
+                  setIsSaving(true);
+                  
+                  const response = await compositeAPI.uploadCompositeImage(
+                    finalImage,
+                    sessionId,
+                    selectedTemplate?._id
+                  );
+
+                  console.log('✅ Auto-saved to gallery:', response);
+                  setIsSaving(false);
+                  
+                  toast.success('✅ Photo saved to My Gallery!', {
+                    duration: 3000,
+                    icon: '🎉',
+                  });
+                } catch (error) {
+                  console.error('❌ Auto-save failed:', error);
+                  setIsSaving(false);
+                  toast.error('Failed to auto-save. Use Download button to save to device.', {
+                    duration: 4000,
+                  });
+                }
+              }, 500);
             } else {
+              // User not logged in - just show download option
               toast.success("✅ Photo ready! Click 'Download' to save to device", {
                 duration: 4000,
               });
@@ -1518,21 +1547,6 @@ const Booth = () => {
                       <Sparkles className="w-5 h-5 mr-2" />
                       Edit Photos
                     </Button>
-                    {user && (
-                      <Button
-                        onClick={handleSaveToGallery}
-                        disabled={isSaving}
-                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Save to your online gallery"
-                      >
-                        {isSaving ? (
-                          <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        ) : (
-                          <Save className="w-5 h-5 mr-2" />
-                        )}
-                        {isSaving ? 'Saving...' : 'Save to My Gallery'}
-                      </Button>
-                    )}
                     <Button
                       onClick={handleDownload}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
@@ -1541,6 +1555,16 @@ const Booth = () => {
                       <Download className="w-5 h-5 mr-2" />
                       Download to Device
                     </Button>
+                    {user && (
+                      <Button
+                        onClick={() => navigate('/my-gallery')}
+                        className="bg-green-600 hover:bg-green-700 text-white px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"
+                        title="View your saved photos"
+                      >
+                        <ImageIcon className="w-5 h-5 mr-2" />
+                        View My Gallery
+                      </Button>
+                    )}
                     <Button
                       onClick={handleShare}
                       className="bg-accent hover:bg-accent/80 text-accent-foreground px-6 py-6 rounded-full shadow-soft hover:shadow-hover transition-all"

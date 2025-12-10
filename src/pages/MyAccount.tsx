@@ -33,13 +33,22 @@ const MyAccount = () => {
         const data = await userAPI.getProfile();
         if (!mounted) return;
         const p = (data as any).data?.user || (data as any).user || data;
+        console.log('Loaded profile data:', p);
         setProfile(p);
         setName(p.name || "");
         setEmail(p.email || "");
         setPhone(p.phone || "");
-        setAvatarPreview(p.profilePicture || null);
+        // Add cache-busting timestamp to profile picture URL
+        if (p.profilePicture) {
+          const profilePicUrl = `${p.profilePicture}?t=${Date.now()}`;
+          console.log('Setting avatar preview to:', profilePicUrl);
+          setAvatarPreview(profilePicUrl);
+        } else {
+          console.log('No profile picture found');
+          setAvatarPreview(null);
+        }
       } catch (err: any) {
-        console.error(err);
+        console.error('Load profile error:', err);
         toast({
           title: "Error",
           description: "Failed to load profile data.",
@@ -73,24 +82,67 @@ const MyAccount = () => {
     try {
       // If avatar selected, upload first
       if (avatarFile) {
-        await userAPI.uploadAvatar(avatarFile);
+        console.log('Uploading avatar...', { fileSize: avatarFile.size, fileType: avatarFile.type });
+        const uploadResult = await userAPI.uploadAvatar(avatarFile);
+        console.log('Upload result:', uploadResult);
+        const newProfilePicUrl = (uploadResult as any)?.data?.profilePicture;
+        
+        // Update preview with cache-busting parameter
+        if (newProfilePicUrl) {
+          const timestamp = Date.now();
+          setAvatarPreview(`${newProfilePicUrl}?t=${timestamp}`);
+          // Update profile state as well
+          setProfile((prev: any) => ({
+            ...prev,
+            profilePicture: newProfilePicUrl
+          }));
+        }
+        
         toast({ title: "Success", description: "Profile picture updated successfully." });
+        setAvatarFile(null); // Clear the file after successful upload
       }
 
       // Update profile fields
-      await userAPI.updateProfile({ name, email, phone });
+      if (name || email || phone) {
+        await userAPI.updateProfile({ name, email, phone });
+      }
 
-      // Refresh auth/user data
-      await checkAuth();
+      // Refresh auth/user data (silent mode to prevent logout on temporary errors)
+      await checkAuth(true);
+
+      // Reload profile data to get fresh info from server
+      const freshData = await userAPI.getProfile();
+      const freshProfile = (freshData as any).data?.user || (freshData as any).user || freshData;
+      setProfile(freshProfile);
+      
+      // Update avatar preview with fresh URL
+      if (freshProfile.profilePicture) {
+        setAvatarPreview(`${freshProfile.profilePicture}?t=${Date.now()}`);
+      }
 
       toast({ title: "Success", description: "Profile updated successfully." });
     } catch (err: any) {
-      console.error(err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to update profile.",
-        variant: "destructive"
-      });
+      console.error('Save profile error:', err);
+      
+      // Check if it's an authentication error
+      if (err.message?.includes('Unauthorized') || err.message?.includes('401')) {
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please login again.",
+          variant: "destructive"
+        });
+        // Don't navigate immediately, let user see the message
+        setTimeout(() => {
+          logout();
+          navigate('/login');
+        }, 2000);
+      } else {
+        toast({
+          title: "Error",
+          description: err.message || "Failed to update profile.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -102,7 +154,8 @@ const MyAccount = () => {
       await userAPI.deleteAvatar();
       setAvatarPreview(null);
       setAvatarFile(null);
-      await checkAuth();
+      setProfile({ ...profile, profilePicture: null });
+      await checkAuth(true);
       toast({ title: "Success", description: "Profile picture removed successfully." });
     } catch (err: any) {
       console.error(err);
@@ -206,7 +259,18 @@ const MyAccount = () => {
             <div className="relative">
               <div className="w-32 h-32 rounded-full bg-white/5 flex items-center justify-center mb-4 overflow-hidden">
                 {avatarPreview ? (
-                  <img src={avatarPreview} alt="avatar" className="w-full h-full object-cover" />
+                  <img 
+                    src={avatarPreview.startsWith('blob:') || avatarPreview.startsWith('http') 
+                      ? avatarPreview 
+                      : `http://localhost:3001${avatarPreview}`
+                    } 
+                    alt="avatar" 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Image load error:', avatarPreview);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
                 ) : (
                   <Camera className="w-12 h-12 text-white/70" />
                 )}

@@ -254,7 +254,17 @@ export const userAPI = {
   // Upload profile picture — FormData, do not set JSON content-type
   uploadAvatar: async (file: File) => {
     const token = localStorage.getItem('token');
+    
+    if (!token) {
+      console.error('No token found for upload');
+      throw new Error('Authentication required. Please login again.');
+    }
+    
     const url = `${API_BASE_URL}/users/profile-picture`;
+    
+    console.log('Uploading to:', url);
+    console.log('Token exists:', !!token);
+    console.log('File size:', file.size, 'bytes');
 
     const form = new FormData();
     form.append('profilePicture', file);
@@ -264,17 +274,26 @@ export const userAPI = {
       mode: 'cors',
       credentials: 'include',
       headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
       body: form,
     });
 
+    console.log('Upload response status:', res.status);
+
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
+      console.error('Upload error response:', data);
+      
+      if (res.status === 401) {
+        throw new Error('Unauthorized - Your session may have expired');
+      }
+      
       throw new Error(data.message || `Upload failed with status ${res.status}`);
     }
 
     const data = await res.json().catch(() => ({}));
+    console.log('Upload success response:', data);
     return data;
   },
 
