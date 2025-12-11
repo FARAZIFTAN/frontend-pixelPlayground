@@ -63,11 +63,63 @@ const MyGallery = () => {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [shareData, setShareData] = useState<{ shareLink?: string; shareCode?: string; shareUrl?: string; qrCode?: string } | null>(null);
   const [sharingComposite, setSharingComposite] = useState<Composite | null>(null);
+  
+  // Delete state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deletingComposite, setDeletingComposite] = useState<Composite | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Track page view
   useEffect(() => {
     analytics.pageView('My Gallery', user?.id);
   }, [user?.id]);
+
+  // Delete composite
+  const handleDeleteClick = (composite: Composite) => {
+    setDeletingComposite(composite);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingComposite) return;
+
+    setIsDeleting(true);
+    try {
+      console.log('🗑️ Deleting composite:', deletingComposite._id);
+      const response = await compositeAPI.deleteComposite(deletingComposite._id);
+      console.log('✅ Delete response:', response);
+      
+      // Remove from local state
+      setComposites(prev => prev.filter(c => c._id !== deletingComposite._id));
+      
+      toast.success('Photo deleted successfully!');
+      
+      // Track deletion in analytics
+      analytics.compositeDelete(deletingComposite._id, user?.id);
+      
+      setDeleteDialogOpen(false);
+      setDeletingComposite(null);
+    } catch (error) {
+      console.error('❌ Delete error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('❌ Error details:', errorMessage);
+      
+      // User-friendly error messages
+      let displayMessage = 'Failed to delete photo. Please try again.';
+      if (errorMessage.includes('not found') || errorMessage.includes('unauthorized')) {
+        displayMessage = 'Photo not found. It may have been already deleted.';
+        // Close dialog since photo doesn't exist anyway
+        setDeleteDialogOpen(false);
+        setDeletingComposite(null);
+        // Refresh the gallery to sync
+        loadComposites();
+      }
+      
+      toast.error(displayMessage);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   // Load composites
   const loadComposites = async (pageNum = 1, append = false) => {
@@ -378,6 +430,14 @@ const MyGallery = () => {
                           <Share2 className="w-3 h-3 mr-1" />
                           Share
                         </Button>
+                        <Button
+                          onClick={() => handleDeleteClick(composite)}
+                          size="sm"
+                          variant="outline"
+                          className="bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/30"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -500,6 +560,74 @@ const MyGallery = () => {
                       Share
                     </Button>
                   )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent className="max-w-md bg-gray-900 border-white/20">
+            <DialogHeader>
+              <DialogTitle className="text-white text-center">Delete Photo</DialogTitle>
+            </DialogHeader>
+            {deletingComposite && (
+              <div className="space-y-4">
+                <div className="flex justify-center">
+                  <img
+                    src={getImageUrl(deletingComposite.compositeUrl)}
+                    alt="Photo to delete"
+                    className="w-32 h-32 object-cover rounded-lg border-2 border-red-500/30"
+                  />
+                </div>
+
+                <div className="text-center space-y-2">
+                  <p className="text-white font-semibold">
+                    Are you sure you want to delete this photo?
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    This action cannot be undone. The photo will be permanently deleted from your gallery and our servers.
+                  </p>
+                  <div className="text-xs text-gray-500 pt-2">
+                    Created: {new Date(deletingComposite.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={() => {
+                      setDeleteDialogOpen(false);
+                      setDeletingComposite(null);
+                    }}
+                    variant="outline"
+                    className="flex-1 border-white/20 text-white hover:bg-white/10"
+                    disabled={isDeleting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleDeleteConfirm}
+                    disabled={isDeleting}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      <>
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             )}

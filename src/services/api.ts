@@ -236,6 +236,11 @@ export const compositeAPI = {
   shareComposite: async (id: string) => {
     return apiCall(`/share/${id}`, { method: 'GET' });
   },
+
+  // Delete composite
+  deleteComposite: async (id: string) => {
+    return apiCall(`/composites/${id}`, { method: 'DELETE' });
+  },
 };
 
 // User profile API helpers
@@ -319,6 +324,19 @@ export const userAPI = {
     return apiCall('/users/password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  },
+
+  // Get user settings
+  getSettings: async () => {
+    return apiCall('/users/settings', { method: 'GET' });
+  },
+
+  // Update user settings
+  updateSettings: async (type: 'notifications' | 'theme', settings: Record<string, any>) => {
+    return apiCall('/users/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ type, settings }),
     });
   },
 

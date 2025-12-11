@@ -38,7 +38,35 @@ const Settings = () => {
         email: user.email || "",
       });
     }
+    // Load settings from backend
+    loadSettings();
   }, [user]);
+
+  const loadSettings = async () => {
+    try {
+      const response = await userAPI.getSettings() as {
+        success: boolean;
+        data?: {
+          notifications: {
+            emailNotifications: boolean;
+            templateAlerts: boolean;
+            weeklyReports: boolean;
+          };
+          theme: {
+            theme: string;
+            language: string;
+          };
+        };
+      };
+
+      if (response.success && response.data) {
+        setNotificationSettings(response.data.notifications);
+        setThemeSettings(response.data.theme);
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,16 +93,48 @@ const Settings = () => {
     }
   };
 
-  const handleSaveNotifications = () => {
-    // Since there's no backend API for this yet, just save locally
-    localStorage.setItem("notificationSettings", JSON.stringify(notificationSettings));
-    toast.success("Notification preferences saved!");
+  const handleSaveNotifications = async () => {
+    setIsSaving(true);
+    try {
+      const response = await userAPI.updateSettings('notifications', notificationSettings) as {
+        success: boolean;
+        message: string;
+      };
+
+      if (response.success) {
+        toast.success("Notification preferences saved!");
+      } else {
+        toast.error(response.message || "Failed to save notification preferences");
+      }
+    } catch (error) {
+      console.error("Error saving notifications:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save notification preferences";
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleSaveTheme = () => {
-    // Save theme settings locally
-    localStorage.setItem("themeSettings", JSON.stringify(themeSettings));
-    toast.success("Appearance settings saved!");
+  const handleSaveTheme = async () => {
+    setIsSaving(true);
+    try {
+      const response = await userAPI.updateSettings('theme', themeSettings) as {
+        success: boolean;
+        message: string;
+      };
+
+      if (response.success) {
+        toast.success("Appearance settings saved!");
+      } else {
+        toast.error(response.message || "Failed to save appearance settings");
+      }
+    } catch (error) {
+      console.error("Error saving theme:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save appearance settings";
+      toast.error(errorMessage);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -209,10 +269,20 @@ const Settings = () => {
                 </label>
                 <Button 
                   onClick={handleSaveNotifications}
+                  disabled={isSaving}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold mt-4"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Save Preferences
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Save Preferences
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
@@ -300,10 +370,20 @@ const Settings = () => {
                 </div>
                 <Button 
                   onClick={handleSaveTheme}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold"
+                  disabled={isSaving}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold mt-4"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Save Appearance
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Save Settings
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>

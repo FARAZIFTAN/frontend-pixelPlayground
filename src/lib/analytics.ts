@@ -172,6 +172,15 @@ export const analytics = {
     });
   },
 
+  compositeDelete: (compositeId: string, userId?: string) => {
+    trackEvent({
+      eventType: EventTypes.PHOTO_DELETE,
+      eventCategory: EventCategories.GALLERY,
+      userId,
+      metadata: { compositeId },
+    });
+  },
+
   // Track errors
   error: (errorType: string, errorMessage: string, userId?: string) => {
     trackEvent({

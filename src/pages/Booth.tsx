@@ -194,6 +194,7 @@ const Booth = () => {
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownToast = useRef(false); // Track if toast has been shown
   const isRetakingPhotoRef = useRef(false); // Track if currently retaking a photo
+  const retakeIndexRef = useRef<number | null>(null); // Track which index to retake
 
   // Load input method from URL parameter
   useEffect(() => {
@@ -646,17 +647,24 @@ const Booth = () => {
         // Save the captured photo (no filter yet)
         const imageData = canvas.toDataURL("image/png");
         
-        // Create new captured images array - either replace or append based on currentPhotoIndex
-        let newCapturedImages: string[];
-        if (currentPhotoIndex < capturedImages.length) {
-          // Replacing a photo (retake scenario)
-          newCapturedImages = [...capturedImages];
-          newCapturedImages[currentPhotoIndex] = imageData;
+        // USE RETAKE INDEX FROM REF IF RETAKING, OTHERWISE USE CURRENT INDEX
+        const targetIndex = retakeIndexRef.current !== null ? retakeIndexRef.current : currentPhotoIndex;
+        const isRetaking = retakeIndexRef.current !== null;
+        
+        console.log(`📸 CAPTURE: Target index: ${targetIndex} (currentPhotoIndex: ${currentPhotoIndex}, retakeIndex: ${retakeIndexRef.current})`);
+        console.log(`📊 CAPTURE: Current array:`, capturedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
+        
+        if (isRetaking) {
+          console.log(`🔄 CAPTURE: RETAKING photo at index ${targetIndex}`);
         } else {
-          // Appending a new photo (normal capture scenario)
-          newCapturedImages = [...capturedImages, imageData];
+          console.log(`➕ CAPTURE: Adding NEW photo at index ${targetIndex}`);
         }
+        
+        // Always update at the specific targetIndex - don't append
+        const newCapturedImages = [...capturedImages];
+        newCapturedImages[targetIndex] = imageData;
         setCapturedImages(newCapturedImages);
+        console.log(`✅ CAPTURE: Photo stored at index ${targetIndex}`);
         
         // Upload photo to backend
         if (sessionId) {
@@ -664,10 +672,11 @@ const Booth = () => {
             const response = await photoAPI.uploadPhoto({
               sessionId,
               photoUrl: imageData,
-              order: currentPhotoIndex,
+              order: targetIndex + 1, // 1-based for backend
               metadata: {
                 capturedAt: new Date().toISOString(),
-                photoNumber: currentPhotoIndex + 1,
+                photoNumber: targetIndex + 1,
+                isRetake: isRetaking
               }
             });
             
@@ -675,7 +684,11 @@ const Booth = () => {
             const data = response as { data?: { photo?: { _id: string } }; photo?: { _id: string } };
             const photoId = data.data?.photo?._id || data.photo?._id;
             if (photoId) {
-              setUploadedPhotoIds(prev => [...prev, photoId]);
+              setUploadedPhotoIds(prev => {
+                const newIds = [...prev];
+                newIds[targetIndex] = photoId;
+                return newIds;
+              });
               console.log('✅ Photo uploaded:', photoId);
             }
           } catch (error) {
@@ -683,7 +696,31 @@ const Booth = () => {
           }
         }
         
-        const nextPhotoIndex = currentPhotoIndex + 1;
+        // Clear retake refs after successful capture
+        if (isRetaking) {
+          retakeIndexRef.current = null;
+          isRetakingPhotoRef.current = false;
+          console.log('🧹 CAPTURE: Cleared retake refs');
+        }
+        
+        // Calculate next index: if retaking, check for completion; otherwise increment
+        let nextPhotoIndex: number;
+        if (isRetaking) {
+          // After retake, check if all photos are captured
+          const allCaptured = newCapturedImages.every(img => img !== "");
+          if (allCaptured) {
+            nextPhotoIndex = photoCount; // All done
+          } else {
+            // Find next empty slot to continue
+            const nextEmpty = newCapturedImages.findIndex((img, idx) => idx > targetIndex && img === "");
+            nextPhotoIndex = nextEmpty !== -1 ? nextEmpty : photoCount;
+          }
+          console.log(`🔄 NEXT: After retake at ${targetIndex}, next index: ${nextPhotoIndex}`);
+        } else {
+          // Normal flow: increment to next
+          nextPhotoIndex = targetIndex + 1;
+          console.log(`➡️ NEXT: Normal flow from ${targetIndex}, next index: ${nextPhotoIndex}`);
+        }
         
         // Check if we've captured all photos
         if (nextPhotoIndex >= photoCount) {
@@ -1060,6 +1097,12 @@ const Booth = () => {
   };
 
   const handleRetake = () => {
+    // Stop existing camera stream first
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+      setStream(null);
+    }
+    
     setCapturedImages([]);
     setFinalCompositeImage(null);
     setCurrentPhotoIndex(0);
@@ -1067,10 +1110,19 @@ const Booth = () => {
     setUploadedPhotoIds([]);
     setAllPhotosCaptured(false);
     setGlobalFilter(FILTER_PRESETS.none);
+    setShowEditPanel(false);
+    
     // Create new session for retake (only if template exists)
     if (selectedTemplate) {
       console.log('🔄 Retaking photos, creating new session...');
       createPhotoSession();
+    }
+    
+    // Restart camera for camera mode
+    if (inputMethod === 'camera') {
+      setTimeout(() => {
+        startCamera();
+      }, 500);
     }
   };
 
@@ -1159,6 +1211,9 @@ const Booth = () => {
 
   // Retake a specific photo
   const handleRetakePhoto = (photoIndex: number) => {
+    console.log(`🔄 RETAKE: Starting retake for photo at index ${photoIndex}`);
+    console.log(`📊 RETAKE: Current array before clear:`, capturedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
+    
     // Clear any existing countdown/intervals first
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
@@ -1166,31 +1221,35 @@ const Booth = () => {
     }
     setCountdown(null);
     
-    // Set currentPhotoIndex first to match which frame we're retaking
-    setCurrentPhotoIndex(photoIndex);
-    
     // Clear only that specific photo, maintaining array structure
     const updatedImages = [...capturedImages];
     updatedImages[photoIndex] = ""; // Mark as empty/to be retaken, don't remove
     setCapturedImages(updatedImages);
+    console.log(`🗑️ RETAKE: Cleared photo at index ${photoIndex}`, updatedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
     
     // Update uploaded photo IDs similarly - keep array structure
     const updatedIds = [...uploadedPhotoIds];
     updatedIds[photoIndex] = ""; // Mark as empty
     setUploadedPhotoIds(updatedIds.filter(id => id !== "")); // Only keep actual IDs
     
-    // Clear the composite and UI state
+    // Clear the composite and UI state - HIDE IMMEDIATELY
     setFinalCompositeImage(null);
     setAllPhotosCaptured(false);
     setShowEditPanel(false);
     setShowRetakeOptions(false);
     
+    // IMPORTANT: Set currentPhotoIndex to the photo we want to retake
+    setCurrentPhotoIndex(photoIndex);
+    
+    // CRITICAL: Store in ref to ensure capturePhoto uses correct index immediately
+    retakeIndexRef.current = photoIndex;
+    isRetakingPhotoRef.current = true;
+    
+    console.log(`✅ RETAKE: Set retakeIndexRef to ${photoIndex}`);
+    
     toast.success(`Retaking frame ${photoIndex + 1}... 📸`, {
       duration: 1500,
     });
-
-    // Mark that we're retaking and will auto-capture
-    isRetakingPhotoRef.current = true;
 
     // Restart camera - stop current stream and start fresh
     if (stream) {
@@ -1594,7 +1653,10 @@ const Booth = () => {
                         >
                           <p className="text-sm text-muted-foreground font-semibold mb-3">Select frame to retake:</p>
                           <div className="space-y-2">
-                            {capturedImages.map((image, idx) => {
+                            {capturedImages
+                              .map((image, idx) => ({ image, idx }))
+                              .filter(({ image }) => image !== "")
+                              .map(({ image, idx }) => {
                               const position = selectedTemplate?.layoutPositions[idx];
                               const frameLabel = selectedTemplate?.frameCount === 2 
                                 ? (idx === 0 ? "Top Frame" : "Bottom Frame")
