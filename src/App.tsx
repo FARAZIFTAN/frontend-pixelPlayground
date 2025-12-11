@@ -25,6 +25,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import ChangePassword from "./pages/ChangePassword";
 import Share from "./pages/Share";
 import AITemplateCreator from "./pages/AITemplateCreator";
+import InputMethodSelection from "./pages/InputMethodSelection";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -105,6 +106,11 @@ const App = () => (
                     <Route path="/change-password" element={
                       <ProtectedRoute>
                         <ChangePassword />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/input-method" element={
+                      <ProtectedRoute>
+                        <InputMethodSelection />
                       </ProtectedRoute>
                     } />
                     <Route path="/booth" element={

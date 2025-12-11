@@ -84,7 +84,7 @@ const Navbar = () => {
                 <button
                   onClick={() => setShowExploreMenu(!showExploreMenu)}
                   className={`flex items-center space-x-1 px-3 lg:px-4 py-2 rounded-lg font-medium transition-all ${
-                    isActive("/gallery") || isActive("/booth") || isActive("/my-gallery") || isActive("/ai-template-creator")
+                    isActive("/gallery") || isActive("/my-gallery") || isActive("/ai-template-creator")
                       ? "bg-[#C62828] text-white"
                       : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
                   }`}
@@ -106,14 +106,6 @@ const Navbar = () => {
                     >
                       <ImageIcon className="w-4 h-4" />
                       <span>Explore</span>
-                    </Link>
-                    <Link
-                      to="/booth"
-                      onClick={() => setShowExploreMenu(false)}
-                      className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span>Booth</span>
                     </Link>
                     <Link
                       to="/my-gallery"
@@ -275,11 +267,6 @@ const Navbar = () => {
                     <p className="text-xs text-gray-400">Signed in as</p>
                     <p className="text-white font-medium truncate">{user.email}</p>
                   </div>
-                  <Link to="/booth" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-full shadow-soft">
-                      Start Booth
-                    </Button>
-                  </Link>
                   <Link to="/my-account" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button className="w-full mt-2 bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
                       <User className="w-4 h-4" />

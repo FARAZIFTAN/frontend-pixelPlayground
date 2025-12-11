@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { compositeAPI, API_BASE_URL } from "@/services/api";
 import { toast } from "react-hot-toast";
 import analytics from "@/lib/analytics";
+import { downloadFile } from "@/lib/fileUtils";
 
 // Helper function to get full image URL
 const getImageUrl = (url: string) => {
@@ -148,18 +149,21 @@ const MyGallery = () => {
   // Handle download
   const handleDownload = async (composite: Composite) => {
     try {
-      const link = document.createElement('a');
-      link.href = composite.compositeUrl;
-      link.download = `karyaKlik-composite-${composite._id}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Get full URL
+      const fullUrl = getImageUrl(composite.compositeUrl);
+      
+      // Use utility function to download with correct extension
+      await downloadFile(
+        fullUrl,
+        `karyaKlik-composite-${composite._id}`
+      );
 
       toast.success('Composite downloaded!');
       if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
         ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_download', 'composite', composite._id);
       }
     } catch (error) {
+      console.error('Download error:', error);
       toast.error('Failed to download composite');
     }
   };

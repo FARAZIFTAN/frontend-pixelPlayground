@@ -101,10 +101,10 @@ const Gallery = () => {
     analytics.templateView(template._id, template.name, user?.id);
   };
 
-  // Navigate to Booth with pre-selected template
+  // Navigate to Input Method Selection with pre-selected template
   const handleUseTemplate = (template: Template) => {
     analytics.templateSelect(template._id, template.name, user?.id);
-    navigate(`/booth?template=${template._id}`);
+    navigate(`/input-method?template=${template._id}`);
   };
 
   return (
@@ -557,14 +557,17 @@ const Gallery = () => {
                 No templates found
               </h3>
               <p className="text-muted-foreground mb-6">
-                We couldn't find any templates
+                Try adjusting your search or category filters
               </p>
 
               <Button 
-                onClick={() => navigate("/booth")}
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategories([]);
+                }}
                 className="rounded-full bg-primary hover:bg-primary/90"
               >
-                Go to Booth
+                Clear Filters
               </Button>
             </div>
           </motion.div>

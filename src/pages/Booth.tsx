@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X, Upload, Check } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -182,7 +182,11 @@ const Booth = () => {
   const [showEditPanel, setShowEditPanel] = useState(false); // Show/hide edit panel
   const [showRetakeOptions, setShowRetakeOptions] = useState(false); // Show individual photo retake options
   
+  // Input method selection states
+  const [inputMethod, setInputMethod] = useState<'camera' | 'upload' | null>(null); // null = show selection screen
+  
   const [compositeImageDimensions, setCompositeImageDimensions] = useState({ width: 800, height: 600 });
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -190,6 +194,14 @@ const Booth = () => {
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasShownToast = useRef(false); // Track if toast has been shown
   const isRetakingPhotoRef = useRef(false); // Track if currently retaking a photo
+
+  // Load input method from URL parameter
+  useEffect(() => {
+    const methodFromUrl = searchParams.get("method");
+    if (methodFromUrl && (methodFromUrl === 'camera' || methodFromUrl === 'upload')) {
+      setInputMethod(methodFromUrl);
+    }
+  }, [searchParams]);
 
   // Load template from URL parameter or AI generated frame
   useEffect(() => {
@@ -286,7 +298,10 @@ const Booth = () => {
   }, [searchParams]);
 
   useEffect(() => {
-    startCamera();
+    // Only start camera if camera mode is selected
+    if (inputMethod === 'camera') {
+      startCamera();
+    }
     
     return () => {
       if (stream) {
@@ -298,16 +313,16 @@ const Booth = () => {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Empty dependency - only run once on mount
+  }, [inputMethod]); // Run when input method changes
 
-  // Create session when template is loaded
+  // Create session when template and input method are selected
   useEffect(() => {
-    if (selectedTemplate && !sessionId) {
+    if (selectedTemplate && inputMethod && !sessionId) {
       console.log('📋 Template loaded, creating photo session...', selectedTemplate.name);
       createPhotoSession();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTemplate]);
+  }, [selectedTemplate, inputMethod]);
 
 
 
@@ -965,6 +980,85 @@ const Booth = () => {
     };
   };
 
+  // Handle file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setIsLoading(true);
+      const uploadedImages: string[] = [];
+
+      // Convert files to base64 for preview
+      for (let i = 0; i < Math.min(files.length, photoCount); i++) {
+        const file = files[i];
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast.error(`File ${file.name} is not an image`);
+          continue;
+        }
+
+        // Read file as base64
+        const reader = new FileReader();
+        const imageData = await new Promise<string>((resolve) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.readAsDataURL(file);
+        });
+
+        uploadedImages.push(imageData);
+      }
+
+      if (uploadedImages.length === 0) {
+        toast.error('No valid images selected');
+        setIsLoading(false);
+        return;
+      }
+
+      // Append to captured images (not replace)
+      const newCapturedImages = [...capturedImages, ...uploadedImages];
+      setCapturedImages(newCapturedImages);
+      setCurrentPhotoIndex(newCapturedImages.length);
+      
+      // Upload to backend
+      if (sessionId) {
+        const uploadPromises = uploadedImages.map(async (imageData, index) => {
+          const response = await photoAPI.uploadPhoto({
+            sessionId,
+            photoUrl: imageData, // base64 string
+            order: capturedImages.length + index + 1,
+            metadata: {
+              source: 'upload',
+              uploadedAt: new Date().toISOString()
+            }
+          });
+          return response.data._id;
+        });
+
+        const photoIds = await Promise.all(uploadPromises);
+        setUploadedPhotoIds([...uploadedPhotoIds, ...photoIds]);
+      }
+
+      // Check if all photos are uploaded
+      if (newCapturedImages.length >= photoCount) {
+        setAllPhotosCaptured(true);
+        toast.success(`All ${photoCount} photos uploaded successfully!`);
+      } else {
+        toast.success(`${newCapturedImages.length} photos uploaded. ${photoCount - newCapturedImages.length} more needed.`);
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photos');
+    } finally {
+      setIsLoading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleRetake = () => {
     setCapturedImages([]);
     setFinalCompositeImage(null);
@@ -1224,6 +1318,16 @@ const Booth = () => {
 
   return (
     <div className="min-h-screen pt-24 pb-20">
+      {/* Hidden file input for upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       <div className="container mx-auto px-4 lg:px-8 max-w-5xl">
         {/* Header */}
         <motion.div
@@ -1265,21 +1369,50 @@ const Booth = () => {
                       )}
                     </div>
                     <div>
-                      <p className="font-heading font-semibold text-lg text-white flex items-center gap-2">
+                      <div className="font-heading font-semibold text-lg text-white flex items-center gap-2">
                         {selectedTemplate.name}
-                      </p>
+                        {inputMethod && (
+                          <Badge variant="secondary" className="text-xs">
+                            {inputMethod === 'camera' ? (
+                              <>
+                                <Camera className="w-3 h-3 mr-1" />
+                                Camera
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="w-3 h-3 mr-1" />
+                                Upload
+                              </>
+                            )}
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
-                        {selectedTemplate.category} Template
+                        {selectedTemplate.category} Template • {photoCount} photos needed
                       </p>
                     </div>
                   </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => navigate('/gallery')}
-                    className="rounded-full"
-                  >
-                    Change Template
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {inputMethod && selectedTemplate && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          navigate(`/input-method?template=${selectedTemplate._id}`);
+                        }}
+                        className="rounded-full"
+                      >
+                        Change Mode
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      onClick={() => navigate('/gallery')}
+                      className="rounded-full"
+                    >
+                      Change Template
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -1505,14 +1638,39 @@ const Booth = () => {
               <div className="mt-6 flex flex-wrap justify-center gap-4">
                 {/* Only show START button when at initial state */}
                 {capturedImages.length === 0 && !finalCompositeImage ? (
-                  <Button
-                    onClick={handleCapture}
-                    disabled={!hasPermission || isLoading || !selectedTemplate}
-                    className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
-                  >
-                    <Camera className="w-5 h-5 mr-2" />
-                    Start Photo Session
-                  </Button>
+                  <>
+                    {inputMethod === 'camera' ? (
+                      <Button
+                        onClick={handleCapture}
+                        disabled={!hasPermission || isLoading || !selectedTemplate}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
+                      >
+                        <Camera className="w-5 h-5 mr-2" />
+                        Start Photo Session
+                      </Button>
+                    ) : inputMethod === 'upload' ? (
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || !selectedTemplate}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
+                      >
+                        <Upload className="w-5 h-5 mr-2" />
+                        Upload Photos ({photoCount} needed)
+                      </Button>
+                    ) : null}
+                  </>
+                ) : capturedImages.length > 0 && capturedImages.length < photoCount && !allPhotosCaptured ? (
+                  // Show "Add More" button for upload mode if not enough photos
+                  inputMethod === 'upload' ? (
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isLoading}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground px-8 py-6 text-lg rounded-full shadow-soft hover:shadow-hover transition-all"
+                    >
+                      <Upload className="w-5 h-5 mr-2" />
+                      Add More Photos ({photoCount - capturedImages.length} needed)
+                    </Button>
+                  ) : null
                 ) : allPhotosCaptured && !finalCompositeImage ? (
                   <>
                     <Button

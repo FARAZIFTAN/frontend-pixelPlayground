@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Heart, Eye, Download, Share2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { apiCall } from '@/services/api';
+import { downloadFile } from '@/lib/fileUtils';
 
 interface SharedComposite {
   _id: string;
@@ -55,16 +56,11 @@ const SharePage = () => {
     if (!shareData) return;
 
     try {
-      const response = await fetch(shareData.composite.compositeUrl);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `karyaKlik-composite-${shareData.composite._id}.jpg`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Use utility function to download with correct extension
+      await downloadFile(
+        shareData.composite.compositeUrl,
+        `karyaKlik-composite-${shareData.composite._id}`
+      );
 
       toast({
         title: 'Download Started',
