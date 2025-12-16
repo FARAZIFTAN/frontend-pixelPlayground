@@ -96,6 +96,9 @@ Go ahead and describe your ideal frame! ✨`,
   const [lastPrompt, setLastPrompt] = useState<string>('');
   const [frameSpec, setFrameSpec] = useState<AIFrameSpec | null>(null);
   const [showQuickPrompts, setShowQuickPrompts] = useState(true);
+  const [frameVisibility, setFrameVisibility] = useState<'public' | 'private'>('public');
+  const [frameName, setFrameName] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -501,6 +504,120 @@ Go ahead and describe your ideal frame! ✨`,
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download Frame
+                    </Button>
+
+                    {/* Visibility Control */}
+                    <div className="bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg p-4 space-y-3">
+                      <h4 className="text-gray-300 font-semibold text-sm flex items-center gap-2">
+                        <Zap className="w-4 h-4 text-[#C62828]" />
+                        Frame Settings
+                      </h4>
+                      
+                      {/* Frame Name */}
+                      <div>
+                        <label className="text-gray-400 text-xs mb-1 block">Frame Name:</label>
+                        <input
+                          type="text"
+                          value={frameName}
+                          onChange={(e) => setFrameName(e.target.value)}
+                          placeholder="My Awesome Frame"
+                          className="w-full px-3 py-2 bg-[#1A1A1A] border border-[#C62828]/30 rounded text-white text-sm focus:outline-none focus:border-[#C62828]"
+                        />
+                      </div>
+
+                      {/* Visibility Toggle */}
+                      <div>
+                        <label className="text-gray-400 text-xs mb-2 block">Visibility:</label>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setFrameVisibility('public')}
+                            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                              frameVisibility === 'public'
+                                ? 'bg-[#27AE60] text-white'
+                                : 'bg-[#1A1A1A] text-gray-400 border border-[#C62828]/30 hover:border-[#27AE60]/50'
+                            }`}
+                          >
+                            🌍 Public
+                          </button>
+                          <button
+                            onClick={() => setFrameVisibility('private')}
+                            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
+                              frameVisibility === 'private'
+                                ? 'bg-[#E74C3C] text-white'
+                                : 'bg-[#1A1A1A] text-gray-400 border border-[#C62828]/30 hover:border-[#E74C3C]/50'
+                            }`}
+                          >
+                            🔒 Private
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          {frameVisibility === 'public' 
+                            ? '✨ Semua user dapat melihat frame ini' 
+                            : '🔒 Hanya Anda yang dapat melihat frame ini'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Save Frame Button */}
+                    <Button
+                      onClick={async () => {
+                        if (!frameSpec || !generatedImage) {
+                          toast({
+                            title: 'Error',
+                            description: 'Frame data is missing.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        if (!frameName.trim()) {
+                          toast({
+                            title: 'Error',
+                            description: 'Please enter a frame name.',
+                            variant: 'destructive',
+                          });
+                          return;
+                        }
+
+                        setIsSaving(true);
+                        try {
+                          const response = await aiAPI.saveFrame({
+                            name: frameName,
+                            frameSpec,
+                            frameDataUrl: generatedImage,
+                            visibility: frameVisibility,
+                            description: `AI-generated ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
+                            tags: ['AI', frameSpec.theme, frameSpec.layout],
+                          });
+
+                          toast({
+                            title: '✅ Frame Saved!',
+                            description: `Frame "${frameName}" saved as ${frameVisibility}`,
+                          });
+                        } catch (error) {
+                          console.error('Save error:', error);
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to save frame. Please try again.',
+                            variant: 'destructive',
+                          });
+                        } finally {
+                          setIsSaving(false);
+                        }
+                      }}
+                      disabled={isSaving || !frameName.trim()}
+                      className="w-full bg-gradient-to-r from-[#9B59B6] to-[#8E44AD] hover:from-[#8E44AD] hover:to-[#9B59B6] text-white font-semibold shadow-lg transition-all disabled:opacity-50"
+                    >
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          💾 Save Frame
+                        </>
+                      )}
                     </Button>
 
                     {/* Use Frame Button - untuk ke booth editor */}

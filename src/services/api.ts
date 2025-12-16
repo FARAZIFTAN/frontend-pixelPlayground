@@ -627,5 +627,35 @@ export const aiAPI = {
 
     return aiAPI.generateFrame(request);
   },
-};
 
+  /**
+   * Menyimpan AI-generated frame ke database dengan visibility setting
+   * 
+   * @param data - Data frame yang akan disimpan
+   * @returns Response dengan informasi template yang tersimpan
+   * 
+   * @example
+   * ```typescript
+   * const response = await aiAPI.saveFrame({
+   *   name: 'My Custom Frame',
+   *   frameSpec: aiFrameSpec,
+   *   frameDataUrl: 'data:image/svg+xml;base64,...',
+   *   visibility: 'public', // atau 'private'
+   *   description: 'Beautiful AI-generated frame',
+   *   tags: ['AI', 'Modern', 'Gradient']
+   * });
+   * ```
+   */
+  saveFrame: async (data: {
+    name: string;
+    frameSpec: AIFrameSpecification;
+    frameDataUrl: string;
+    visibility: 'public' | 'private';
+    description?: string;
+    tags?: string[];
+  }): Promise<any> => {
+    return apiCall<any>('/ai/save-frame', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },};
