@@ -10,6 +10,7 @@ const InputMethodSelection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('template');
+  const isAIFrame = searchParams.get('aiFrame') === 'true';
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,6 +24,30 @@ const InputMethodSelection = () => {
     const loadTemplate = async () => {
       try {
         setLoading(true);
+        
+        // Handle AI-generated frame (not from backend API)
+        if (isAIFrame && templateId.startsWith('ai-generated-')) {
+          // Get AI frame data from sessionStorage
+          const aiFrameSpec = sessionStorage.getItem('aiFrameSpec');
+          const aiFrameImage = sessionStorage.getItem('aiFrameImage');
+          
+          if (aiFrameSpec && aiFrameImage) {
+            const spec = JSON.parse(aiFrameSpec);
+            const aiTemplate = {
+              _id: templateId,
+              name: `AI ${spec.frameCount}-Photo ${spec.layout} Frame`,
+              category: 'AI Generated',
+              thumbnail: aiFrameImage,
+              frameUrl: aiFrameImage,
+              frameCount: spec.frameCount,
+            };
+            setSelectedTemplate(aiTemplate);
+            setLoading(false);
+            return;
+          }
+        }
+        
+        // Load regular template from backend
         const response = await templateAPI.getTemplate(templateId) as { data: any };
         if (response.data) {
           setSelectedTemplate(response.data);
@@ -40,10 +65,14 @@ const InputMethodSelection = () => {
     };
 
     loadTemplate();
-  }, [templateId, navigate]);
+  }, [templateId, isAIFrame, navigate]);
 
   const handleSelectMethod = (method: 'camera' | 'upload') => {
-    navigate(`/booth?template=${templateId}&method=${method}`);
+    if (isAIFrame) {
+      navigate(`/booth?template=${templateId}&method=${method}&aiFrame=true`);
+    } else {
+      navigate(`/booth?template=${templateId}&method=${method}`);
+    }
   };
 
   if (loading) {

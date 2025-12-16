@@ -200,6 +200,7 @@ const Booth = () => {
   useEffect(() => {
     const methodFromUrl = searchParams.get("method");
     if (methodFromUrl && (methodFromUrl === 'camera' || methodFromUrl === 'upload')) {
+      console.log('Setting input method from URL:', methodFromUrl);
       setInputMethod(methodFromUrl);
     }
   }, [searchParams]);
@@ -208,11 +209,32 @@ const Booth = () => {
   useEffect(() => {
     const templateIdFromUrl = searchParams.get("template");
     const aiFrameFromUrl = searchParams.get("aiFrame");
+    const methodFromUrl = searchParams.get("method");
+    
+    console.log('Template loading effect:', { 
+      templateIdFromUrl, 
+      aiFrameFromUrl, 
+      methodFromUrl,
+      hasLoadedTemplate,
+      inputMethod,
+      selectedTemplate: selectedTemplate?.name
+    });
+    
+    // Reset hasLoadedTemplate if we need to reload (e.g., when method changes)
+    if (aiFrameFromUrl === "true" && methodFromUrl && !selectedTemplate) {
+      console.log('Resetting hasLoadedTemplate to reload AI frame');
+      setHasLoadedTemplate(false);
+    }
     
     if (aiFrameFromUrl === "true" && !hasLoadedTemplate) {
       // Load AI generated frame from sessionStorage
       const aiFrameSpec = sessionStorage.getItem('aiFrameSpec');
       const aiFrameImage = sessionStorage.getItem('aiFrameImage');
+      
+      console.log('AI Frame data from sessionStorage:', { 
+        hasSpec: !!aiFrameSpec, 
+        hasImage: !!aiFrameImage 
+      });
       
       if (aiFrameSpec && aiFrameImage) {
         try {
@@ -228,7 +250,7 @@ const Booth = () => {
           
           // Create a mock template object from AI frame spec
           const aiTemplate: Template = {
-            _id: 'ai-generated-' + Date.now(),
+            _id: templateIdFromUrl || 'ai-generated-' + Date.now(),
             name: `AI ${spec.frameCount}-Photo ${spec.layout} Frame`,
             category: 'AI Generated',
             thumbnail: aiFrameImage,
@@ -238,27 +260,53 @@ const Booth = () => {
             layoutPositions: layoutPositions,
           };
           
+          console.log('AI Template created:', aiTemplate);
+          
           setSelectedTemplate(aiTemplate);
           setPhotoCount(spec.frameCount);
           setHasLoadedTemplate(true);
           
+          // Check if input method is already set from URL or state
+          const currentInputMethod = inputMethod || methodFromUrl;
+          
+          // If no input method is selected, redirect to input method selection
+          if (!currentInputMethod) {
+            console.log('No input method, redirecting to input-method page');
+            toast.success(`✨ AI Frame loaded! Please select input method`, {
+              duration: 2000,
+              icon: "🤖",
+            });
+            setTimeout(() => {
+              navigate(`/input-method?template=${aiTemplate._id}&aiFrame=true`);
+            }, 500);
+            // Keep sessionStorage for InputMethodSelection page
+            return;
+          }
+          
+          console.log('Input method available, loading frame with method:', currentInputMethod);
+          
           if (!hasShownToast.current) {
             hasShownToast.current = true;
             queueMicrotask(() => {
-              toast.success(`✨ AI Generated Frame Loaded!`, {
+              toast.success(`✨ AI Generated Frame Ready! Start taking photos! 📸`, {
                 duration: 3000,
                 icon: "🤖",
               });
             });
           }
           
-          // Clean up sessionStorage after loading
-          sessionStorage.removeItem('aiFrameSpec');
-          sessionStorage.removeItem('aiFrameImage');
+          // Clean up sessionStorage ONLY after successfully loading everything
+          setTimeout(() => {
+            sessionStorage.removeItem('aiFrameSpec');
+            sessionStorage.removeItem('aiFrameImage');
+            console.log('SessionStorage cleaned up');
+          }, 1000);
         } catch (error) {
           console.error('Load AI frame error:', error);
           toast.error('Failed to load AI frame');
         }
+      } else {
+        console.warn('AI Frame data not found in sessionStorage');
       }
       return;
     }
@@ -296,7 +344,7 @@ const Booth = () => {
       loadTemplate(templateIdFromUrl);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
+  }, [searchParams, inputMethod]); // Add inputMethod to dependencies
 
   useEffect(() => {
     // Only start camera if camera mode is selected

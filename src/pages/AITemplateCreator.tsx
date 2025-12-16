@@ -172,23 +172,29 @@ Go ahead and describe your ideal frame! ✨`,
     try {
       console.log('Generating frame with AI spec:', frameSpec);
 
-      const response = await aiAPI.generateFrame(
-        frameSpec.frameCount,
-        frameSpec.layout,
-        frameSpec.backgroundColor,
-        frameSpec.borderColor,
-        frameSpec.gradientFrom,
-        frameSpec.gradientTo
-      );
+      const requestBody = {
+        frameCount: frameSpec.frameCount,
+        layout: frameSpec.layout as 'vertical' | 'horizontal' | 'grid',
+        backgroundColor: frameSpec.backgroundColor,
+        borderColor: frameSpec.borderColor,
+        gradientFrom: frameSpec.gradientFrom || frameSpec.backgroundColor,
+        gradientTo: frameSpec.gradientTo || frameSpec.backgroundColor,
+        borderThickness: frameSpec.borderThickness || 2,
+        borderRadius: frameSpec.borderRadius || 8,
+      };
+      
+      console.log('Request body:', requestBody);
 
-      if (response.image) {
-        setGeneratedImage(`data:image/svg+xml;base64,${response.image}`);
+      const response = await aiAPI.generateFrame(requestBody);
+
+      if (response.success && response.image) {
+        setGeneratedImage(`data:${response.contentType};base64,${response.image}`);
         toast({
           title: 'Success',
           description: `Visual frame generated! (${frameSpec.frameCount}-photo ${frameSpec.layout} frame)`,
         });
       } else {
-        throw new Error('No image in response');
+        throw new Error(response.error || 'No image in response');
       }
     } catch (error) {
       console.error('Error generating frame:', error);
@@ -518,8 +524,8 @@ Go ahead and describe your ideal frame! ✨`,
                         sessionStorage.setItem('aiFrameImage', generatedImage);
                         
                         toast({
-                          title: 'Success',
-                          description: 'Frame ready! Opening Booth...',
+                          title: '✨ Frame Siap Digunakan!',
+                          description: 'Frame akan terbuka di Booth untuk foto Anda',
                         });
                         
                         // Redirect to booth with aiFrame indicator
@@ -527,10 +533,16 @@ Go ahead and describe your ideal frame! ✨`,
                           navigate('/booth?aiFrame=true');
                         }, 500);
                       }}
-                      className="w-full bg-[#3498DB] hover:bg-[#2980B9] text-white font-semibold"
+                      className="w-full bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] text-white font-semibold shadow-lg transition-all"
                     >
-                      🎉 Use This Frame in Booth
+                      📸 Gunakan Frame untuk Foto
                     </Button>
+                    
+                    <div className="bg-gradient-to-r from-[#3498DB]/10 to-[#2980B9]/10 border border-[#3498DB]/30 rounded-lg p-3 text-sm">
+                      <p className="text-gray-300 text-center">
+                        <span className="font-semibold text-[#3498DB]">💡 Tip:</span> Klik tombol di atas untuk langsung menggunakan frame ini di Photo Booth!
+                      </p>
+                    </div>
 
                     {/* Frame Specifications */}
                     {frameSpec && (

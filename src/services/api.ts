@@ -30,8 +30,23 @@ async function apiCall<T>(
     const response = await fetch(url, config);
     
     if (!response.ok) {
-      const data = await response.json();
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { message: `HTTP error! status: ${response.status}` };
+      }
+      
+      // More specific error messages
+      let errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+      
+      // Add details if available (for validation errors)
+      if (errorData.details) {
+        errorMessage += ` - ${errorData.details}`;
+      }
+      
+      console.error(`API Error [${endpoint}]:`, errorMessage, errorData);
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();
@@ -483,42 +498,134 @@ export const templateAPI = {
 };
 
 // AI API
+import type { 
+  GenerateFrameRequest,
+  GenerateFrameResponse,
+  ChatAIRequest,
+  ChatAIResponse,
+  GenerateImageRequest,
+  GenerateImageResponse,
+  FrameLayout
+} from '@/types/ai-frame.types';
+
 export const aiAPI = {
-  // Chat with AI for template creation
-  chatAI: async (messages: Array<{ role: 'user' | 'assistant'; content: string }>) => {
-    return apiCall('/ai/chat', {
+  /**
+   * Chat dengan AI untuk mendapatkan bantuan dalam mendesain frame
+   * 
+   * @param messages - Array of chat messages
+   * @returns Response dari AI dengan optional frameSpec
+   * 
+   * @example
+   * ```typescript
+   * const response = await aiAPI.chatAI([
+   *   { role: 'user', content: 'Saya ingin frame 3 foto vertikal' }
+   * ]);
+   * console.log(response.message);
+   * if (response.frameSpec) {
+   *   // frameSpec tersedia, user sudah confirm design
+   * }
+   * ```
+   */
+  chatAI: async (messages: ChatAIRequest['messages']): Promise<ChatAIResponse> => {
+    return apiCall<ChatAIResponse>('/ai/chat', {
       method: 'POST',
       body: JSON.stringify({ messages }),
     });
   },
 
-  // Generate image from text prompt
-  generateImage: async (prompt: string, negativePrompt?: string): Promise<{ image: string; contentType: string; success: boolean }> => {
-    return apiCall('/ai/generate-image', {
+  /**
+   * Generate image dari text prompt menggunakan AI
+   * 
+   * @param prompt - Text prompt untuk generate gambar
+   * @param negativePrompt - Negative prompt (optional)
+   * @returns Response dengan base64 encoded image
+   * 
+   * @example
+   * ```typescript
+   * const response = await aiAPI.generateImage(
+   *   'Beautiful sunset over mountains',
+   *   'ugly, blurry'
+   * );
+   * const imgSrc = `data:${response.contentType};base64,${response.image}`;
+   * ```
+   */
+  generateImage: async (
+    prompt: string, 
+    negativePrompt?: string
+  ): Promise<GenerateImageResponse> => {
+    const request: GenerateImageRequest = {
+      prompt,
+      negative_prompt: negativePrompt,
+      num_inference_steps: 10,
+    };
+    
+    return apiCall<GenerateImageResponse>('/ai/generate-image', {
       method: 'POST',
-      body: JSON.stringify({
-        prompt,
-        negative_prompt: negativePrompt,
-        num_inference_steps: 10,
-      }),
+      body: JSON.stringify(request),
     });
   },
 
-  // Generate frame template as image
-  generateFrame: async (frameCount: number, layout: string = 'vertical', backgroundColor: string = '#FDE2E4', borderColor: string = '#F7A9A8', gradientFrom?: string, gradientTo?: string): Promise<{ image: string; contentType: string; success: boolean }> => {
-    return apiCall('/ai/generate-frame', {
+  /**
+   * Generate frame template sebagai SVG image
+   * 
+   * @param config - Frame configuration
+   * @returns Response dengan base64 encoded SVG image
+   * 
+   * @example
+   * ```typescript
+   * const response = await aiAPI.generateFrame({
+   *   frameCount: 3,
+   *   layout: 'vertical',
+   *   backgroundColor: '#FFD700',
+   *   borderColor: '#FFA500',
+   *   gradientFrom: '#FFD700',
+   *   gradientTo: '#FFC700'
+   * });
+   * 
+   * if (response.success) {
+   *   const imgSrc = `data:${response.contentType};base64,${response.image}`;
+   *   // Use imgSrc in <img> tag
+   * }
+   * ```
+   */
+  generateFrame: async (config: GenerateFrameRequest): Promise<GenerateFrameResponse> => {
+    return apiCall<GenerateFrameResponse>('/ai/generate-frame', {
       method: 'POST',
-      body: JSON.stringify({
-        frameCount,
-        layout,
-        backgroundColor,
-        borderColor,
-        borderThickness: 2,
-        borderRadius: 8,
-        gradientFrom: gradientFrom || backgroundColor,
-        gradientTo: gradientTo || backgroundColor,
-      }),
+      body: JSON.stringify(config),
     });
+  },
+
+  /**
+   * Generate frame dengan parameter yang lebih simple (helper function)
+   * 
+   * @param frameCount - Jumlah foto dalam frame (2-6)
+   * @param layout - Tipe layout frame
+   * @param backgroundColor - Warna background
+   * @param borderColor - Warna border
+   * @param gradientFrom - Warna awal gradient (optional)
+   * @param gradientTo - Warna akhir gradient (optional)
+   * @returns Response dengan base64 encoded SVG image
+   */
+  generateFrameSimple: async (
+    frameCount: number,
+    layout: FrameLayout = 'vertical',
+    backgroundColor: string = '#FDE2E4',
+    borderColor: string = '#F7A9A8',
+    gradientFrom?: string,
+    gradientTo?: string
+  ): Promise<GenerateFrameResponse> => {
+    const request: GenerateFrameRequest = {
+      frameCount,
+      layout,
+      backgroundColor,
+      borderColor,
+      borderThickness: 2,
+      borderRadius: 8,
+      gradientFrom: gradientFrom || backgroundColor,
+      gradientTo: gradientTo || backgroundColor,
+    };
+
+    return aiAPI.generateFrame(request);
   },
 };
 
