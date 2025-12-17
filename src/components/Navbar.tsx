@@ -37,6 +37,13 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // Close menus on route change to prevent memory leak
+  useEffect(() => {
+    setShowUserMenu(false);
+    setShowExploreMenu(false);
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Contact", path: "/contact" },
@@ -181,6 +188,11 @@ const Navbar = () => {
                       <User className="w-5 h-5 text-white" />
                     )}
                     <span className="text-white font-medium">{user.name}</span>
+                    {user.isPremium && (
+                      <span className="px-2 py-0.5 bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-bold rounded-full">
+                        PRO
+                      </span>
+                    )}
                   </button>
                   
                   {showUserMenu && (
@@ -192,6 +204,11 @@ const Navbar = () => {
                       <div className="px-4 py-3 border-b border-white/10">
                         <p className="text-sm text-gray-400">Signed in as</p>
                         <p className="text-white font-medium truncate">{user.email}</p>
+                        {user.isPremium && (
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-bold rounded-full">
+                            👑 Premium Member
+                          </span>
+                        )}
                       </div>
                       <Link
                         to="/my-account"

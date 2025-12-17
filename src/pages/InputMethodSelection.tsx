@@ -47,10 +47,41 @@ const InputMethodSelection = () => {
           }
         }
         
+        // Try to get from cache first
+        const cachedTemplates = sessionStorage.getItem('templates_cache');
+        if (cachedTemplates) {
+          try {
+            const templates = JSON.parse(cachedTemplates);
+            const foundTemplate = templates.find((t: any) => t._id === templateId);
+            if (foundTemplate) {
+              setSelectedTemplate(foundTemplate);
+              setLoading(false);
+              
+              // Preload template image for instant display in Booth
+              if (foundTemplate.frameUrl) {
+                const img = document.createElement('img');
+                img.src = foundTemplate.frameUrl;
+                console.log('⚡ Preloading frame image:', foundTemplate.name);
+              }
+              
+              return;
+            }
+          } catch (e) {
+            console.warn('Cache read error');
+          }
+        }
+        
         // Load regular template from backend
         const response = await templateAPI.getTemplate(templateId) as { data: any };
         if (response.data) {
           setSelectedTemplate(response.data);
+          
+          // Preload template image immediately
+          if (response.data.frameUrl) {
+            const img = document.createElement('img');
+            img.src = response.data.frameUrl;
+            console.log('⚡ Preloading frame image from API');
+          }
         } else {
           toast.error('Template not found');
           navigate('/gallery');
@@ -68,10 +99,39 @@ const InputMethodSelection = () => {
   }, [templateId, isAIFrame, navigate]);
 
   const handleSelectMethod = (method: 'camera' | 'upload') => {
-    if (isAIFrame) {
-      navigate(`/booth?template=${templateId}&method=${method}&aiFrame=true`);
-    } else {
-      navigate(`/booth?template=${templateId}&method=${method}`);
+    console.log('🎯 Navigating to Booth with method:', method);
+    
+    // Cache template data for instant load in Booth
+    if (selectedTemplate) {
+      sessionStorage.setItem('booth_template_cache', JSON.stringify({
+        template: selectedTemplate,
+        timestamp: Date.now()
+      }));
+      console.log('⚡ Template cached for instant Booth load');
+    }
+    
+    // Navigate immediately - no delay
+    const url = isAIFrame 
+      ? `/booth?template=${templateId}&method=${method}&aiFrame=true`
+      : `/booth?template=${templateId}&method=${method}`;
+    
+    navigate(url, { replace: false });
+  };
+
+  // Preload camera permission when hovering over camera button
+  const handleCameraHover = () => {
+    if ('mediaDevices' in navigator) {
+      // Trigger permission request early (will be cached by browser)
+      navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+        .then(stream => {
+          console.log('✅ Camera permission granted (preload)');
+          // Don't use stream yet, just check permission
+          stream.getTracks().forEach(track => track.stop());
+        })
+        .catch(() => {
+          // Permission denied or no camera - will be handled in Booth
+          console.log('⚠️ Camera permission check (preload)');
+        });
     }
   };
 
@@ -149,6 +209,7 @@ const InputMethodSelection = () => {
                 whileHover={{ scale: 1.03, y: -5 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleSelectMethod('camera')}
+                onMouseEnter={handleCameraHover}
                 className="group relative bg-white/95 hover:bg-white rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-2xl"
               >
                 <div className="text-center">

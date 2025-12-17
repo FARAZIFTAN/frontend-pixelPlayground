@@ -35,6 +35,16 @@ const Register: React.FC = () => {
       return false;
     }
 
+    // Check password complexity
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    
+    if (!hasUpperCase || !hasLowerCase || !hasNumber) {
+      setError("Password must contain uppercase, lowercase, and numbers");
+      return false;
+    }
+
     if (password !== confirmPassword) {
       setError("Passwords do not match");
       return false;
@@ -87,8 +97,6 @@ const Register: React.FC = () => {
       localStorage.setItem("token", response.token);
       localStorage.setItem("user", JSON.stringify(response.user));
       
-      console.log('✅ Google sign up successful:', response.user.email);
-      
       // Show success and redirect
       setSuccess(true);
       setTimeout(() => {
@@ -96,14 +104,12 @@ const Register: React.FC = () => {
         window.location.reload();
       }, 2000);
     } catch (err: any) {
-      console.error('❌ Google sign up error:', err);
       setError(err.message || "Google sign up failed. Please try again.");
       setIsLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    console.error('❌ Google sign up failed');
     setError("Google sign up failed. Please try again.");
   };
 

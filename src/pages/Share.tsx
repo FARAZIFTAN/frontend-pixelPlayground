@@ -33,6 +33,8 @@ const SharePage = () => {
   const [shareData, setShareData] = useState<ShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   useEffect(() => {
     const loadSharedComposite = async () => {
@@ -42,7 +44,6 @@ const SharePage = () => {
         const response = await apiCall(`/api/share/public/${id}`, { method: 'GET' }) as ShareData;
         setShareData(response);
       } catch (err: any) {
-        console.error('Error loading shared composite:', err);
         setError(err.message || 'Failed to load shared composite');
       } finally {
         setLoading(false);
@@ -53,8 +54,9 @@ const SharePage = () => {
   }, [id]);
 
   const handleDownload = async () => {
-    if (!shareData) return;
+    if (!shareData || isDownloading) return;
 
+    setIsDownloading(true);
     try {
       // Use utility function to download with correct extension
       await downloadFile(
@@ -67,31 +69,36 @@ const SharePage = () => {
         description: 'Your composite image is being downloaded.',
       });
     } catch (error) {
-      console.error('Download error:', error);
       toast({
         title: 'Download Failed',
         description: 'Failed to download the composite image.',
         variant: 'destructive',
       });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleShare = async () => {
-    if (!shareData) return;
+    if (!shareData || isSharing) return;
 
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'KaryaKlik Photo Composite',
-          text: 'Check out this amazing photo composite created with KaryaKlik!',
-          url: shareData.shareUrl,
-        });
-      } catch (error) {
-        console.error('Share error:', error);
+    setIsSharing(true);
+    try {
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'KaryaKlik Photo Composite',
+            text: 'Check out this amazing photo composite created with KaryaKlik!',
+            url: shareData.shareUrl,
+          });
+        } catch (error) {
+          copyToClipboard();
+        }
+      } else {
         copyToClipboard();
       }
-    } else {
-      copyToClipboard();
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -184,13 +191,13 @@ const SharePage = () => {
               </div>
 
               <div className="flex gap-3">
-                <Button onClick={handleDownload} className="flex-1">
+                <Button onClick={handleDownload} className="flex-1" disabled={isDownloading}>
                   <Download className="w-4 h-4 mr-2" />
-                  Download
+                  {isDownloading ? 'Downloading...' : 'Download'}
                 </Button>
-                <Button onClick={handleShare} variant="outline" className="flex-1">
+                <Button onClick={handleShare} variant="outline" className="flex-1" disabled={isSharing}>
                   <Share2 className="w-4 h-4 mr-2" />
-                  Share
+                  {isSharing ? 'Sharing...' : 'Share'}
                 </Button>
               </div>
 

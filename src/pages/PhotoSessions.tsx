@@ -52,7 +52,6 @@ export default function PhotoSessions() {
         setSessions(response.data.sessions);
       }
     } catch (error) {
-      console.error('Load sessions error:', error);
       toast.error('Gagal memuat sesi foto');
     } finally {
       setIsLoading(false);
@@ -67,7 +66,6 @@ export default function PhotoSessions() {
       toast.success('Sesi berhasil dihapus');
       loadSessions();
     } catch (error) {
-      console.error('Delete session error:', error);
       toast.error('Gagal menghapus sesi');
     }
   };

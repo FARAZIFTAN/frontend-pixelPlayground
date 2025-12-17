@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import analytics from "@/lib/analytics";
 import { templateAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
+import PremiumModal from "@/components/PremiumModal";
 
 interface Template {
   _id: string;
@@ -25,7 +26,7 @@ interface Template {
 
 const Gallery = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -33,6 +34,10 @@ const Gallery = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["All"]);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+  // Gallery tidak perlu proteksi - user bisa lihat semua template
+  // Hanya frame premium yang di-lock untuk non-premium user
 
   // Available categories with template counts
   const categories = ["All", "Education", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "Artistic", "General"];
@@ -46,31 +51,60 @@ const Gallery = () => {
   // All templates count
   categoryCounts["All"] = templates.length;
 
-  // Load templates from API
+  // Load templates from API immediately on mount
   useEffect(() => {
     loadTemplates();
   }, []);
 
   const loadTemplates = async () => {
+    console.log('🔄 Loading templates...');
     setIsLoading(true);
+    
+    // Check cache first for faster loading
+    const cachedTemplates = sessionStorage.getItem('templates_cache');
+    if (cachedTemplates) {
+      try {
+        const parsed = JSON.parse(cachedTemplates);
+        console.log('⚡ Using cached templates:', parsed.length);
+        setTemplates(parsed);
+        setIsLoading(false);
+        // Still fetch in background to update cache
+        fetchTemplates();
+        return;
+      } catch (e) {
+        console.warn('Cache parse error, fetching fresh');
+      }
+    }
+    
+    await fetchTemplates();
+  };
+  
+  const fetchTemplates = async () => {
     try {
       const response = await templateAPI.getTemplates({ limit: 100 }) as {
         success: boolean;
         data?: { templates: Template[] };
       };
       
-      console.log('📋 API Response:', response);
+      console.log('📦 Template response:', response);
       
       if (response.success && response.data) {
-        console.log('📸 Templates loaded:', response.data.templates.length);
-        console.log('📸 Template names:', response.data.templates.map(t => t.name));
+        console.log('✅ Templates loaded:', response.data.templates.length);
         setTemplates(response.data.templates);
+        // Cache for 5 minutes
+        sessionStorage.setItem('templates_cache', JSON.stringify(response.data.templates));
       } else {
-        console.error('❌ API response not successful:', response);
+        console.warn('⚠️ No templates data in response');
+        toast.error('No templates found');
       }
     } catch (error) {
       console.error('❌ Load templates error:', error);
-      toast.error('Failed to load templates');
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMsg.includes('fetch')) {
+        toast.error('Backend server not running. Start backend first!', { duration: 5000 });
+      } else {
+        toast.error('Failed to load templates');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -80,15 +114,10 @@ const Gallery = () => {
   const filteredTemplates = templates.filter(template => {
     const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategory = selectedCategories.includes("All") || selectedCategories.includes(template.category);
+    
+    // Tampilkan semua template, tidak ada filter premium
     return matchSearch && matchCategory;
   });
-
-  // Debug logging for filtered templates
-  console.log('🔍 Search query:', searchQuery);
-  console.log('🏷️ Selected categories:', selectedCategories);
-  console.log('📊 Total templates:', templates.length);
-  console.log('📊 Filtered templates:', filteredTemplates.length);
-  console.log('📊 Filtered template names:', filteredTemplates.map(t => t.name));
 
   // Track page view
   useEffect(() => {
@@ -103,6 +132,29 @@ const Gallery = () => {
 
   // Navigate to Input Method Selection with pre-selected template
   const handleUseTemplate = (template: Template) => {
+    // Cegah akses template premium jika user belum premium
+    if (template.isPremium && !isPremium) {
+      // Jika belum login, arahkan ke login
+      if (!user) {
+        toast.error("Login diperlukan untuk menggunakan frame premium!", { 
+          duration: 4000,
+          icon: "🔒"
+        });
+        setTimeout(() => {
+          navigate("/login");
+        }, 1500);
+        return;
+      }
+      
+      // Jika sudah login tapi belum premium, tampilkan modal upgrade
+      toast.error("Upgrade ke Premium untuk menggunakan frame PRO!", { 
+        duration: 3000,
+        icon: "👑"
+      });
+      setShowPremiumModal(true);
+      return;
+    }
+    
     analytics.templateSelect(template._id, template.name, user?.id);
     navigate(`/input-method?template=${template._id}`);
   };
@@ -529,10 +581,22 @@ const Gallery = () => {
                       e.stopPropagation();
                       handleUseTemplate(template);
                     }}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-soft group-hover:shadow-hover transition-all"
+                    className={`w-full rounded-full shadow-soft group-hover:shadow-hover transition-all ${
+                      template.isPremium && !isPremium
+                        ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
+                        : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    }`}
                   >
-                    Use Template
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                    {template.isPremium && !isPremium ? (
+                      <>
+                        <span>🔒 Premium Only</span>
+                      </>
+                    ) : (
+                      <>
+                        Use Template
+                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                      </>
+                    )}
                   </Button>
                 </CardFooter>
               </Card>
@@ -684,6 +748,13 @@ const Gallery = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Premium Modal */}
+        <PremiumModal 
+          isOpen={showPremiumModal} 
+          onClose={() => setShowPremiumModal(false)}
+          feature="Gallery"
+        />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
-// API Base URL
-const API_BASE_URL = 'http://localhost:3001/api';
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
@@ -434,9 +434,13 @@ export const dashboardAPI = {
   },
 };
 
-// Template API
+// Template API with request deduplication
+let templatesPromise: Promise<any> | null = null;
+let templatesCache: { data: any; timestamp: number } | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const templateAPI = {
-  // Get all templates
+  // Get all templates with deduplication and caching
   getTemplates: async (params?: { category?: string; isPremium?: boolean; page?: number; limit?: number }) => {
     const query = new URLSearchParams();
     if (params?.category) query.append('category', params.category);
@@ -444,7 +448,33 @@ export const templateAPI = {
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
     
-    return apiCall(`/templates?${query.toString()}`, { method: 'GET' });
+    const cacheKey = query.toString();
+    
+    // Check memory cache first
+    if (templatesCache && Date.now() - templatesCache.timestamp < CACHE_DURATION) {
+      console.log('⚡ Using memory cache for templates');
+      return Promise.resolve(templatesCache.data);
+    }
+    
+    // Deduplicate simultaneous requests
+    if (templatesPromise) {
+      console.log('⏳ Reusing in-flight template request');
+      return templatesPromise;
+    }
+    
+    // Make the actual request
+    templatesPromise = apiCall(`/templates?${query.toString()}`, { method: 'GET' })
+      .then(data => {
+        templatesCache = { data, timestamp: Date.now() };
+        templatesPromise = null;
+        return data;
+      })
+      .catch(err => {
+        templatesPromise = null;
+        throw err;
+      });
+    
+    return templatesPromise;
   },
 
   // Get single template

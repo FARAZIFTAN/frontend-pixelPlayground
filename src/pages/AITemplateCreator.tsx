@@ -1,46 +1,19 @@
-import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Loader2, Copy, Check, AlertCircle, Sparkles, ImagePlus, Download, Zap, Layout, Grid3x3, Layers, User, Bot } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Loader2, AlertCircle, Sparkles, ImagePlus, Download, Layout } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import PremiumModal from '@/components/PremiumModal';
+import { toast } from 'react-hot-toast';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
-}
-
-interface FrameSpec {
-  frameCount: number;
-  layoutType: string;
-  width: number;
-  height: number;
-  backgroundColor: string;
-  borderStyle: string;
-  borderColor: string;
-  borderThickness: number;
-  description: string;
-  photoPositions: Array<{
-    id: number;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    borderRadius: number;
-    rotation: number;
-  }>;
-  designElements: {
-    pattern: string;
-    shadow: string;
-    decorations: string;
-  };
-}
-
-interface AIResponse {
-  message: string;
 }
 
 interface AIFrameSpec {
@@ -48,8 +21,8 @@ interface AIFrameSpec {
   layout: 'vertical' | 'horizontal' | 'grid';
   backgroundColor: string;
   borderColor: string;
-  gradientFrom: string;
-  gradientTo: string;
+  gradientFrom?: string;
+  gradientTo?: string;
 }
 
 interface ChatAIResponse {
@@ -57,168 +30,145 @@ interface ChatAIResponse {
   frameSpec?: AIFrameSpec;
 }
 
-const QUICK_PROMPTS = [
-  { icon: Layers, text: '3-photo vertical frame with gradient', prompt: 'Create a 3-photo vertical frame with blue to purple gradient background' },
-  { icon: Grid3x3, text: '4-photo grid layout', prompt: 'Design a 4-photo grid frame with modern style and soft colors' },
-  { icon: Layout, text: '2-photo horizontal frame', prompt: 'Make a 2-photo horizontal frame with elegant border and pastel colors' },
-];
+interface FrameImageResponse {
+  success: boolean;
+  data?: {
+    frameImage: string;
+  };
+}
+
+// Type guard for AIFrameSpec
+const isValidFrameSpec = (spec: unknown): spec is AIFrameSpec => {
+  if (!spec || typeof spec !== 'object') return false;
+  const s = spec as Partial<AIFrameSpec>;
+  return (
+    typeof s.frameCount === 'number' &&
+    s.frameCount >= 2 &&
+    s.frameCount <= 4 &&
+    (s.layout === 'vertical' || s.layout === 'horizontal' || s.layout === 'grid') &&
+    typeof s.backgroundColor === 'string' &&
+    typeof s.borderColor === 'string'
+  );
+}
+
+interface ChatAIResponse {
+  message: string;
+  frameSpec?: AIFrameSpec;
+}
 
 const AITemplateCreator = () => {
   const navigate = useNavigate();
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: `👋 Welcome to AI Template Creator!
+  const { user, isPremium } = useAuth();
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
-I'm here to help you design custom photo frames using AI. Just describe the frame you want, and I'll generate the specifications and visual frame for you.
+  // Check premium status on mount
+  useEffect(() => {
+    if (user && !isPremium) {
+      setShowPremiumModal(true);
+    }
+  }, [user, isPremium]);
 
-**What you can ask for:**
-- "Create a 3-photo vertical frame with a blue gradient background"
-- "Design a 2-photo frame with rounded borders and a modern look"
-- "Make a 4-photo grid frame with a trendy color scheme"
+  // Handler untuk close modal - redirect jika belum premium
+  const handleCloseModal = () => {
+    if (!isPremium) {
+      toast.error("Premium membership required to access AI Template Creator", {
+        duration: 3000,
+        icon: "🔒"
+      });
+      navigate("/");
+    }
+    setShowPremiumModal(false);
+  };
 
-**Frame constraints:**
-- Frame Count: 2, 3, or 4 photos
-- Layout Types: vertical, horizontal, grid, or mixed
-- Dimensions: 800x600 to 1200x900 pixels
-- Colors: Hex color codes (e.g., #FF5733)
-
-Go ahead and describe your ideal frame! ✨`,
-    },
-  ]);
-
-  const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [selectedSpec, setSelectedSpec] = useState<FrameSpec | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [lastPrompt, setLastPrompt] = useState<string>('');
+  // Form states - 1x process
+  const [frameCount, setFrameCount] = useState<2 | 3 | 4>(3);
+  const [layout, setLayout] = useState<'vertical' | 'horizontal' | 'grid'>('vertical');
+  const [description, setDescription] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
   const [frameSpec, setFrameSpec] = useState<AIFrameSpec | null>(null);
-  const [showQuickPrompts, setShowQuickPrompts] = useState(true);
-  const [frameVisibility, setFrameVisibility] = useState<'public' | 'private'>('public');
+  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [frameName, setFrameName] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleSendMessage = async (customMessage?: string) => {
-    const messageToSend = customMessage || inputValue.trim();
-    if (!messageToSend) return;
-
-    const userMessage = messageToSend;
-    setInputValue('');
-    setLastPrompt(userMessage);
-    setShowQuickPrompts(false);
-
-    // Add user message to chat
-    const updatedMessages: Message[] = [
-      ...messages,
-      { role: 'user', content: userMessage },
-    ];
-    setMessages(updatedMessages);
-    setIsLoading(true);
-
-    try {
-      const response = await aiAPI.chatAI(updatedMessages);
-      const chatResponse = response as ChatAIResponse;
-      const assistantMessage = chatResponse.message;
-      const spec = chatResponse.frameSpec;
-
-      // Store frame spec if provided by AI
-      if (spec) {
-        setFrameSpec(spec);
-        console.log('Received frame spec from AI:', spec);
-      }
-
-      // Add assistant message
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: assistantMessage },
-      ]);
-
-      toast({
-        title: 'Frame Idea Received',
-        description: spec ? 'Your frame is ready! Click "Generate Visual Frame" to create it.' : 'Click "Generate Visual Frame" to create the frame image!',
-      });
-    } catch (error) {
-      console.error('Error:', error);
+  // Generate template dalam 1x proses - langsung dari form ke gambar
+  const handleGenerateTemplate = async () => {
+    if (!description.trim()) {
       toast({
         title: 'Error',
-        description: 'Failed to get AI response. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGenerateVisualFrame = async () => {
-    if (!frameSpec) {
-      toast({
-        title: 'Error',
-        description: 'No frame specification available. Please confirm your frame design in the chat first.',
+        description: 'Mohon masukkan deskripsi template Anda',
         variant: 'destructive',
       });
       return;
     }
 
-    setIsGeneratingImage(true);
+    setIsGenerating(true);
+    setFrameSpec(null);
+    setGeneratedImage(null);
+
     try {
-      console.log('Generating frame with AI spec:', frameSpec);
+      // Step 1: Generate frame spec via AI (bahasa Indonesia)
+      const promptIndonesia = `Buatkan spesifikasi frame foto dengan ketentuan berikut:
+- Jumlah foto: ${frameCount}
+- Layout: ${layout}
+- Deskripsi: ${description}
 
+Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen dekoratif yang sesuai dengan deskripsi.`;
+
+      const messages: Message[] = [
+        {
+          role: 'user',
+          content: promptIndonesia
+        }
+      ];
+
+      const chatResponse = await aiAPI.chatAI(messages) as ChatAIResponse;
+      const spec = chatResponse?.frameSpec;
+
+      if (!spec || !isValidFrameSpec(spec)) {
+        throw new Error('Gagal generate spesifikasi frame dari AI');
+      }
+
+      setFrameSpec(spec);
+
+      // Step 2: Langsung generate visual frame
       const requestBody = {
-        frameCount: frameSpec.frameCount,
-        layout: frameSpec.layout as 'vertical' | 'horizontal' | 'grid',
-        backgroundColor: frameSpec.backgroundColor,
-        borderColor: frameSpec.borderColor,
-        gradientFrom: frameSpec.gradientFrom || frameSpec.backgroundColor,
-        gradientTo: frameSpec.gradientTo || frameSpec.backgroundColor,
-        borderThickness: frameSpec.borderThickness || 2,
-        borderRadius: frameSpec.borderRadius || 8,
+        frameCount: spec.frameCount,
+        layout: spec.layout,
+        backgroundColor: spec.backgroundColor || '#FFFFFF',
+        borderColor: spec.borderColor || '#000000',
+        gradientFrom: spec.gradientFrom || spec.backgroundColor || '#FFFFFF',
+        gradientTo: spec.gradientTo || spec.backgroundColor || '#FFFFFF',
+        borderThickness: 2,
+        borderRadius: 8,
       };
-      
-      console.log('Request body:', requestBody);
 
-      const response = await aiAPI.generateFrame(requestBody);
+      const imageResponse = await aiAPI.generateFrameImage(requestBody) as FrameImageResponse;
 
-      if (response.success && response.image) {
-        setGeneratedImage(`data:${response.contentType};base64,${response.image}`);
+      if (imageResponse.success && imageResponse.data?.frameImage) {
+        const base64Image = imageResponse.data.frameImage;
+        setGeneratedImage(base64Image);
+        
         toast({
-          title: 'Success',
-          description: `Visual frame generated! (${frameSpec.frameCount}-photo ${frameSpec.layout} frame)`,
+          title: '✨ Template Berhasil Dibuat!',
+          description: 'Template frame Anda sudah siap digunakan',
         });
       } else {
-        throw new Error(response.error || 'No image in response');
+        throw new Error('Gagal generate gambar frame');
       }
     } catch (error) {
-      console.error('Error generating frame:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-      let displayMessage = 'Failed to generate visual frame. Please try again.';
-      if (errorMessage.includes('timeout') || errorMessage.includes('504')) {
-        displayMessage = 'Image generation timed out. Try with a simpler description.';
-      } else if (errorMessage.includes('Cannot connect')) {
-        displayMessage = 'Cannot connect to server. Make sure backend is running.';
-      }
-
+      console.error('Generate template error:', error);
       toast({
         title: 'Error',
-        description: displayMessage,
+        description: 'Gagal membuat template. Silakan coba lagi.',
         variant: 'destructive',
       });
     } finally {
-      setIsGeneratingImage(false);
+      setIsGenerating(false);
     }
   };
+
+  // Fungsi handleGenerateVisualFrame dihapus - sudah digabung dalam handleGenerateTemplate
 
   const copyToClipboard = (text: string, index: number) => {
     navigator.clipboard.writeText(text);
@@ -249,163 +199,105 @@ Go ahead and describe your ideal frame! ✨`,
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Chat Section */}
+          {/* Form Section */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-2"
           >
-            <Card className="h-[600px] flex flex-col bg-[#1A1A1A] border-[#C62828]/30">
+            <Card className="bg-[#1A1A1A] border-[#C62828]/30">
               <CardHeader className="border-b border-[#C62828]/20 bg-[#0F0F0F]/50">
                 <CardTitle className="text-white flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-[#C62828]" />
-                  Chat with AI
+                  Buat Template AI
                 </CardTitle>
               </CardHeader>
 
-              {/* Messages */}
-              <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-                {messages.map((msg, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    {msg.role === 'assistant' && (
-                      <div className="flex-shrink-0 w-8 h-8 bg-[#C62828] rounded-full flex items-center justify-center">
-                        <Bot className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                    <div className="flex flex-col gap-1">
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg shadow-lg ${
-                          msg.role === 'user'
-                            ? 'bg-gradient-to-br from-[#C62828] to-[#E53935] text-white rounded-br-none'
-                            : 'bg-[#2A2A2A] text-gray-100 rounded-bl-none border border-[#C62828]/20'
-                        }`}
-                      >
-                        <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-                          {msg.content}
-                        </p>
-                      </div>
-                      <span className={`text-xs text-gray-500 px-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                        {new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-                    {msg.role === 'user' && (
-                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-[#3498DB] to-[#2980B9] rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </motion.div>
-                ))}
-
-                {/* Quick Prompts */}
-                <AnimatePresence>
-                  {showQuickPrompts && messages.length === 1 && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
-                      className="flex flex-col gap-2 py-4"
+              {/* Form */}
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  {/* Jumlah Foto */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                      <ImagePlus className="w-4 h-4 text-[#C62828]" />
+                      Jumlah Foto
+                    </label>
+                    <select
+                      value={frameCount}
+                      onChange={(e) => setFrameCount(Number(e.target.value) as 2 | 3 | 4)}
+                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all"
+                      disabled={isGenerating}
                     >
-                      <p className="text-xs text-gray-500 mb-2 flex items-center gap-2">
-                        <Zap className="w-3 h-3" />
-                        Quick Suggestions:
-                      </p>
-                      {QUICK_PROMPTS.map((prompt, idx) => {
-                        const Icon = prompt.icon;
-                        return (
-                          <Button
-                            key={idx}
-                            variant="outline"
-                            onClick={() => handleSendMessage(prompt.prompt)}
-                            className="w-full justify-start text-left bg-[#2A2A2A] hover:bg-[#C62828]/20 border-[#C62828]/30 text-gray-300 hover:text-white transition-all"
-                          >
-                            <Icon className="w-4 h-4 mr-2 text-[#C62828]" />
-                            <span className="text-sm">{prompt.text}</span>
-                          </Button>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {isLoading && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex gap-3 items-start"
-                  >
-                    <div className="flex-shrink-0 w-8 h-8 bg-[#C62828] rounded-full flex items-center justify-center">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
-                    <div className="flex flex-col gap-2 bg-[#2A2A2A] px-4 py-3 rounded-lg rounded-bl-none border border-[#C62828]/20">
-                      <div className="flex gap-2 items-center text-gray-400">
-                        <Loader2 className="w-4 h-4 animate-spin text-[#C62828]" />
-                        <span className="text-sm">AI is thinking...</span>
-                      </div>
-                      <div className="flex gap-1">
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1, delay: 0 }}
-                          className="w-2 h-2 bg-[#C62828] rounded-full"
-                        />
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1, delay: 0.2 }}
-                          className="w-2 h-2 bg-[#C62828] rounded-full"
-                        />
-                        <motion.div
-                          animate={{ scale: [1, 1.2, 1] }}
-                          transition={{ repeat: Infinity, duration: 1, delay: 0.4 }}
-                          className="w-2 h-2 bg-[#C62828] rounded-full"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </CardContent>
-
-              {/* Input */}
-              <div className="border-t border-[#C62828]/20 p-4 bg-gradient-to-b from-[#0F0F0F]/50 to-[#1A1A1A]">
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={inputValue}
-                      onChange={(e) => setInputValue(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && !isLoading) {
-                          handleSendMessage();
-                        }
-                      }}
-                      placeholder="Describe your ideal frame... (e.g., '3-photo vertical with blue gradient')"
-                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all placeholder:text-gray-500"
-                      disabled={isLoading}
-                    />
+                      <option value={2}>2 Foto</option>
+                      <option value={3}>3 Foto</option>
+                      <option value={4}>4 Foto</option>
+                    </select>
                   </div>
+
+                  {/* Layout */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                      <Layout className="w-4 h-4 text-[#C62828]" />
+                      Tata Letak
+                    </label>
+                    <select
+                      value={layout}
+                      onChange={(e) => setLayout(e.target.value as 'vertical' | 'horizontal' | 'grid')}
+                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all"
+                      disabled={isGenerating}
+                    >
+                      <option value="vertical">Vertikal (Atas ke Bawah)</option>
+                      <option value="horizontal">Horizontal (Kiri ke Kanan)</option>
+                      <option value="grid">Grid (Kotak-kotak)</option>
+                    </select>
+                  </div>
+
+                  {/* Deskripsi */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-[#C62828]" />
+                      Deskripsi Frame
+                    </label>
+                    <textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Contoh: Frame dengan background gradasi biru, border rounded, dan dekorasi bintang di sudut"
+                      rows={5}
+                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all placeholder:text-gray-500 resize-none"
+                      disabled={isGenerating}
+                    />
+                    <p className="text-xs text-gray-500">
+                      Jelaskan frame yang kamu inginkan: warna, style, dekorasi, dll.
+                    </p>
+                  </div>
+
+                  {/* Generate Button */}
                   <Button
-                    onClick={() => handleSendMessage()}
-                    disabled={isLoading || !inputValue.trim()}
-                    className="bg-gradient-to-r from-[#C62828] to-[#E53935] hover:from-[#E53935] hover:to-[#C62828] text-white px-6 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    onClick={handleGenerateTemplate}
+                    disabled={isGenerating || !description.trim()}
+                    className="w-full bg-gradient-to-r from-[#C62828] to-[#E53935] hover:from-[#E53935] hover:to-[#C62828] text-white font-semibold py-6 text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                    {isGenerating ? (
+                      <>
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        Membuat Template...
+                      </>
                     ) : (
-                      <Send className="w-5 h-5" />
+                      <>
+                        <Sparkles className="w-5 h-5 mr-2" />
+                        Buat Template AI
+                      </>
                     )}
                   </Button>
+
+                  {/* Info Box */}
+                  <div className="bg-[#2A2A2A] border border-[#C62828]/20 rounded-lg p-4">
+                    <p className="text-xs text-gray-400 leading-relaxed">
+                      <strong className="text-[#C62828]">Tips:</strong> Semakin detail deskripsi kamu, semakin bagus hasil frame yang dihasilkan AI. Jelaskan warna, style, dekorasi, dan elemen visual lainnya.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Press Enter to send or use quick suggestions above
-                </p>
-              </div>
+              </CardContent>
             </Card>
           </motion.div>
 
@@ -682,12 +574,9 @@ Go ahead and describe your ideal frame! ✨`,
                       onClick={() => {
                         setGeneratedImage(null);
                         setFrameSpec(null);
-                        setMessages([
-                          {
-                            role: 'assistant',
-                            content: `👋 Welcome to AI Template Creator!\n\nI'm here to help you design custom photo frames using AI. Just describe the frame you want, and I'll generate the specifications and visual frame for you.\n\n**What you can ask for:**\n- "Create a 3-photo vertical frame with a blue gradient background"\n- "Design a 2-photo frame with rounded borders and a modern look"\n- "Make a 4-photo grid frame with a trendy color scheme"\n\n**Frame constraints:**\n- Frame Count: 2, 3, or 4 photos\n- Layout Types: vertical, horizontal, grid, or mixed\n- Dimensions: 800x600 to 1200x900 pixels\n- Colors: Hex color codes (e.g., #FF5733)\n\nGo ahead and describe your ideal frame! ✨`,
-                          },
-                        ]);
+                        setDescription('');
+                        setFrameCount(3);
+                        setLayout('vertical');
                         toast({
                           title: 'Reset',
                           description: 'Ready to design a new frame!',
@@ -695,30 +584,12 @@ Go ahead and describe your ideal frame! ✨`,
                       }}
                       className="w-full bg-[#7F8C8D] hover:bg-[#95A5A6] text-white font-semibold"
                     >
-                      ↻ Start New Frame
+                      ↻ Buat Frame Baru
                     </Button>
                   </>
                 ) : (
                   <>
-                    {/* Generate Visual Frame Button */}
-                    <Button
-                      onClick={handleGenerateVisualFrame}
-                      disabled={isGeneratingImage || !frameSpec}
-                      className="w-full bg-[#E53935] hover:bg-[#C62828] text-white font-semibold disabled:opacity-50"
-                    >
-                      {isGeneratingImage ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Generating Frame...
-                        </>
-                      ) : (
-                        <>
-                          <ImagePlus className="w-4 h-4 mr-2" />
-                          Generate Visual Frame
-                        </>
-                      )}
-                    </Button>
-
+                    {/* No Frame Yet */}
                     <motion.div
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -727,13 +598,8 @@ Go ahead and describe your ideal frame! ✨`,
                       <div className="bg-[#2A2A2A] rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center">
                         <Sparkles className="w-10 h-10 text-[#C62828] opacity-50" />
                       </div>
-                      <h3 className="text-white font-semibold mb-2">No Frame Yet</h3>
-                      <p className="text-sm leading-relaxed">Chat with AI to design your frame, then click "Generate Visual Frame" to create it!</p>
-                      {frameSpec && (
-                        <Badge className="mt-3 bg-[#C62828]/20 text-[#C62828] border-[#C62828]/30">
-                          Frame ready to generate!
-                        </Badge>
-                      )}
+                      <h3 className="text-white font-semibold mb-2">Belum Ada Frame</h3>
+                      <p className="text-sm leading-relaxed">Isi form di sebelah kiri, lalu klik "Buat Template AI" untuk generate frame!</p>
                     </motion.div>
                   </>
                 )}
@@ -742,6 +608,14 @@ Go ahead and describe your ideal frame! ✨`,
           </motion.div>
         </div>
       </div>
+
+      {/* Premium Modal - REQUIRED upgrade */}
+      <PremiumModal 
+        isOpen={showPremiumModal} 
+        onClose={handleCloseModal}
+        feature="AI Template Creator"
+        requireUpgrade={true}
+      />
     </div>
   );
 };

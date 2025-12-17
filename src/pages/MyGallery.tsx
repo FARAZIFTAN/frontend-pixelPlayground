@@ -13,14 +13,22 @@ import { compositeAPI, API_BASE_URL } from "@/services/api";
 import { toast } from "react-hot-toast";
 import analytics from "@/lib/analytics";
 import { downloadFile } from "@/lib/fileUtils";
+import PremiumModal from "@/components/PremiumModal";
 
 // Helper function to get full image URL
 const getImageUrl = (url: string) => {
   if (!url) return '';
-  if (url.startsWith('http') || url.startsWith('data:')) return url;
-  // Remove /api from base URL for static files
-  const baseUrl = API_BASE_URL.replace('/api', '');
-  return `${baseUrl}${url}`;
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) return url;
+  // For relative URLs, construct full URL properly
+  try {
+    const apiUrl = new URL(API_BASE_URL);
+    const baseUrl = `${apiUrl.protocol}//${apiUrl.host}`;
+    return `${baseUrl}${url.startsWith('/') ? url : '/' + url}`;
+  } catch {
+    // Fallback to simple string replace if URL parsing fails
+    const baseUrl = API_BASE_URL.replace('/api', '');
+    return `${baseUrl}${url}`;
+  }
 };
 
 interface Composite {
@@ -43,7 +51,15 @@ interface Composite {
 
 const MyGallery = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+
+  // Check premium status - LOCK My Gallery untuk non-premium
+  useEffect(() => {
+    if (user && !isPremium) {
+      setShowPremiumModal(true);
+    }
+  }, [user, isPremium]);
 
   // State management
   const [composites, setComposites] = useState<Composite[]>([]);
@@ -68,6 +84,25 @@ const MyGallery = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deletingComposite, setDeletingComposite] = useState<Composite | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // Check premium status - LOCK My Gallery untuk non-premium
+  useEffect(() => {
+    if (user && !isPremium) {
+      setShowPremiumModal(true);
+    }
+  }, [user, isPremium]);
+
+  // Handler untuk close modal - redirect jika belum premium
+  const handleCloseModal = () => {
+    if (!isPremium) {
+      toast.error("Premium membership required to access My Gallery", {
+        duration: 3000,
+        icon: "🔒"
+      });
+      navigate("/");
+    }
+    setShowPremiumModal(false);
+  };
 
   // Track page view
   useEffect(() => {
@@ -100,9 +135,7 @@ const MyGallery = () => {
       setDeleteDialogOpen(false);
       setDeletingComposite(null);
     } catch (error) {
-      console.error('❌ Delete error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('❌ Error details:', errorMessage);
       
       // User-friendly error messages
       let displayMessage = 'Failed to delete photo. Please try again.';
@@ -146,7 +179,6 @@ const MyGallery = () => {
       setPage(pageNum);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load gallery';
-      console.error('Load composites error:', error);
       setError(message);
       toast.error('Failed to load gallery');
     } finally {
@@ -633,6 +665,14 @@ const MyGallery = () => {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Premium Modal - REQUIRED upgrade */}
+        <PremiumModal 
+          isOpen={showPremiumModal} 
+          onClose={handleCloseModal}
+          feature="My Gallery"
+          requireUpgrade={true}
+        />
       </div>
     </div>
   );

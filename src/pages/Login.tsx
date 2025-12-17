@@ -43,23 +43,18 @@ const Login: React.FC = () => {
       // Track successful login
       analytics.userLogin(userData.id, 'email');
       
-      console.log('Login successful, user role:', userData.role);
-      
       // Give a small delay to ensure state is updated
       await new Promise(resolve => setTimeout(resolve, 100));
       
       // Redirect based on user role
       if (userData.role === 'admin') {
-        console.log('✅ Admin login successful! Redirecting to admin panel...');
         // Admin user -> redirect to admin dashboard
         navigate("/admin/dashboard", { replace: true });
       } else {
-        console.log('✅ User login successful! Redirecting to home...');
         // Regular user -> redirect to home
         navigate("/", { replace: true });
       }
     } catch (err: any) {
-      console.error('Login error:', err);
       setError(err.message || "Login failed. Please check your credentials.");
       setIsLoading(false);
     }
@@ -83,8 +78,6 @@ const Login: React.FC = () => {
       // Track successful login
       analytics.userLogin(userData.id, 'google');
       
-      console.log('✅ Google login successful:', userData.email);
-      
       // Redirect based on role
       if (userData.role === 'admin') {
         navigate("/admin/dashboard", { replace: true });
@@ -95,14 +88,12 @@ const Login: React.FC = () => {
       // Reload to update auth context
       window.location.reload();
     } catch (err: any) {
-      console.error('❌ Google login error:', err);
       setError(err.message || "Google login failed. Please try again.");
       setIsLoading(false);
     }
   };
 
   const handleGoogleError = () => {
-    console.error('❌ Google login failed');
     setError("Google login failed. Please try again.");
   };
 

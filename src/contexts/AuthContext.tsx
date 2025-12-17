@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import analytics from '@/lib/analytics';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface User {
   id: string;
@@ -8,6 +10,7 @@ interface User {
   role: 'user' | 'admin';
   profilePicture?: string | null;
   createdAt: string;
+  isPremium?: boolean;
 }
 
 interface AuthContextType {
@@ -16,44 +19,27 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isPremium: boolean;
   login: (email: string, password: string) => Promise<User | null>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: (silent?: boolean) => Promise<void>;
+  upgradeToPremium: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
 
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load token from localStorage on mount
-  useEffect(() => {
-    const savedToken = localStorage.getItem('token');
-    if (savedToken) {
-      setToken(savedToken);
-      checkAuth();
-    } else {
-      setIsLoading(false);
-    }
-  }, []);
-
   // Check if token is valid and get user data
-  const checkAuth = async (silent = false) => {
+  const checkAuth = useCallback(async (silent = false) => {
     const savedToken = localStorage.getItem('token');
     if (!savedToken) {
       if (!silent) {
@@ -65,7 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       // Add cache-busting to ensure fresh data
       const timestamp = Date.now();
-      const response = await fetch(`http://localhost:3001/api/auth/verify?t=${timestamp}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/verify?t=${timestamp}`, {
         mode: 'cors',
         headers: {
           'Authorization': `Bearer ${savedToken}`,
@@ -77,7 +63,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setUser(data.data.user);
+        // Load premium status from localStorage and merge with user data
+        const isPremiumFromStorage = localStorage.getItem('isPremium') === 'true';
+        const userData = { ...data.data.user, isPremium: isPremiumFromStorage || data.data.user.isPremium };
+        setUser(userData);
         setToken(savedToken);
       } else {
         // Only logout if not silent mode (i.e., initial load or explicit check)
@@ -104,12 +93,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
       }
     }
-  };
+  }, []);
+
+  // Load token from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('token');
+    if (savedToken) {
+      setToken(savedToken);
+      checkAuth();
+    } else {
+      setIsLoading(false);
+    }
+  }, [checkAuth]);
 
   // Login function
   const login = async (email: string, password: string): Promise<User | null> => {
     try {
-      const response = await fetch('http://localhost:3001/api/auth/login', {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -130,9 +130,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Save token to localStorage
         localStorage.setItem('token', newToken);
         
+        // Load premium status from localStorage and merge
+        const isPremiumFromStorage = localStorage.getItem('isPremium') === 'true';
+        const userWithPremium = { ...userData, isPremium: isPremiumFromStorage || userData.isPremium };
+        
         // Update state
         setToken(newToken);
-        setUser(userData);
+        setUser(userWithPremium);
         
         // Return user data (including role)
         return userData;
@@ -148,9 +152,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Register function
   const register = async (name: string, email: string, password: string) => {
     try {
-      console.log('Attempting to register with:', { name, email });
       
-      const response = await fetch('http://localhost:3001/api/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         mode: 'cors',
         headers: {
@@ -159,10 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         body: JSON.stringify({ name, email, password }),
       });
 
-      console.log('Response status:', response.status);
-      
       const data = await response.json();
-      console.log('Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Registration failed');
@@ -193,8 +193,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
     
     localStorage.removeItem('token');
+    localStorage.removeItem('isPremium');
     setToken(null);
     setUser(null);
+  };
+
+  // Upgrade to Premium (Dummy)
+  const upgradeToPremium = () => {
+    if (user) {
+      const updatedUser = { ...user, isPremium: true };
+      setUser(updatedUser);
+      localStorage.setItem('isPremium', 'true');
+    }
   };
 
   const value: AuthContextType = {
@@ -203,11 +213,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading,
     isAuthenticated: !!user && !!token,
     isAdmin: user?.role === 'admin',
+    isPremium: user?.isPremium || false,
     login,
     register,
     logout,
     checkAuth,
+    upgradeToPremium,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+}
+
+// Custom hook
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+
+// Export at the bottom for Fast Refresh compatibility
+export { AuthProvider };
+export default AuthProvider;

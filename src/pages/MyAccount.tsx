@@ -48,7 +48,6 @@ const MyAccount = () => {
           setAvatarPreview(null);
         }
       } catch (err: any) {
-        console.error('Load profile error:', err);
         toast({
           title: "Error",
           description: "Failed to load profile data.",
@@ -82,9 +81,7 @@ const MyAccount = () => {
     try {
       // If avatar selected, upload first
       if (avatarFile) {
-        console.log('Uploading avatar...', { fileSize: avatarFile.size, fileType: avatarFile.type });
         const uploadResult = await userAPI.uploadAvatar(avatarFile);
-        console.log('Upload result:', uploadResult);
         const newProfilePicUrl = (uploadResult as any)?.data?.profilePicture;
         
         // Update preview with cache-busting parameter
@@ -122,8 +119,6 @@ const MyAccount = () => {
 
       toast({ title: "Success", description: "Profile updated successfully." });
     } catch (err: any) {
-      console.error('Save profile error:', err);
-      
       // Check if it's an authentication error
       if (err.message?.includes('Unauthorized') || err.message?.includes('401')) {
         toast({
@@ -158,7 +153,6 @@ const MyAccount = () => {
       await checkAuth(true);
       toast({ title: "Success", description: "Profile picture removed successfully." });
     } catch (err: any) {
-      console.error(err);
       toast({
         title: "Error",
         description: err.message || "Failed to remove profile picture.",
@@ -222,7 +216,6 @@ const MyAccount = () => {
       logout();
       navigate("/");
     } catch (err: any) {
-      console.error(err);
       toast({
         title: "Error",
         description: err.message || "Failed to delete account.",
