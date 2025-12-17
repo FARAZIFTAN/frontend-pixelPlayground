@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, AlertCircle, Sparkles, ImagePlus, Download, Layout } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, ImagePlus, Download, Layout, MessageSquare, Zap, Send, Bot, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -29,14 +29,61 @@ interface ChatAIResponse {
   message: string;
   frameSpec?: AIFrameSpec;
 }
-
-interface FrameImageResponse {
-  success: boolean;
-  data?: {
-    frameImage: string;
+// Konversi nama warna Indonesia/Inggris ke hex color
+const colorNameToHex = (colorName: string): string => {
+  const colorMap: { [key: string]: string } = {
+    // Warna Indonesia
+    'merah': '#FF0000',
+    'kuning': '#FFFF00',
+    'biru': '#0000FF',
+    'hijau': '#00FF00',
+    'putih': '#FFFFFF',
+    'hitam': '#000000',
+    'pink': '#FF69B4',
+    'ungu': '#800080',
+    'orange': '#FFA500',
+    'oranye': '#FFA500',
+    'coklat': '#8B4513',
+    'abu': '#808080',
+    'abu-abu': '#808080',
+    'emas': '#FFD700',
+    'perak': '#C0C0C0',
+    
+    // Warna Inggris
+    'red': '#FF0000',
+    'yellow': '#FFFF00',
+    'blue': '#0000FF',
+    'green': '#00FF00',
+    'white': '#FFFFFF',
+    'black': '#000000',
+    'purple': '#800080',
+    'orange': '#FFA500',
+    'brown': '#8B4513',
+    'gray': '#808080',
+    'grey': '#808080',
+    'gold': '#FFD700',
+    'silver': '#C0C0C0',
   };
-}
 
+  const normalized = colorName.toLowerCase().trim();
+  return colorMap[normalized] || '#FFFFFF';
+};
+
+// Validasi dan konversi hex color
+const ensureHexColor = (color: string): string => {
+  // Jika sudah format hex yang valid
+  if (/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    return color;
+  }
+  
+  // Jika format hex tanpa #
+  if (/^[0-9A-Fa-f]{6}$/.test(color)) {
+    return `#${color}`;
+  }
+  
+  // Jika nama warna, konversi ke hex
+  return colorNameToHex(color);
+};
 // Type guard for AIFrameSpec
 const isValidFrameSpec = (spec: unknown): spec is AIFrameSpec => {
   if (!spec || typeof spec !== 'object') return false;
@@ -81,17 +128,18 @@ const AITemplateCreator = () => {
   };
 
   // Form states - 1x process
-  const [frameCount, setFrameCount] = useState<2 | 3 | 4>(3);
-  const [layout, setLayout] = useState<'vertical' | 'horizontal' | 'grid'>('vertical');
   const [description, setDescription] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [frameSpec, setFrameSpec] = useState<AIFrameSpec | null>(null);
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [frameName, setFrameName] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  const [frameVisibility, setFrameVisibility] = useState<'public' | 'private'>('public');
   const { toast } = useToast();
 
-  // Generate template dalam 1x proses - langsung dari form ke gambar
+
+
+  // Generate template dari deskripsi user
   const handleGenerateTemplate = async () => {
     if (!description.trim()) {
       toast({
@@ -107,13 +155,30 @@ const AITemplateCreator = () => {
     setGeneratedImage(null);
 
     try {
-      // Step 1: Generate frame spec via AI (bahasa Indonesia)
-      const promptIndonesia = `Buatkan spesifikasi frame foto dengan ketentuan berikut:
-- Jumlah foto: ${frameCount}
-- Layout: ${layout}
-- Deskripsi: ${description}
+      // Parse dari deskripsi user untuk mendapatkan frame spec
+      const promptIndonesia = `Parse deskripsi berikut dan buat spesifikasi frame foto JSON:
+Deskripsi: "${description}"
 
-Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen dekoratif yang sesuai dengan deskripsi.`;
+IMPORTANT: Berikan response dalam format JSON dengan fields berikut. Semua warna HARUS dalam format HEX COLOR (contoh: #FF0000 untuk merah, #FFFF00 untuk kuning):
+
+- frameCount (number: 2, 3, 4, atau 6)
+- layout (string: "vertical" atau "horizontal" atau "grid")
+- backgroundColor (string: HEX COLOR format #RRGGBB, contoh: #FF69B4)
+- borderColor (string: HEX COLOR format #RRGGBB, contoh: #FFD700)
+- gradientFrom (optional string: HEX COLOR untuk gradient start)
+- gradientTo (optional string: HEX COLOR untuk gradient end)
+
+Jika user menyebutkan nama warna, konversi ke hex:
+- merah → #FF0000
+- kuning → #FFFF00
+- biru → #0000FF
+- pink → #FF69B4
+- ungu → #800080
+- hijau → #00FF00
+- orange → #FFA500
+
+Untuk gradasi, gunakan gradientFrom dan gradientTo dengan warna yang sesuai.
+Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
 
       const messages: Message[] = [
         {
@@ -131,22 +196,50 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
 
       setFrameSpec(spec);
 
-      // Step 2: Langsung generate visual frame
+      // Step 2: Konversi warna ke hex dan generate visual frame
+      const backgroundColor = ensureHexColor(spec.backgroundColor || '#FFFFFF');
+      const borderColor = ensureHexColor(spec.borderColor || '#000000');
+      const gradientFrom = spec.gradientFrom ? ensureHexColor(spec.gradientFrom) : backgroundColor;
+      const gradientTo = spec.gradientTo ? ensureHexColor(spec.gradientTo) : backgroundColor;
+
       const requestBody = {
         frameCount: spec.frameCount,
         layout: spec.layout,
-        backgroundColor: spec.backgroundColor || '#FFFFFF',
-        borderColor: spec.borderColor || '#000000',
-        gradientFrom: spec.gradientFrom || spec.backgroundColor || '#FFFFFF',
-        gradientTo: spec.gradientTo || spec.backgroundColor || '#FFFFFF',
+        backgroundColor,
+        borderColor,
+        gradientFrom,
+        gradientTo,
         borderThickness: 2,
         borderRadius: 8,
       };
 
-      const imageResponse = await aiAPI.generateFrameImage(requestBody) as FrameImageResponse;
+      console.log('Sending frame request:', requestBody);
 
-      if (imageResponse.success && imageResponse.data?.frameImage) {
-        const base64Image = imageResponse.data.frameImage;
+      const imageResponse = await aiAPI.generateFrame(requestBody);
+
+      console.log('Frame response:', imageResponse);
+
+      if (imageResponse.success && imageResponse.image) {
+        let base64Image = imageResponse.image;
+        
+        // Ensure proper data URI format for SVG
+        if (!base64Image.startsWith('data:')) {
+          // Check if it's SVG by trying to decode
+          try {
+            const decoded = atob(base64Image);
+            if (decoded.includes('<svg')) {
+              base64Image = `data:image/svg+xml;base64,${base64Image}`;
+            } else {
+              base64Image = `data:image/png;base64,${base64Image}`;
+            }
+          } catch (e) {
+            console.error('Failed to decode base64:', e);
+            base64Image = `data:image/svg+xml;base64,${base64Image}`;
+          }
+        }
+        
+        console.log('✅ Base64 image with proper prefix:', base64Image.substring(0, 50) + '...');
+        
         setGeneratedImage(base64Image);
         
         toast({
@@ -154,7 +247,7 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
           description: 'Template frame Anda sudah siap digunakan',
         });
       } else {
-        throw new Error('Gagal generate gambar frame');
+        throw new Error(imageResponse.error || 'Gagal generate gambar frame');
       }
     } catch (error) {
       console.error('Generate template error:', error);
@@ -168,17 +261,83 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
     }
   };
 
-  // Fungsi handleGenerateVisualFrame dihapus - sudah digabung dalam handleGenerateTemplate
-
-  const copyToClipboard = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    toast({
-      title: 'Copied',
-      description: 'Frame specification copied to clipboard!',
-    });
-    setTimeout(() => setCopiedIndex(null), 2000);
+  // Handle generate click from button
+  const handleGenerateClick = () => {
+    if (!description.trim()) {
+      toast({
+        title: 'Deskripsi Kosong',
+        description: 'Mohon tulis deskripsi frame terlebih dahulu',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    handleGenerateTemplate();
   };
+
+  // Handle save template to database
+  const handleSaveTemplate = async () => {
+    if (!frameSpec || !generatedImage) {
+      toast({
+        title: 'Error',
+        description: 'Frame belum dibuat. Generate frame terlebih dahulu.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!frameName.trim()) {
+      toast({
+        title: 'Nama Frame Kosong',
+        description: 'Mohon isi nama frame terlebih dahulu',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Prepare frame data for AI save-frame endpoint
+      const frameData = {
+        name: frameName.trim(),
+        frameSpec: frameSpec,
+        frameDataUrl: generatedImage, // base64 with data URI prefix
+        visibility: frameVisibility,
+        description: description.trim() || `AI-generated ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
+        tags: ['AI Generated', frameSpec.layout, `${frameSpec.frameCount} Photos`],
+      };
+
+      console.log('💾 Saving frame via AI endpoint:', frameData);
+
+      // Call aiAPI.saveFrame (user-specific endpoint)
+      const result = await aiAPI.saveFrame(frameData);
+
+      console.log('✅ Frame saved:', result);
+
+      toast({
+        title: '✅ Frame Tersimpan!',
+        description: `Frame "${frameName}" berhasil disimpan sebagai ${frameVisibility}`,
+      });
+
+      // Reset form after successful save
+      setFrameName('');
+      setDescription('');
+      setGeneratedImage(null);
+      setFrameSpec(null);
+
+    } catch (error) {
+      console.error('Save template error:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Gagal menyimpan template',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+
 
   return (
     <div className="min-h-screen bg-[#0F0F0F] p-6 pt-24">
@@ -199,106 +358,105 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Form Section */}
+          {/* Chat Interface Section */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-2"
           >
-            <Card className="bg-[#1A1A1A] border-[#C62828]/30">
-              <CardHeader className="border-b border-[#C62828]/20 bg-[#0F0F0F]/50">
-                <CardTitle className="text-white flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-[#C62828]" />
-                  Buat Template AI
-                </CardTitle>
-              </CardHeader>
-
-              {/* Form */}
-              <CardContent className="p-6 space-y-6">
-                <div className="space-y-4">
-                  {/* Jumlah Foto */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                      <ImagePlus className="w-4 h-4 text-[#C62828]" />
-                      Jumlah Foto
-                    </label>
-                    <select
-                      value={frameCount}
-                      onChange={(e) => setFrameCount(Number(e.target.value) as 2 | 3 | 4)}
-                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all"
-                      disabled={isGenerating}
-                    >
-                      <option value={2}>2 Foto</option>
-                      <option value={3}>3 Foto</option>
-                      <option value={4}>4 Foto</option>
-                    </select>
-                  </div>
-
-                  {/* Layout */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                      <Layout className="w-4 h-4 text-[#C62828]" />
-                      Tata Letak
-                    </label>
-                    <select
-                      value={layout}
-                      onChange={(e) => setLayout(e.target.value as 'vertical' | 'horizontal' | 'grid')}
-                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all"
-                      disabled={isGenerating}
-                    >
-                      <option value="vertical">Vertikal (Atas ke Bawah)</option>
-                      <option value="horizontal">Horizontal (Kiri ke Kanan)</option>
-                      <option value="grid">Grid (Kotak-kotak)</option>
-                    </select>
-                  </div>
-
-                  {/* Deskripsi */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-[#C62828]" />
-                      Deskripsi Frame
-                    </label>
-                    <textarea
-                      value={description}
-                      onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Contoh: Frame dengan background gradasi biru, border rounded, dan dekorasi bintang di sudut"
-                      rows={5}
-                      className="w-full px-4 py-3 bg-[#2A2A2A] text-white rounded-lg border border-[#C62828]/20 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/20 focus:outline-none transition-all placeholder:text-gray-500 resize-none"
-                      disabled={isGenerating}
-                    />
-                    <p className="text-xs text-gray-500">
-                      Jelaskan frame yang kamu inginkan: warna, style, dekorasi, dll.
-                    </p>
-                  </div>
-
-                  {/* Generate Button */}
-                  <Button
-                    onClick={handleGenerateTemplate}
-                    disabled={isGenerating || !description.trim()}
-                    className="w-full bg-gradient-to-r from-[#C62828] to-[#E53935] hover:from-[#E53935] hover:to-[#C62828] text-white font-semibold py-6 text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Membuat Template...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-5 h-5 mr-2" />
-                        Buat Template AI
-                      </>
-                    )}
-                  </Button>
-
-                  {/* Info Box */}
-                  <div className="bg-[#2A2A2A] border border-[#C62828]/20 rounded-lg p-4">
-                    <p className="text-xs text-gray-400 leading-relaxed">
-                      <strong className="text-[#C62828]">Tips:</strong> Semakin detail deskripsi kamu, semakin bagus hasil frame yang dihasilkan AI. Jelaskan warna, style, dekorasi, dan elemen visual lainnya.
-                    </p>
-                  </div>
+            {/* Chat Box */}
+            <div className="bg-[#1A1A1A] border border-[#C62828]/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col h-[calc(100vh-200px)]">
+              {/* Chat Header */}
+              <div className="bg-gradient-to-r from-[#C62828] to-[#E53935] px-6 py-4 flex items-center gap-3 shadow-lg">
+                <div className="bg-white/20 rounded-full p-2">
+                  <Bot className="w-6 h-6 text-white" />
                 </div>
-              </CardContent>
-            </Card>
+                <div>
+                  <h3 className="text-white font-bold text-lg">AI Frame Assistant</h3>
+                  <p className="text-white/80 text-xs">Online • Siap membantu Anda</p>
+                </div>
+              </div>
+
+              {/* Chat Messages Area */}
+              <div className="flex-1 overflow-y-auto p-6 bg-[#0F0F0F]">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex gap-3 items-start"
+                >
+                  {/* Avatar */}
+                  <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-[#C62828] to-[#E53935]">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+
+                  {/* Single Message Bubble with Instructions */}
+                  <div className="flex-1 flex flex-col">
+                    <div className="rounded-2xl px-5 py-5 bg-[#2A2A2A] border border-gray-700 text-gray-200 rounded-tl-none">
+                      <p className="text-sm font-semibold text-white mb-3">
+                        Hai! 👋 Saya AI Assistant yang akan membantu Anda membuat frame foto custom.
+                      </p>
+                      
+                      <div className="bg-[#1A1A1A] rounded-lg p-4 mb-4 border border-gray-600">
+                        <p className="text-xs font-bold text-[#C62828] mb-2">📋 Persyaratan Prompt Generate Frame:</p>
+                        <ul className="text-sm space-y-1.5 text-gray-300">
+                          <li>1. <strong>Jumlah foto:</strong> 2 / 3 / 4 / 6</li>
+                          <li>2. <strong>Layout:</strong> vertikal / horizontal / grid</li>
+                          <li>3. <strong>Border:</strong> kuning / merah / biru / putih / hitam / (warna lainnya)</li>
+                          <li>4. <strong>Color frame:</strong> (warna atau gradasi, contoh: biru gradasi, pink solid)</li>
+                          <li>5. <strong>Style:</strong> vintage / modern / minimalist / elegant / (opsional)</li>
+                        </ul>
+                      </div>
+
+                      <div className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-lg p-4">
+                        <p className="text-xs font-bold text-blue-300 mb-2">💡 Contoh Deskripsi:</p>
+                        <p className="text-sm text-gray-200 italic leading-relaxed">
+                          "Buat frame dengan <strong>3 foto</strong> dengan layout <strong>vertikal</strong>, border <strong>kuning tebal</strong>, dengan frame berwarna <strong>biru gradasi</strong> dengan style <strong>vintage</strong>"
+                        </p>
+                      </div>
+
+                      {/* Description Input */}
+                      <div className="mt-5 pt-4 border-t border-gray-600">
+                        <label className="text-sm text-gray-300 mb-2 block font-medium">✍️ Tulis Deskripsi Frame Anda:</label>
+                        <textarea
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="Contoh: Buat frame dengan 4 foto layout horizontal, border merah, frame berwarna pink gradasi dengan style modern"
+                          rows={4}
+                          disabled={isGenerating}
+                          className="w-full px-4 py-3 bg-[#1A1A1A] text-white rounded-lg border border-gray-600 focus:border-[#C62828] focus:ring-2 focus:ring-[#C62828]/30 focus:outline-none transition-all placeholder:text-gray-500 resize-none text-sm leading-relaxed disabled:opacity-50"
+                        />
+                        <p className="text-xs text-gray-400 mt-2">
+                          ⚡ <strong className="text-[#C62828]">Tips:</strong> Ikuti format persyaratan di atas untuk hasil terbaik!
+                        </p>
+                      </div>
+
+                      {/* Generate Button */}
+                      <div className="mt-4">
+                        <button
+                          onClick={handleGenerateClick}
+                          disabled={isGenerating || !description.trim()}
+                          className="w-full bg-gradient-to-r from-[#C62828] to-[#E53935] text-white hover:from-[#E53935] hover:to-[#C62828] transform hover:scale-[1.02] px-8 py-3.5 text-base font-bold rounded-lg shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {isGenerating ? (
+                            <>
+                              <Loader2 className="w-5 h-5 mr-2 inline animate-spin" />
+                              Sedang Membuat Frame...
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-5 h-5 mr-2 inline" />
+                              Generate Frame
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
+
+
+            </div>
           </motion.div>
 
           {/* Preview Section */}
@@ -452,53 +610,16 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
 
                     {/* Save Frame Button */}
                     <Button
-                      onClick={async () => {
-                        if (!frameSpec || !generatedImage) {
-                          toast({
-                            title: 'Error',
-                            description: 'Frame data is missing.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-
-                        if (!frameName.trim()) {
-                          toast({
-                            title: 'Error',
-                            description: 'Please enter a frame name.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-
-                        setIsSaving(true);
-                        try {
-                          const response = await aiAPI.saveFrame({
-                            name: frameName,
-                            frameSpec,
-                            frameDataUrl: generatedImage,
-                            visibility: frameVisibility,
-                            description: `AI-generated ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
-                            tags: ['AI', frameSpec.theme, frameSpec.layout],
-                          });
-
-                          toast({
-                            title: '✅ Frame Saved!',
-                            description: `Frame "${frameName}" saved as ${frameVisibility}`,
-                          });
-                        } catch (error) {
-                          console.error('Save error:', error);
-                          toast({
-                            title: 'Error',
-                            description: 'Failed to save frame. Please try again.',
-                            variant: 'destructive',
-                          });
-                        } finally {
-                          setIsSaving(false);
-                        }
+                      onClick={() => {
+                        console.log('Save button clicked!', { 
+                          frameName, 
+                          hasImage: !!generatedImage,
+                          isSaving 
+                        });
+                        handleSaveTemplate();
                       }}
-                      disabled={isSaving || !frameName.trim()}
-                      className="w-full bg-gradient-to-r from-[#9B59B6] to-[#8E44AD] hover:from-[#8E44AD] hover:to-[#9B59B6] text-white font-semibold shadow-lg transition-all disabled:opacity-50"
+                      disabled={isSaving || !frameName.trim() || !generatedImage}
+                      className="w-full bg-gradient-to-r from-[#9B59B6] to-[#8E44AD] hover:from-[#8E44AD] hover:to-[#9B59B6] text-white font-semibold shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSaving ? (
                         <>
@@ -511,6 +632,17 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
                         </>
                       )}
                     </Button>
+                    
+                    {/* Helper text untuk status button */}
+                    {generatedImage && (
+                      <div className="text-xs text-center">
+                        {!frameName.trim() ? (
+                          <p className="text-yellow-400">⚠️ Isi nama frame untuk menyimpan</p>
+                        ) : (
+                          <p className="text-green-400">✅ Siap disimpan</p>
+                        )}
+                      </div>
+                    )}
 
                     {/* Use Frame Button - untuk ke booth editor */}
                     <Button
@@ -575,11 +707,11 @@ Buatkan desain yang menarik dan modern. Berikan warna yang cocok dan elemen deko
                         setGeneratedImage(null);
                         setFrameSpec(null);
                         setDescription('');
-                        setFrameCount(3);
-                        setLayout('vertical');
+                        setFrameName('');
+                        setFrameVisibility('public');
                         toast({
-                          title: 'Reset',
-                          description: 'Ready to design a new frame!',
+                          title: '🔄 Reset Berhasil',
+                          description: 'Siap membuat frame baru!',
                         });
                       }}
                       className="w-full bg-[#7F8C8D] hover:bg-[#95A5A6] text-white font-semibold"

@@ -56,7 +56,7 @@ const Contact = () => {
       reset(); // Clear form after successful submission
     } catch (error) {
       console.error("Contact form error:", error);
-      toast.error("❌ Failed to send message. Please try again or email us directly at hello@karyaklik.com", {
+      toast.error("❌ Failed to send message. Please try again or email us directly at karyaklik2025@gmail.com", {
         duration: 6000,
       });
     } finally {
@@ -209,10 +209,10 @@ const Contact = () => {
                     <div>
                       <p className="font-medium">Email</p>
                       <a
-                        href="mailto:hello@karyaklik.com"
+                        href="mailto:karyaklik2025@gmail.com"
                         className="text-primary hover:underline text-sm"
                       >
-                        hello@karyaklik.com
+                        karyaklik2025@gmail.com
                       </a>
                     </div>
                   </div>
@@ -244,7 +244,7 @@ const Contact = () => {
                     <span className="text-sm font-medium">WhatsApp</span>
                   </a>
                   <a
-                    href="mailto:hello@karyaklik.com"
+                    href="mailto:karyaklik2025@gmail.com"
                     className="flex flex-col items-center justify-center p-6 rounded-2xl bg-accent hover:bg-primary hover:text-primary-foreground transition-all group shadow-soft hover:shadow-hover"
                   >
                     <Mail className="w-8 h-8 mb-2" />

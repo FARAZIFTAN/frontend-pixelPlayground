@@ -1349,11 +1349,23 @@ const Booth = () => {
       return;
     }
 
+    // Validate layoutPositions
+    if (!selectedTemplate.layoutPositions || selectedTemplate.layoutPositions.length === 0) {
+      console.error('❌ Template has no layoutPositions!');
+      toast.error("Template configuration error. Please choose another template.");
+      return;
+    }
+
+    if (photos.length !== selectedTemplate.frameCount) {
+      console.warn(`⚠️ Photo count mismatch: ${photos.length} photos but template expects ${selectedTemplate.frameCount}`);
+    }
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     
     if (!ctx) {
       console.error('❌ Canvas context not found!');
+      toast.error("Canvas error. Please try again.");
       return;
     }
 
@@ -1362,7 +1374,12 @@ const Booth = () => {
     templateImg.crossOrigin = "anonymous";
     templateImg.src = selectedTemplate.frameUrl;
 
-    console.log('📦 Loading template from:', selectedTemplate.frameUrl);
+    console.log('📦 Loading template from:', selectedTemplate.frameUrl.substring(0, 100) + '...');
+
+    templateImg.onerror = (error) => {
+      console.error('❌ Failed to load template:', error);
+      toast.error("Failed to load template. Please try another template.");
+    };
 
     templateImg.onload = () => {
       console.log('✅ Template loaded!', templateImg.width, 'x', templateImg.height);
@@ -1382,6 +1399,11 @@ const Booth = () => {
         img.crossOrigin = "anonymous";
         img.src = photoDataUrl;
         
+        img.onerror = (error) => {
+          console.error(`❌ Failed to load photo ${index + 1}:`, error);
+          toast.error(`Failed to load photo ${index + 1}`);
+        };
+        
         img.onload = () => {
           console.log(`✅ Photo ${index + 1} loaded:`, img.width, 'x', img.height);
           photoImages[index] = img;
@@ -1400,66 +1422,88 @@ const Booth = () => {
             console.log('⬜ White background drawn');
 
             // STEP 2: Draw each photo in its position (BEHIND template)
+            console.log(`🎨 Drawing ${photos.length} photos using ${selectedTemplate.layoutPositions.length} positions`);
+            
             photos.forEach((_, i) => {
               const position = selectedTemplate.layoutPositions[i];
-              if (position && photoImages[i]) {
-                const photo = photoImages[i];
-                
-                console.log(`📍 Drawing photo ${i + 1} at position:`, position);
-
-                // Calculate aspect ratio to fit photo in the frame (cover fit)
-                const photoAspect = photo.width / photo.height;
-                const frameAspect = position.width / position.height;
-
-                let drawWidth, drawHeight, offsetX, offsetY;
-
-                if (photoAspect > frameAspect) {
-                  // Photo is wider - fit by height
-                  drawHeight = position.height;
-                  drawWidth = drawHeight * photoAspect;
-                  offsetX = (drawWidth - position.width) / 2;
-                  offsetY = 0;
-                } else {
-                  // Photo is taller - fit by width
-                  drawWidth = position.width;
-                  drawHeight = drawWidth / photoAspect;
-                  offsetX = 0;
-                  offsetY = (drawHeight - position.height) / 2;
-                }
-
-                // Save context state
-                ctx.save();
-
-                // Create clipping region for the photo area
-                ctx.beginPath();
-                ctx.rect(position.x, position.y, position.width, position.height);
-                ctx.clip();
-
-                // Draw the photo (centered and covering the area)
-                ctx.drawImage(
-                  photo,
-                  position.x - offsetX,
-                  position.y - offsetY,
-                  drawWidth,
-                  drawHeight
-                );
-
-                // Restore context state
-                ctx.restore();
-
-                console.log(`✅ Photo ${i + 1} drawn at x:${position.x}, y:${position.y}, w:${position.width}, h:${position.height}`);
+              
+              if (!position) {
+                console.warn(`⚠️ No position data for photo ${i + 1}`);
+                return;
               }
+              
+              if (!photoImages[i]) {
+                console.warn(`⚠️ Photo ${i + 1} not loaded`);
+                return;
+              }
+              
+              const photo = photoImages[i];
+              console.log(`📍 Drawing photo ${i + 1} at position:`, position);
+
+              // Calculate aspect ratio to fit photo in the frame (cover fit)
+              const photoAspect = photo.width / photo.height;
+              const frameAspect = position.width / position.height;
+
+              let drawWidth, drawHeight, offsetX, offsetY;
+
+              if (photoAspect > frameAspect) {
+                // Photo is wider - fit by height
+                drawHeight = position.height;
+                drawWidth = drawHeight * photoAspect;
+                offsetX = (drawWidth - position.width) / 2;
+                offsetY = 0;
+              } else {
+                // Photo is taller - fit by width
+                drawWidth = position.width;
+                drawHeight = drawWidth / photoAspect;
+                offsetX = 0;
+                offsetY = (drawHeight - position.height) / 2;
+              }
+
+              // Save context state
+              ctx.save();
+
+              // Create clipping region for the photo area
+              ctx.beginPath();
+              ctx.rect(position.x, position.y, position.width, position.height);
+              ctx.clip();
+
+              // Draw the photo (centered and covering the area)
+              ctx.drawImage(
+                photo,
+                position.x - offsetX,
+                position.y - offsetY,
+                drawWidth,
+                drawHeight
+              );
+
+              // Restore context state
+              ctx.restore();
+
+              console.log(`✅ Photo ${i + 1} drawn at x:${position.x}, y:${position.y}, w:${position.width}, h:${position.height}`);
             });
 
             // STEP 3: Draw template overlay ON TOP of photos
-            ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
-            console.log('🖼️ Template overlay drawn on top');
+            let finalImage: string;
+            try {
+              ctx.drawImage(templateImg, 0, 0, canvas.width, canvas.height);
+              console.log('🖼️ Template overlay drawn on top');
 
-            // Get final composite image
-            const finalImage = canvas.toDataURL("image/png", 1.0);
-            setFinalCompositeImage(finalImage);
-            setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
-            console.log('🎉 Composite complete! Template:', canvas.width, 'x', canvas.height);
+              // Get final composite image
+              finalImage = canvas.toDataURL("image/png", 1.0);
+              setFinalCompositeImage(finalImage);
+              setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
+              console.log('🎉 Composite complete! Size:', canvas.width, 'x', canvas.height);
+              
+              toast.success("🎉 Photo strip created successfully!", {
+                duration: 3000,
+                icon: '✨'
+              });
+            } catch (error) {
+              console.error('❌ Error creating composite:', error);
+              toast.error("Failed to create photo strip. Please try again.");
+              return;
+            }
             
             // Auto-save to gallery if user is logged in
             if (user && sessionId) {
@@ -1525,8 +1569,15 @@ const Booth = () => {
       setIsLoading(true);
       const uploadedImages: string[] = [];
 
+      // Calculate how many more photos we can accept
+      const remainingSlots = photoCount - capturedImages.length;
+      const filesToProcess = Math.min(files.length, remainingSlots);
+
+      console.log(`📸 Uploading ${filesToProcess} files (${remainingSlots} slots remaining out of ${photoCount})`);
+      console.log(`Current photos: ${capturedImages.length}, Will upload: ${filesToProcess}`);
+
       // Convert files to base64 for preview
-      for (let i = 0; i < Math.min(files.length, photoCount); i++) {
+      for (let i = 0; i < filesToProcess; i++) {
         const file = files[i];
         
         // Validate file type
@@ -1535,14 +1586,22 @@ const Booth = () => {
           continue;
         }
 
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`File ${file.name} is too large (max 10MB)`);
+          continue;
+        }
+
         // Read file as base64
         const reader = new FileReader();
-        const imageData = await new Promise<string>((resolve) => {
+        const imageData = await new Promise<string>((resolve, reject) => {
           reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = (e) => reject(new Error('Failed to read file'));
           reader.readAsDataURL(file);
         });
 
         uploadedImages.push(imageData);
+        console.log(`✅ Processed image ${i + 1}/${filesToProcess}: ${file.name}`);
       }
 
       if (uploadedImages.length === 0) {
@@ -1550,6 +1609,8 @@ const Booth = () => {
         setIsLoading(false);
         return;
       }
+
+      console.log(`✅ Successfully processed ${uploadedImages.length} images`);
 
       // Append to captured images (not replace)
       const newCapturedImages = [...capturedImages, ...uploadedImages];
@@ -1580,14 +1641,29 @@ const Booth = () => {
       // Check if all photos are uploaded
       if (newCapturedImages.length >= photoCount) {
         setAllPhotosCaptured(true);
-        toast.success(`All ${photoCount} photos uploaded successfully!`);
+        toast.success(`✅ All ${photoCount} photos uploaded successfully!`, {
+          duration: 3000,
+          icon: '📸'
+        });
       } else {
-        toast.success(`${newCapturedImages.length} photos uploaded. ${photoCount - newCapturedImages.length} more needed.`);
+        const remaining = photoCount - newCapturedImages.length;
+        toast.success(`✅ Uploaded ${uploadedImages.length} photo(s). ${remaining} more needed.`, {
+          duration: 3000,
+          icon: '📸'
+        });
+      }
+
+      // Warn if user selected more files than available slots
+      if (files.length > remainingSlots) {
+        toast(`⚠️ Only ${remainingSlots} slots available. ${files.length - remainingSlots} file(s) skipped.`, {
+          duration: 4000,
+          icon: '⚠️'
+        });
       }
 
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload photos');
+      toast.error('Failed to upload photos. Please try again.');
     } finally {
       setIsLoading(false);
       // Reset file input
@@ -1942,6 +2018,47 @@ const Booth = () => {
     } catch (error) {
       console.error("❌ Share error:", error);
       toast.error("Could not share. Use Download button instead.", {
+        duration: 3000,
+      });
+    }
+  };
+
+  const handleShareToWhatsApp = async () => {
+    if (!finalCompositeImage) {
+      toast.error("No photo to share. Please take photos first.");
+      return;
+    }
+    
+    try {
+      // Render stickers to image first
+      const imageWithStickers = stickers.length > 0 
+        ? await renderStickersToCanvas(finalCompositeImage)
+        : finalCompositeImage;
+
+      const blob = await (await fetch(imageWithStickers)).blob();
+      const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
+      
+      // Try native share API (works on mobile and some modern browsers)
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "My PixelPlayground Photo Strip",
+          text: "Check out my photo strip from PixelPlayground! 📸✨",
+        });
+        toast.success("📤 Shared successfully!", {
+          duration: 2000,
+          icon: "✅",
+        });
+      } else {
+        // Fallback: Open WhatsApp Web (plain, no message)
+        window.open('https://web.whatsapp.com/', '_blank');
+        toast.success("💚 WhatsApp opened!", {
+          duration: 2000,
+        });
+      }
+    } catch (error) {
+      console.error("❌ WhatsApp share error:", error);
+      toast.error("Could not share. Please try again.", {
         duration: 3000,
       });
     }
@@ -2438,6 +2555,40 @@ const Booth = () => {
                 <canvas ref={canvasRef} className="hidden" />
                 <canvas ref={filterCanvasRef} className="hidden" />
               </div>
+
+              {/* Uploaded Photos Preview - Show when some photos uploaded but not complete */}
+              {capturedImages.length > 0 && !allPhotosCaptured && !finalCompositeImage && (
+                <div className="mt-6 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-semibold text-lg">
+                      Uploaded Photos ({capturedImages.length}/{photoCount})
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-4 gap-3">
+                    {capturedImages.map((image, index) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border bg-secondary">
+                        <img
+                          src={image}
+                          alt={`Photo ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+                          {index + 1}
+                        </div>
+                      </div>
+                    ))}
+                    {/* Empty slots */}
+                    {Array.from({ length: photoCount - capturedImages.length }).map((_, index) => (
+                      <div key={`empty-${index}`} className="relative aspect-square rounded-lg border-2 border-dashed border-border bg-secondary/50 flex items-center justify-center">
+                        <div className="text-center">
+                          <Upload className="w-6 h-6 text-muted-foreground/50 mx-auto mb-1" />
+                          <span className="text-xs text-muted-foreground/50">{capturedImages.length + index + 1}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -2484,7 +2635,7 @@ const Booth = () => {
                         className="w-full border-2 border-primary/50 hover:bg-primary/10 hover:border-primary text-primary transition-all py-5 font-semibold"
                       >
                         <Sparkles className="w-4 h-4 mr-2" />
-                        Edit More
+                        Edit Photo
                       </Button>
 
                       <div className="border-t border-border my-4"></div>
@@ -2496,7 +2647,7 @@ const Booth = () => {
                         className="w-full border-2 border-destructive/40 hover:bg-destructive/10 hover:border-destructive text-destructive transition-all py-4"
                       >
                         <RotateCcw className="w-4 h-4 mr-2" />
-                        Retake Photos
+                        Start Over
                       </Button>
 
                       {/* Optional: View Gallery Link */}
@@ -3334,25 +3485,23 @@ const Booth = () => {
                       Download Photo
                     </Button>
                     
-                    <div className="grid grid-cols-2 gap-3">
-                      {user && (
-                        <Button
-                          onClick={() => navigate('/my-gallery')}
-                          className="bg-green-600 hover:bg-green-700 text-white shadow-lg transition-all py-5"
-                        >
-                          <ImageIcon className="w-4 h-4 mr-1" />
-                          My Gallery
-                        </Button>
-                      )}
+                    <Button
+                      onClick={handleShare}
+                      className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg transition-all py-5 font-semibold"
+                    >
+                      <Share2 className="w-4 h-4 mr-2" />
+                      Share
+                    </Button>
+                    
+                    {user && (
                       <Button
-                        onClick={handleShare}
-                        variant="outline"
-                        className="border-2 hover:bg-accent hover:border-primary transition-all py-5"
+                        onClick={() => navigate('/my-gallery')}
+                        className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white shadow-lg transition-all py-5"
                       >
-                        <Share2 className="w-4 h-4 mr-1" />
-                        Share
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                        View My Gallery
                       </Button>
-                    </div>
+                    )}
                     
                     <Button
                       onClick={handleRetake}
@@ -3461,6 +3610,37 @@ const Booth = () => {
                         Upload Photos ({photoCount} needed)
                       </Button>
                     ) : null}
+                  </div>
+                ) : capturedImages.length > 0 && !allPhotosCaptured ? (
+                  <div className="flex flex-col gap-3">
+                    {inputMethod === 'upload' && (
+                      <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading || !selectedTemplate}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Upload className="w-5 h-5 mr-2" />
+                        Upload More Photos ({capturedImages.length}/{photoCount})
+                      </Button>
+                    )}
+                    {inputMethod === 'camera' && (
+                      <Button
+                        onClick={handleCapture}
+                        disabled={!hasPermission || isLoading || !selectedTemplate}
+                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                      >
+                        <Camera className="w-5 h-5 mr-2" />
+                        Continue ({capturedImages.length}/{photoCount})
+                      </Button>
+                    )}
+                    <Button
+                      onClick={handleRetake}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Start Over
+                    </Button>
                   </div>
                 ) : allPhotosCaptured && !finalCompositeImage ? (
                   <div className="flex flex-col gap-3">
