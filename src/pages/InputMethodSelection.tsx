@@ -72,17 +72,24 @@ const InputMethodSelection = () => {
         }
         
         // Load regular template from backend
-        const response = await templateAPI.getTemplate(templateId) as { data: any };
-        if (response.data) {
-          setSelectedTemplate(response.data);
+        const response = await templateAPI.getTemplate(templateId) as {
+          success: boolean;
+          data?: { template: any };
+        };
+        
+        console.log('📦 Template API response:', response);
+        
+        if (response.success && response.data?.template) {
+          setSelectedTemplate(response.data.template);
           
           // Preload template image immediately
-          if (response.data.frameUrl) {
+          if (response.data.template.frameUrl) {
             const img = document.createElement('img');
-            img.src = response.data.frameUrl;
+            img.src = response.data.template.frameUrl;
             console.log('⚡ Preloading frame image from API');
           }
         } else {
+          console.error('❌ Template not found in response:', response);
           toast.error('Template not found');
           navigate('/gallery');
         }

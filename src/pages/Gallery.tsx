@@ -91,8 +91,42 @@ const Gallery = () => {
       if (response.success && response.data) {
         console.log('✅ Templates loaded:', response.data.templates.length);
         setTemplates(response.data.templates);
-        // Cache for 5 minutes
-        sessionStorage.setItem('templates_cache', JSON.stringify(response.data.templates));
+        
+        // Cache dengan data yang lebih ringan (tanpa layoutPositions yang besar)
+        try {
+          const lightweightCache = response.data.templates.map(t => ({
+            _id: t._id,
+            name: t.name,
+            category: t.category,
+            thumbnail: t.thumbnail,
+            frameUrl: t.frameUrl,
+            isPremium: t.isPremium,
+            frameCount: t.frameCount,
+            // Exclude layoutPositions untuk menghemat space
+          }));
+          sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
+        } catch (cacheError) {
+          // Handle QuotaExceededError
+          if (cacheError instanceof Error && cacheError.name === 'QuotaExceededError') {
+            console.warn('⚠️ Cache quota exceeded, clearing old cache');
+            // Clear old cache and try again
+            sessionStorage.removeItem('templates_cache');
+            try {
+              const lightweightCache = response.data.templates.map(t => ({
+                _id: t._id,
+                name: t.name,
+                category: t.category,
+                thumbnail: t.thumbnail,
+                frameUrl: t.frameUrl,
+                isPremium: t.isPremium,
+                frameCount: t.frameCount,
+              }));
+              sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
+            } catch (e) {
+              console.warn('⚠️ Still cannot cache, continuing without cache');
+            }
+          }
+        }
       } else {
         console.warn('⚠️ No templates data in response');
         toast.error('No templates found');
