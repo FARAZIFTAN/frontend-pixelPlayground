@@ -1,5 +1,5 @@
 import { Bell, Search, User, Menu } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -20,15 +20,37 @@ const Header = () => {
   const [isLoadingNotifications, setIsLoadingNotifications] = useState(false);
   const { logout, user, token } = useAuth();
   const navigate = useNavigate();
+  const fetchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFetchTimeRef = useRef<number>(0);
 
   useEffect(() => {
+    // Debounce notification fetch to prevent duplicate requests
     if (showNotifications) {
-      fetchNotifications();
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+      
+      fetchTimeoutRef.current = setTimeout(() => {
+        fetchNotifications();
+      }, 300); // 300ms debounce
     }
+
+    return () => {
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [showNotifications]);
 
   const fetchNotifications = async () => {
     try {
+      // Prevent fetching if already fetched recently
+      const now = Date.now();
+      if (now - lastFetchTimeRef.current < 1000) {
+        return; // Skip if fetched within last 1 second
+      }
+      lastFetchTimeRef.current = now;
+
       setIsLoadingNotifications(true);
       const response = await fetch(
         `http://localhost:3001/api/notifications?limit=10`,
