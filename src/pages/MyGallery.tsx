@@ -52,18 +52,35 @@ interface Composite {
 const MyGallery = () => {
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
+  // Initialize modal state based on premium status
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [modalClosedManually, setModalClosedManually] = useState(false);
 
   // Check premium status - LOCK My Gallery untuk non-premium
   useEffect(() => {
-    if (user && !isPremium) {
-      setShowPremiumModal(true);
+    if (user) {
+      // Hanya tampilkan modal jika user TIDAK premium
+      if (!isPremium) {
+        setShowPremiumModal(true);
+      } else {
+        // User adalah premium, tutup modal dan reset flag
+        setShowPremiumModal(false);
+        setModalClosedManually(false);
+      }
     }
   }, [user, isPremium]);
 
+  // Redirect logic terpisah - hanya redirect jika modal ditutup manual tanpa upgrade
+  useEffect(() => {
+    if (modalClosedManually && !showPremiumModal && user && !isPremium) {
+      // Modal ditutup manual tapi user belum premium, redirect
+      navigate("/");
+    }
+  }, [modalClosedManually, showPremiumModal, user, isPremium, navigate]);
+
   // State management
   const [composites, setComposites] = useState<Composite[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [selectedComposite, setSelectedComposite] = useState<Composite | null>(null);
@@ -85,22 +102,9 @@ const MyGallery = () => {
   const [deletingComposite, setDeletingComposite] = useState<Composite | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Check premium status - LOCK My Gallery untuk non-premium
-  useEffect(() => {
-    if (user && !isPremium) {
-      setShowPremiumModal(true);
-    }
-  }, [user, isPremium]);
-
-  // Handler untuk close modal - redirect jika belum premium
+  // Handler untuk close modal - hanya set flag, redirect dihandle useEffect
   const handleCloseModal = () => {
-    if (!isPremium) {
-      toast.error("Premium membership required to access My Gallery", {
-        duration: 3000,
-        icon: "🔒"
-      });
-      navigate("/");
-    }
+    setModalClosedManually(true);
     setShowPremiumModal(false);
   };
 
@@ -156,6 +160,13 @@ const MyGallery = () => {
 
   // Load composites
   const loadComposites = async (pageNum = 1, append = false) => {
+    // Jangan load jika bukan premium user
+    if (!isPremium) {
+      setLoading(false);
+      setLoadingMore(false);
+      return;
+    }
+
     try {
       if (pageNum === 1) setLoading(true);
       else setLoadingMore(true);
@@ -180,7 +191,10 @@ const MyGallery = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to load gallery';
       setError(message);
-      toast.error('Failed to load gallery');
+      // Hanya tampilkan toast error jika memang error bukan karena tidak premium
+      if (isPremium) {
+        toast.error('Failed to load gallery');
+      }
     } finally {
       setLoading(false);
       setLoadingMore(false);
@@ -188,10 +202,14 @@ const MyGallery = () => {
   };
 
   useEffect(() => {
-    if (user) {
+    // Hanya load gallery jika user premium
+    if (user && isPremium) {
       loadComposites();
+    } else if (user && !isPremium) {
+      // Set loading false untuk non-premium user
+      setLoading(false);
     }
-  }, [user]);
+  }, [user, isPremium]);
 
   // Filter and sort composites
   const filteredComposites = composites

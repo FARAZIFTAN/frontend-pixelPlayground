@@ -14,7 +14,7 @@ interface PremiumModalProps {
 }
 
 const PremiumModal = ({ isOpen, onClose, feature = "this feature", requireUpgrade = false }: PremiumModalProps) => {
-  const { upgradeToPremium } = useAuth();
+  const { upgradeToPremium, checkAuth } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [step, setStep] = useState<'plan' | 'payment' | 'success'>('plan');
 
@@ -22,27 +22,38 @@ const PremiumModal = ({ isOpen, onClose, feature = "this feature", requireUpgrad
     setStep('payment');
   };
 
-  const handleDummyPayment = () => {
+  const handleDummyPayment = async () => {
     setIsProcessing(true);
     
     // Simulasi loading payment
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsProcessing(false);
       setStep('success');
       
       // Update user to premium after 1 second
-      setTimeout(() => {
+      setTimeout(async () => {
+        // Update to premium
         upgradeToPremium();
+        
+        // Wait sedikit untuk state propagation
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Force refresh auth state untuk update semua komponen
+        await checkAuth(true);
+        
+        // Wait lagi untuk memastikan semua komponen ter-update
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         toast.success("🎉 Welcome to Premium! You now have full access!", {
           duration: 4000,
           icon: "👑",
         });
         
-        // Close modal after success
+        // Close modal after success dengan delay lebih lama untuk state propagation
         setTimeout(() => {
           onClose();
           setStep('plan'); // Reset for next time
-        }, 2000);
+        }, 1500);
       }, 1000);
     }, 2000);
   };

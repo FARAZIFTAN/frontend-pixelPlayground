@@ -204,6 +204,12 @@ function AuthProvider({ children }: AuthProviderProps) {
       const updatedUser = { ...user, isPremium: true };
       setUser(updatedUser);
       localStorage.setItem('isPremium', 'true');
+      
+      // Force re-render dengan mengupdate user object reference
+      // Ini akan memicu useEffect di komponen yang depend pada isPremium
+      setTimeout(() => {
+        setUser({ ...updatedUser });
+      }, 100);
     }
   };
 
