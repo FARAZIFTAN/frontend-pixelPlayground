@@ -31,7 +31,7 @@ const UserFrameSubmission = () => {
   // Check if user is premium
   if (!user?.isPremium) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-black flex items-center justify-center px-4 pt-32">
         <div className="text-center max-w-md">
           <Lock className="w-16 h-16 text-[#C62828] mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white mb-2">PRO Feature</h1>
@@ -40,7 +40,7 @@ const UserFrameSubmission = () => {
           </p>
           <Button
             onClick={() => navigate("/pricing")}
-            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold"
+            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-lg"
           >
             Upgrade to PRO
           </Button>
@@ -109,27 +109,27 @@ const UserFrameSubmission = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-black pt-32">
+      <div className="container mx-auto px-4 py-12 max-w-7xl">
         <div className="flex items-center gap-3 mb-8">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/user/my-submissions")}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-white hover:bg-white/10"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-white">Submit Custom Frame</h1>
-            <p className="text-gray-300 mt-1">Create and submit a new frame for approval</p>
+            <h1 className="text-4xl font-bold text-white">Submit Custom Frame</h1>
+            <p className="text-gray-400 mt-2">Create and submit a new frame for community approval</p>
           </div>
         </div>
 
-        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-sm text-blue-200">
-            💡 <strong>Tip:</strong> After submission, your frame will be reviewed by our admin team. Once approved, it will
-            be available as a public template for all users!
+        <div className="mb-8 p-5 bg-gradient-to-r from-[#C62828]/15 to-[#FF6B6B]/5 border border-[#C62828]/40 rounded-lg">
+          <p className="text-sm text-[#FFB3B3] flex items-center gap-2">
+            <span className="text-lg">💡</span>
+            <span><strong>Tip:</strong> After submission, your frame will be reviewed by our admin team. Once approved, it will be available as a public template for all users!</span>
           </p>
         </div>
 

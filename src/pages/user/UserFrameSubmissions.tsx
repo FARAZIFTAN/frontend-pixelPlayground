@@ -108,7 +108,7 @@ const UserFrameSubmissions = () => {
 
   if (!user?.isPremium) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-black flex items-center justify-center px-4 pt-32">
         <div className="text-center max-w-md">
           <Upload className="w-16 h-16 text-[#C62828] mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white mb-2">PRO Feature</h1>
@@ -117,7 +117,7 @@ const UserFrameSubmissions = () => {
           </p>
           <Button
             onClick={() => navigate("/pricing")}
-            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold"
+            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-lg"
           >
             Upgrade to PRO
           </Button>
@@ -127,16 +127,16 @@ const UserFrameSubmissions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#0F0F0F] via-[#1A1A1A] to-black">
+      <div className="container mx-auto px-4 py-12 max-w-6xl">
+        <div className="flex items-center justify-between mb-8 pt-16">
           <div>
-            <h1 className="text-3xl font-bold text-white">My Frame Submissions</h1>
-            <p className="text-gray-300 mt-1">View and manage your submitted frames</p>
+            <h1 className="text-4xl font-bold text-white">My Frame Submissions</h1>
+            <p className="text-gray-400 mt-2">View and manage your submitted frames</p>
           </div>
           <Button
             onClick={() => navigate("/user/frame-submission")}
-            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold"
+            className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all"
           >
             <Upload className="w-4 h-4 mr-2" />
             Submit New Frame
