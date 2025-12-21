@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload } from "lucide-react";
@@ -15,6 +15,16 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
+
+  // Refs for dropdowns and buttons
+  const exploreMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const exploreButtonRef = useRef<HTMLButtonElement>(null);
+  const userButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus management states
+  const [exploreFocusIndex, setExploreFocusIndex] = useState(-1);
+  const [userFocusIndex, setUserFocusIndex] = useState(-1);
 
   // Update profile pic version when user changes
   useEffect(() => {
@@ -66,6 +76,109 @@ const Navbar = () => {
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Click outside handler for dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exploreMenuRef.current && !exploreMenuRef.current.contains(event.target as Node)) {
+        setShowExploreMenu(false);
+        setExploreFocusIndex(-1);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+        setUserFocusIndex(-1);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Focus management: return focus to trigger after dropdown closes
+  useEffect(() => {
+    if (!showExploreMenu && exploreButtonRef.current) {
+      exploreButtonRef.current.focus();
+    }
+  }, [showExploreMenu]);
+
+  useEffect(() => {
+    if (!showUserMenu && userButtonRef.current) {
+      userButtonRef.current.focus();
+    }
+  }, [showUserMenu]);
+
+  // Keyboard navigation inside dropdowns
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (showExploreMenu) {
+        const exploreItems = user?.isPremium 
+          ? ['gallery', 'my-gallery', 'ai-template-creator', 'my-submissions']
+          : ['gallery', 'my-gallery', 'ai-template-creator'];
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setExploreFocusIndex(prev => (prev + 1) % exploreItems.length);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setExploreFocusIndex(prev => prev <= 0 ? exploreItems.length - 1 : prev - 1);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          // Trigger navigation based on focus index
+          const item = exploreItems[exploreFocusIndex];
+          if (item) {
+            setShowExploreMenu(false);
+            setExploreFocusIndex(-1);
+            // Navigate to the selected item
+            if (item === 'gallery') navigate('/gallery');
+            else if (item === 'my-gallery') navigate('/my-gallery');
+            else if (item === 'ai-template-creator') navigate('/ai-template-creator');
+            else if (item === 'my-submissions') navigate('/user/my-submissions');
+          }
+        }
+      } else if (showUserMenu) {
+        const userItems = ['my-account', 'logout'];
+        
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setUserFocusIndex(prev => (prev + 1) % userItems.length);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setUserFocusIndex(prev => prev <= 0 ? userItems.length - 1 : prev - 1);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          const item = userItems[userFocusIndex];
+          if (item === 'my-account') {
+            setShowUserMenu(false);
+            setUserFocusIndex(-1);
+            navigate('/my-account');
+          } else if (item === 'logout') {
+            setShowUserMenu(false);
+            setUserFocusIndex(-1);
+            handleLogout();
+          }
+        }
+      }
+    };
+
+    if (showExploreMenu || showUserMenu) {
+      document.addEventListener('keydown', handleKeyDown);
+    }
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showExploreMenu, showUserMenu, exploreFocusIndex, userFocusIndex, user?.isPremium, navigate]);
+
+  // Set initial focus when dropdown opens
+  useEffect(() => {
+    if (showExploreMenu) {
+      setExploreFocusIndex(0);
+    }
+  }, [showExploreMenu]);
+
+  useEffect(() => {
+    if (showUserMenu) {
+      setUserFocusIndex(0);
+    }
+  }, [showUserMenu]);
+
   const navLinks = [
     { name: "Home", path: "/" },
     { name: "Contact", path: "/contact" },
@@ -112,8 +225,9 @@ const Navbar = () => {
 
             {/* Explore with Dropdown - Only for Authenticated Users */}
             {isAuthenticated && user && (
-              <div className="relative">
+              <div className="relative" ref={exploreMenuRef}>
                 <button
+                  ref={exploreButtonRef}
                   onClick={() => setShowExploreMenu(!showExploreMenu)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -121,6 +235,7 @@ const Navbar = () => {
                       setShowExploreMenu(!showExploreMenu);
                     } else if (e.key === 'Escape') {
                       setShowExploreMenu(false);
+                      setExploreFocusIndex(-1);
                     }
                   }}
                   className={`flex items-center space-x-1 px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
@@ -146,7 +261,9 @@ const Navbar = () => {
                       <Link
                         to="/gallery"
                         onClick={() => setShowExploreMenu(false)}
-                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group"
+                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                          exploreFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                        }`}
                       >
                         <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
                         <div>
@@ -157,7 +274,9 @@ const Navbar = () => {
                       <Link
                         to="/my-gallery"
                         onClick={() => setShowExploreMenu(false)}
-                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group"
+                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                          exploreFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                        }`}
                       >
                         <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
                         <div>
@@ -168,7 +287,9 @@ const Navbar = () => {
                       <Link
                         to="/ai-template-creator"
                         onClick={() => setShowExploreMenu(false)}
-                        className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group"
+                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                          exploreFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                        }`}
                       >
                         <Sparkles className="w-5 h-5 text-yellow-400" />
                         <div>
@@ -180,7 +301,9 @@ const Navbar = () => {
                         <Link
                           to="/user/my-submissions"
                           onClick={() => setShowExploreMenu(false)}
-                          className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group"
+                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                          exploreFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                        }`}
                         >
                           <Upload className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
                           <div>
@@ -232,8 +355,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated && user ? (
               <>
-                <div className="relative">
+                <div className="relative" ref={userMenuRef}>
                   <button
+                    ref={userButtonRef}
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -241,6 +365,7 @@ const Navbar = () => {
                         setShowUserMenu(!showUserMenu);
                       } else if (e.key === 'Escape') {
                         setShowUserMenu(false);
+                        setUserFocusIndex(-1);
                       }
                     }}
                     className="flex items-center space-x-3 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
@@ -306,14 +431,18 @@ const Navbar = () => {
                         <Link
                           to="/my-account"
                           onClick={() => setShowUserMenu(false)}
-                          className="w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2"
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2 ${
+                            userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                          }`}
                         >
                           <User className="w-4 h-4" />
                           <span>My Account</span>
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="w-full px-4 py-3 text-left text-white hover:bg-[#C62828] transition-colors flex items-center space-x-2"
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-[#C62828] transition-colors flex items-center space-x-2 ${
+                            userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                          }`}
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
