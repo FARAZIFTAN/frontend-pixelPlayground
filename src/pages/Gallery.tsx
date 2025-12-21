@@ -27,9 +27,8 @@ interface Template {
 
 const Gallery = () => {
   const navigate = useNavigate();
-  const { user, isPremium } = useAuth();
+  const { user, isPremium, isLoading: authLoading } = useAuth();
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
-  const [hoveredTemplate, setHoveredTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -278,29 +277,33 @@ const Gallery = () => {
 
   // Navigate to Input Method Selection with pre-selected template
   const handleUseTemplate = (template: Template) => {
+    // Jika autentikasi masih loading, tunggu sebentar
+    if (authLoading) {
+      toast.info("Memverifikasi status akun...", { duration: 2000 });
+      return;
+    }
+
     // Cegah akses template premium jika user belum premium
     if (template.isPremium && !isPremium) {
       // Jika belum login, arahkan ke login
       if (!user) {
-        toast.error("Login diperlukan untuk menggunakan frame premium!", { 
+        toast.error("Login diperlukan untuk menggunakan frame premium!", {
           duration: 4000,
           icon: "🔒"
         });
-        setTimeout(() => {
-          navigate("/login");
-        }, 1500);
+        navigate("/login");
         return;
       }
-      
+
       // Jika sudah login tapi belum premium, tampilkan modal upgrade
-      toast.error("Upgrade ke Premium untuk menggunakan frame PRO!", { 
+      toast.error("Upgrade ke Premium untuk menggunakan frame PRO!", {
         duration: 3000,
         icon: "👑"
       });
       setShowPremiumModal(true);
       return;
     }
-    
+
     analytics.templateSelect(template._id, template.name, user?.id);
     navigate(`/input-method?template=${template._id}`);
   };
@@ -690,7 +693,8 @@ const Gallery = () => {
                               </Button>
                               <Button
                                 onClick={() => handleUseTemplate(frame)}
-                                className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/50 text-white"
+                                disabled={authLoading}
+                                className={`bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/50 text-white ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 size="sm"
                               >
                                 <ArrowRight className="w-4 h-4 mr-2" />
@@ -823,11 +827,12 @@ const Gallery = () => {
                       e.stopPropagation();
                       handleUseTemplate(template);
                     }}
+                    disabled={authLoading}
                     className={`w-full rounded-full shadow-soft group-hover:shadow-hover transition-all ${
                       template.isPremium && !isPremium
                         ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
                         : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                    }`}
+                    } ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {template.isPremium && !isPremium ? (
                       <>
@@ -989,7 +994,8 @@ const Gallery = () => {
                 <div className="flex gap-3">
                   <Button
                     onClick={() => handleUseTemplate(selectedTemplateForPreview)}
-                    className="flex-1 bg-primary hover:bg-primary/90 rounded-full py-6 shadow-lg shadow-primary/20"
+                    disabled={authLoading}
+                    className={`flex-1 bg-primary hover:bg-primary/90 rounded-full py-6 shadow-lg shadow-primary/20 ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     size="lg"
                   >
                     <Camera className="w-5 h-5 mr-2" />
