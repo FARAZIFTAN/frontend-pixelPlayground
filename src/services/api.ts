@@ -723,3 +723,58 @@ export const feedbackAPI = {
     });
   },
 };
+
+// User Generated Frames API
+export const userFrameAPI = {
+  getAll: async (): Promise<any> => {
+    return apiCall<any>('/user-frames', {
+      method: 'GET',
+    });
+  },
+
+  create: async (data: {
+    name: string;
+    description?: string;
+    frameUrl: string;
+    thumbnail: string;
+    frameCount: number;
+    layoutPositions: Array<{
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      borderRadius?: number;
+      rotation?: number;
+    }>;
+    frameSpec?: any;
+  }): Promise<any> => {
+    return apiCall<any>('/user-frames', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getById: async (id: string): Promise<any> => {
+    return apiCall<any>(`/user-frames/${id}`, {
+      method: 'GET',
+    });
+  },
+
+  update: async (id: string, data: {
+    name?: string;
+    description?: string;
+    isFavorite?: boolean;
+    isActive?: boolean;
+  }): Promise<any> => {
+    return apiCall<any>(`/user-frames/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: string): Promise<any> => {
+    return apiCall<any>(`/user-frames/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { aiAPI } from '@/services/api';
+import { aiAPI, userFrameAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import PremiumModal from '@/components/PremiumModal';
 import { toast } from 'react-hot-toast';
@@ -144,7 +144,6 @@ const AITemplateCreator = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [frameName, setFrameName] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const [frameVisibility, setFrameVisibility] = useState<'public' | 'private'>('public');
   const { toast } = useToast();
 
 
@@ -307,26 +306,57 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
 
     setIsSaving(true);
     try {
-      // Prepare frame data for AI save-frame endpoint
-      const frameData = {
+      // Load generated frame to get actual dimensions
+      const frameImg = document.createElement('img');
+      frameImg.crossOrigin = "anonymous";
+      
+      const actualDimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
+        frameImg.onload = () => {
+          console.log(`📐 Frame image loaded - naturalWidth: ${frameImg.naturalWidth}, naturalHeight: ${frameImg.naturalHeight}, width: ${frameImg.width}, height: ${frameImg.height}`);
+          const w = frameImg.naturalWidth || frameImg.width;
+          const h = frameImg.naturalHeight || frameImg.height;
+          console.log(`📐 Using dimensions: ${w}x${h}`);
+          resolve({ width: w, height: h });
+        };
+        frameImg.onerror = (err) => {
+          console.error('Failed to load frame image:', err);
+          reject(new Error('Failed to load frame'));
+        };
+        frameImg.src = generatedImage;
+        console.log(`🖼️ Starting to load frame from: ${generatedImage?.substring(0, 50)}...`);
+      });
+
+      console.log(`✅ Frame dimensions resolved: ${actualDimensions.width}x${actualDimensions.height}`);
+
+      // Generate layout positions based on ACTUAL frame dimensions
+      const layoutPositions = generateLayoutPositionsWithActualSize(
+        frameSpec.frameCount,
+        frameSpec.layout,
+        actualDimensions.width,
+        actualDimensions.height
+      );
+
+      // Prepare frame data for user-generated frames (private)
+      const userFrameData = {
         name: frameName.trim(),
+        description: description.trim() || `Custom ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
+        frameUrl: generatedImage, // base64 SVG data
+        thumbnail: generatedImage, // same as frameUrl for now
+        frameCount: frameSpec.frameCount,
+        layoutPositions: layoutPositions,
         frameSpec: frameSpec,
-        frameDataUrl: generatedImage, // base64 with data URI prefix
-        visibility: frameVisibility,
-        description: description.trim() || `AI-generated ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
-        tags: ['AI Generated', frameSpec.layout, `${frameSpec.frameCount} Photos`],
       };
 
-      console.log('💾 Saving frame via AI endpoint:', frameData);
+      console.log('💾 Saving custom frame to user frames:', userFrameData);
 
-      // Call aiAPI.saveFrame (user-specific endpoint)
-      const result = await aiAPI.saveFrame(frameData);
+      // Save to user-generated frames (always private)
+      const result = await userFrameAPI.create(userFrameData);
 
-      console.log('✅ Frame saved:', result);
+      console.log('✅ Custom frame saved:', result);
 
       toast({
         title: '✅ Frame Tersimpan!',
-        description: `Frame "${frameName}" berhasil disimpan sebagai ${frameVisibility}`,
+        description: `Frame "${frameName}" berhasil disimpan. Hanya Anda yang bisa melihat frame ini.`,
       });
 
       // Reset form after successful save
@@ -345,6 +375,134 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Helper function to generate layout positions based on frame count and layout type
+  const generateLayoutPositions = (frameCount: number, layout: string) => {
+    const positions = [];
+    const frameWidth = 400;
+    const frameHeight = 600;
+    const padding = 20;
+    const photoWidth = (frameWidth - padding * 2) / (layout === 'horizontal' ? frameCount : 1);
+    const photoHeight = (frameHeight - padding * 2) / (layout === 'vertical' ? frameCount : 1);
+
+    if (layout === 'vertical') {
+      for (let i = 0; i < frameCount; i++) {
+        positions.push({
+          x: padding,
+          y: padding + i * photoHeight,
+          width: photoWidth,
+          height: photoHeight,
+          borderRadius: 8,
+          rotation: 0,
+        });
+      }
+    } else if (layout === 'horizontal') {
+      for (let i = 0; i < frameCount; i++) {
+        positions.push({
+          x: padding + i * photoWidth,
+          y: padding,
+          width: photoWidth,
+          height: photoHeight,
+          borderRadius: 8,
+          rotation: 0,
+        });
+      }
+    } else if (layout === 'grid') {
+      // 2x2 or 3x2 grid layout
+      const cols = frameCount === 4 ? 2 : 3;
+      const rows = Math.ceil(frameCount / cols);
+      const cellWidth = (frameWidth - padding * 2) / cols;
+      const cellHeight = (frameHeight - padding * 2) / rows;
+
+      for (let i = 0; i < frameCount; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        positions.push({
+          x: padding + col * cellWidth,
+          y: padding + row * cellHeight,
+          width: cellWidth - padding / 2,
+          height: cellHeight - padding / 2,
+          borderRadius: 8,
+          rotation: 0,
+        });
+      }
+    }
+
+    return positions;
+  };
+
+  // Generate layout positions based on ACTUAL frame dimensions
+  const generateLayoutPositionsWithActualSize = (frameCount: number, layout: string, frameWidth: number, frameHeight: number) => {
+    const positions = [];
+    const padding = Math.max(20, frameWidth * 0.05); // 5% padding or minimum 20px
+    const photoWidth = (frameWidth - padding * 2) / (layout === 'horizontal' ? frameCount : 1);
+    const photoHeight = (frameHeight - padding * 2) / (layout === 'vertical' ? frameCount : 1);
+
+    console.log(`📐 Generating layout for ${layout} with ${frameCount} photos. Frame: ${frameWidth}x${frameHeight}, padding: ${padding}, photoSize: ${photoWidth}x${photoHeight}`);
+
+    if (layout === 'vertical') {
+      for (let i = 0; i < frameCount; i++) {
+        positions.push({
+          x: padding,
+          y: padding + i * photoHeight,
+          width: photoWidth,
+          height: photoHeight,
+          borderRadius: 8,
+          rotation: 0,
+        });
+      }
+    } else if (layout === 'horizontal') {
+      for (let i = 0; i < frameCount; i++) {
+        positions.push({
+          x: padding + i * photoWidth,
+          y: padding,
+          width: photoWidth,
+          height: photoHeight,
+          borderRadius: 8,
+          rotation: 0,
+        });
+      }
+    } else if (layout === 'grid') {
+      // 2x2 or 3x2 grid layout
+      const cols = frameCount === 4 ? 2 : 3;
+      const rows = Math.ceil(frameCount / cols);
+      const cellWidth = (frameWidth - padding * 2) / cols;
+      const cellHeight = (frameHeight - padding * 2) / rows;
+
+      console.log(`📊 Grid layout:
+        - Photos: ${frameCount}
+        - Grid: ${cols}x${rows}
+        - Frame: ${frameWidth}x${frameHeight}
+        - Padding: ${padding}
+        - Available space: ${frameWidth - padding * 2}x${frameHeight - padding * 2}
+        - Cell size: ${cellWidth.toFixed(1)}x${cellHeight.toFixed(1)}`);
+
+      for (let i = 0; i < frameCount; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        const position = {
+          x: padding + col * cellWidth,
+          y: padding + row * cellHeight,
+          width: cellWidth,
+          height: cellHeight,
+          borderRadius: 8,
+          rotation: 0,
+        };
+        positions.push(position);
+        console.log(`  📌 Photo ${i + 1}: (${position.x.toFixed(0)}, ${position.y.toFixed(0)}) ${position.width.toFixed(0)}x${position.height.toFixed(0)}`);
+      }
+    }
+
+    console.log('✅ Layout positions generated:', positions);
+    
+    // Validate positions don't overlap
+    for (let i = 0; i < positions.length; i++) {
+      const pos = positions[i];
+      console.log(`  Position ${i + 1}: x=${pos.x.toFixed(0)}, y=${pos.y.toFixed(0)}, w=${pos.width.toFixed(0)}, h=${pos.height.toFixed(0)}, bottomRight=(${(pos.x + pos.width).toFixed(0)}, ${(pos.y + pos.height).toFixed(0)})`);
+    }
+    
+    return positions;
   };
 
 
@@ -585,36 +743,15 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                         />
                       </div>
 
-                      {/* Visibility Toggle */}
-                      <div>
-                        <label className="text-gray-400 text-xs mb-2 block">Visibility:</label>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => setFrameVisibility('public')}
-                            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
-                              frameVisibility === 'public'
-                                ? 'bg-[#27AE60] text-white'
-                                : 'bg-[#1A1A1A] text-gray-400 border border-[#C62828]/30 hover:border-[#27AE60]/50'
-                            }`}
-                          >
-                            🌍 Public
-                          </button>
-                          <button
-                            onClick={() => setFrameVisibility('private')}
-                            className={`flex-1 px-3 py-2 rounded text-sm font-medium transition-all ${
-                              frameVisibility === 'private'
-                                ? 'bg-[#E74C3C] text-white'
-                                : 'bg-[#1A1A1A] text-gray-400 border border-[#C62828]/30 hover:border-[#E74C3C]/50'
-                            }`}
-                          >
-                            🔒 Private
-                          </button>
+                      {/* Privacy Info */}
+                      <div className="bg-gradient-to-r from-[#1A1A1A] to-[#C62828]/10 border border-[#C62828]/30 rounded-lg p-3">
+                        <div className="flex items-start gap-2">
+                          <span className="text-lg">🔒</span>
+                          <div>
+                            <p className="text-gray-300 text-sm font-medium">Frame Pribadi</p>
+                            <p className="text-gray-500 text-xs">Frame ini hanya bisa dilihat oleh Anda. User lain tidak dapat mengakses atau melihat frame pribadi Anda.</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {frameVisibility === 'public' 
-                            ? '✨ Semua user dapat melihat frame ini' 
-                            : '🔒 Hanya Anda yang dapat melihat frame ini'}
-                        </p>
                       </div>
                     </div>
 
@@ -718,7 +855,6 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                         setFrameSpec(null);
                         setDescription('');
                         setFrameName('');
-                        setFrameVisibility('public');
                         toast({
                           title: '🔄 Reset Berhasil',
                           description: 'Siap membuat frame baru!',

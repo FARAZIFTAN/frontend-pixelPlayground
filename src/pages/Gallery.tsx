@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X } from "lucide-react";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
 import analytics from "@/lib/analytics";
-import { templateAPI } from "@/services/api";
+import { templateAPI, userFrameAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
 import PremiumModal from "@/components/PremiumModal";
 
@@ -30,6 +30,7 @@ const Gallery = () => {
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [userCustomFrames, setUserCustomFrames] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
@@ -54,7 +55,8 @@ const Gallery = () => {
   // Load templates from API immediately on mount
   useEffect(() => {
     loadTemplates();
-  }, []);
+    loadCustomFrames();
+  }, [user]);
 
   const loadTemplates = async () => {
     console.log('🔄 Loading templates...');
@@ -141,6 +143,33 @@ const Gallery = () => {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Load user's custom frames
+  const loadCustomFrames = async () => {
+    if (!user) {
+      setUserCustomFrames([]);
+      return;
+    }
+
+    try {
+      const response = await userFrameAPI.getAll();
+      if (response.data) {
+        console.log('📸 Custom frames loaded:', response.data.length);
+        // Ensure custom frames have all required Template fields
+        const normalizedFrames = response.data.map((frame: any) => ({
+          ...frame,
+          category: frame.category || 'User Generated',
+          isPremium: false,
+          thumbnail: frame.thumbnail || frame.frameUrl,
+        }));
+        setUserCustomFrames(normalizedFrames);
+      }
+    } catch (error) {
+      console.error('Error loading custom frames:', error);
+      // Tidak perlu toast error untuk custom frames
+      setUserCustomFrames([]);
     }
   };
 
@@ -511,6 +540,90 @@ const Gallery = () => {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Custom Frames Section */}
+        {userCustomFrames.length > 0 && (
+          <div className="mt-12">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
+                <Heart className="w-6 h-6 text-red-500" />
+                My Custom Frames
+              </h2>
+            </motion.div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+              {userCustomFrames.map((frame, index) => (
+                <motion.div
+                  key={`custom-${frame._id}`}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  whileHover={{ scale: 1.02 }}
+                  onMouseEnter={() => setHoveredTemplate(`custom-${frame._id}`)}
+                  onMouseLeave={() => setHoveredTemplate(null)}
+                  className="group cursor-pointer"
+                >
+                  <Card className="overflow-hidden bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 h-full flex flex-col">
+                    <CardContent className="p-0 relative flex-1 overflow-hidden">
+                      {/* Template Image */}
+                      <div className="relative w-full aspect-[3/4] overflow-hidden bg-black/20">
+                        <img
+                          src={frame.thumbnail}
+                          alt={frame.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        
+                        {/* Custom Frame Badge */}
+                        <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Heart className="w-3 h-3 fill-current" />
+                          Your Frame
+                        </div>
+
+                        {/* Hover Overlay */}
+                        <AnimatePresence>
+                          {hoveredTemplate === `custom-${frame._id}` && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center gap-3"
+                            >
+                              <Button
+                                onClick={() => handlePreview(frame)}
+                                className="bg-primary hover:bg-primary/90 text-white"
+                                size="sm"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Preview
+                              </Button>
+                              <Button
+                                onClick={() => handleUseTemplate(frame)}
+                                className="bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/50 text-white"
+                                size="sm"
+                              >
+                                <ArrowRight className="w-4 h-4 mr-2" />
+                                Use
+                              </Button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="p-4 border-t border-white/5 bg-white/[0.02]">
+                      <div className="w-full">
+                        <h3 className="font-semibold text-white truncate">{frame.name}</h3>
+                        <p className="text-xs text-gray-400 mt-1">{frame.frameCount} photos</p>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Template Grid */}
         {isLoading ? (

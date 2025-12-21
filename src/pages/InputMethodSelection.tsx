@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, Upload, ArrowRight, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { templateAPI } from '@/services/api';
+import { templateAPI, userFrameAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
@@ -94,54 +94,88 @@ const InputMethodSelection = () => {
           }
         }
         
-        // Load regular template from backend
-        const response = await templateAPI.getTemplate(templateId) as {
-          success: boolean;
-          data?: { template: any };
-        };
-        
-        console.log('📦 Template API response:', response);
-        
-        if (response.success && response.data?.template) {
-          const template = response.data.template;
+        // Try to load regular template from backend
+        try {
+          const response = await templateAPI.getTemplate(templateId) as {
+            success: boolean;
+            data?: { template: any };
+          };
           
-          // Check if template is premium and user is not logged in or not premium
-          if (template.isPremium && !user) {
-            toast.error('Login required untuk menggunakan frame premium', { 
-              duration: 4000,
-              icon: "🔒"
-            });
-            setTimeout(() => {
-              navigate('/login');
-            }, 1500);
+          console.log('📦 Template API response:', response);
+          
+          if (response.success && response.data?.template) {
+            const template = response.data.template;
+            
+            // Check if template is premium and user is not logged in or not premium
+            if (template.isPremium && !user) {
+              toast.error('Login required untuk menggunakan frame premium', { 
+                duration: 4000,
+                icon: "🔒"
+              });
+              setTimeout(() => {
+                navigate('/login');
+              }, 1500);
+              return;
+            }
+            
+            if (template.isPremium && !isPremium) {
+              toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
+                duration: 3000,
+                icon: "👑"
+              });
+              navigate('/gallery');
+              return;
+            }
+            
+            setSelectedTemplate(template);
+            
+            // Preload template image immediately
+            if (template.frameUrl) {
+              const img = document.createElement('img');
+              img.src = template.frameUrl;
+              console.log('⚡ Preloading frame image from API');
+            }
             return;
           }
-          
-          if (template.isPremium && !isPremium) {
-            toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
-              duration: 3000,
-              icon: "👑"
-            });
-            navigate('/gallery');
-            return;
-          }
-          
-          setSelectedTemplate(template);
-          
-          // Preload template image immediately
-          if (template.frameUrl) {
-            const img = document.createElement('img');
-            img.src = template.frameUrl;
-            console.log('⚡ Preloading frame image from API');
-          }
-        } else {
-          console.error('❌ Template not found in response:', response);
-          toast.error('Template not found');
-          navigate('/gallery');
+        } catch (templateError) {
+          console.log('⚠️ Public template not found, trying custom frames...');
         }
-      } catch (error) {
-        console.error('Failed to load template:', error);
-        toast.error('Failed to load template');
+        
+        // Template not found in public templates, try custom frames
+        console.log('🔄 Checking custom frames...');
+        try {
+          const customFrameResponse = await userFrameAPI.getById(templateId);
+          console.log('📦 Custom frame response:', customFrameResponse);
+          
+          // Response format: { success: true, data: frame }
+          let customFrame = customFrameResponse?.data || customFrameResponse;
+          
+          if (customFrame && customFrame._id) {
+            // Ensure custom frame has all required fields for Template interface
+            customFrame = {
+              ...customFrame,
+              category: customFrame.category || 'User Generated',
+              isPremium: false,
+              thumbnail: customFrame.thumbnail || customFrame.frameUrl,
+            };
+            
+            console.log('✅ Found custom frame:', customFrame.name);
+            setSelectedTemplate(customFrame);
+            
+            // Preload custom frame image
+            if (customFrame.frameUrl) {
+              const img = document.createElement('img');
+              img.src = customFrame.frameUrl;
+              console.log('⚡ Preloading custom frame image');
+            }
+            return;
+          }
+        } catch (customError) {
+          console.error('❌ Custom frame not found:', customError);
+        }
+        
+        console.error('❌ Frame not found in both public and custom');
+        toast.error('Frame tidak ditemukan');
         navigate('/gallery');
       } finally {
         setLoading(false);

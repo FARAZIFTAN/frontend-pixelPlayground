@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
-import { sessionAPI, photoAPI, compositeAPI, templateAPI } from "@/services/api";
+import { sessionAPI, photoAPI, compositeAPI, templateAPI, userFrameAPI } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface Template {
@@ -237,6 +237,7 @@ const Booth = () => {
   // Frame change states
   const [showFrameSelector, setShowFrameSelector] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
+  const [userCustomFrames, setUserCustomFrames] = useState<any[]>([]);
   
   // Input method selection states
   const [inputMethod, setInputMethod] = useState<'camera' | 'upload' | null>(null); // null = show selection screen
@@ -259,6 +260,13 @@ const Booth = () => {
   useEffect(() => {
     // Tip notification removed - not necessary
   }, [selectedTemplate, user]);
+
+  // Reset custom frames when user logs out
+  useEffect(() => {
+    if (!user) {
+      setUserCustomFrames([]);
+    }
+  }, [user]);
 
   // Define handleCapture as regular function (not useCallback to avoid dependency issues)
   const handleCapture = () => {
@@ -875,7 +883,7 @@ const Booth = () => {
   const handleOpenFrameSelector = async () => {
     setShowFrameSelector(true);
     
-    // Templates already preloaded - instant!
+    // Load public templates if not already loaded
     if (availableTemplates.length === 0) {
       try {
         const response = await templateAPI.getTemplates({ limit: 50 }) as {
@@ -889,6 +897,35 @@ const Booth = () => {
       } catch (error) {
         console.error('Failed to load templates:', error);
         toast.error('Gagal memuat template');
+      }
+    }
+
+    // Load user's custom frames if logged in
+    if (user) {
+      try {
+        const customFrames = await userFrameAPI.getAll();
+        if (customFrames.success && customFrames.data) {
+          // Normalize custom frames to match Template interface
+          const normalizedFrames = customFrames.data.map((frame: any) => ({
+            ...frame,
+            category: frame.category || 'User Generated',
+            isPremium: false,
+            thumbnail: frame.thumbnail || frame.frameUrl,
+          }));
+          setUserCustomFrames(normalizedFrames);
+        } else if (Array.isArray(customFrames)) {
+          // If response is already array
+          const normalizedFrames = customFrames.map((frame: any) => ({
+            ...frame,
+            category: frame.category || 'User Generated',
+            isPremium: false,
+            thumbnail: frame.thumbnail || frame.frameUrl,
+          }));
+          setUserCustomFrames(normalizedFrames);
+        }
+      } catch (error) {
+        console.error('Failed to load custom frames:', error);
+        // Don't show error toast for custom frames since it's optional
       }
     }
   };
@@ -1320,6 +1357,8 @@ const Booth = () => {
     console.log('🎯 Starting composite...');
     console.log('📸 Photos count:', photos.length);
     console.log('🖼️ Template:', selectedTemplate?.name);
+    console.log('📋 Template category:', selectedTemplate?.category);
+    console.log('🔍 LayoutPositions:', selectedTemplate?.layoutPositions);
 
     if (!selectedTemplate || !canvasRef.current) {
       toast.error("No template selected!");
@@ -1436,6 +1475,8 @@ const Booth = () => {
                 offsetX = 0;
                 offsetY = (drawHeight - position.height) / 2;
               }
+
+              console.log(`📸 Photo ${i + 1} aspect: ${photoAspect.toFixed(2)}, frame aspect: ${frameAspect.toFixed(2)}, draw: ${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}, offset: (${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`);
 
               // Save context state
               ctx.save();
@@ -3703,47 +3744,102 @@ const Booth = () => {
 
               {/* Frame Grid */}
               <div className="p-6 overflow-y-auto max-h-[calc(80vh-100px)]">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {availableTemplates.map((template) => (
-                    <motion.button
-                      key={template._id}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleChangeFrame(template)}
-                      className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-                        selectedTemplate?._id === template._id
-                          ? 'border-primary ring-2 ring-primary ring-offset-2'
-                          : 'border-border hover:border-primary'
-                      }`}
-                    >
-                      <img
-                        src={template.thumbnail}
-                        alt={template.name}
-                        className="w-full aspect-[3/4] object-cover"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                        <p className="text-white text-sm font-semibold truncate">
-                          {template.name}
-                        </p>
-                        <p className="text-white/70 text-xs">
-                          {template.frameCount} photos
-                        </p>
-                      </div>
-                      {template.isPremium && (
-                        <Badge className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                          PRO
-                        </Badge>
-                      )}
-                      {selectedTemplate?._id === template._id && (
-                        <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full p-1">
-                          <Check className="w-4 h-4" />
+                {/* User's Custom Frames Section */}
+                {userCustomFrames.length > 0 && (
+                  <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Heart className="w-5 h-5 text-red-500" />
+                      My Custom Frames
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {userCustomFrames.map((customFrame) => (
+                        <motion.button
+                          key={customFrame._id}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleChangeFrame(customFrame as Template)}
+                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                            selectedTemplate?._id === customFrame._id
+                              ? 'border-primary ring-2 ring-primary ring-offset-2'
+                              : 'border-border hover:border-primary'
+                          }`}
+                        >
+                          <img
+                            src={customFrame.thumbnail}
+                            alt={customFrame.name}
+                            className="w-full aspect-[3/4] object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                            <p className="text-white text-sm font-semibold truncate">
+                              {customFrame.name}
+                            </p>
+                            <p className="text-white/70 text-xs">
+                              {customFrame.frameCount} photos
+                            </p>
+                          </div>
+                          <div className="absolute top-2 right-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-full p-1">
+                            <Heart className="w-4 h-4 fill-current" />
+                          </div>
+                          {selectedTemplate?._id === customFrame._id && (
+                            <div className="absolute top-10 left-2 bg-primary text-primary-foreground rounded-full p-1">
+                              <Check className="w-4 h-4" />
+                            </div>
+                          )}
+                        </motion.button>
+                      ))}
+                    </div>
+                    <div className="border-b border-border mt-8 mb-8"></div>
+                  </div>
+                )}
+
+                {/* Public Templates Section */}
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                    <Shapes className="w-5 h-5 text-primary" />
+                    Available Templates
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {availableTemplates.map((template) => (
+                      <motion.button
+                        key={template._id}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => handleChangeFrame(template)}
+                        className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                          selectedTemplate?._id === template._id
+                            ? 'border-primary ring-2 ring-primary ring-offset-2'
+                            : 'border-border hover:border-primary'
+                        }`}
+                      >
+                        <img
+                          src={template.thumbnail}
+                          alt={template.name}
+                          className="w-full aspect-[3/4] object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                          <p className="text-white text-sm font-semibold truncate">
+                            {template.name}
+                          </p>
+                          <p className="text-white/70 text-xs">
+                            {template.frameCount} photos
+                          </p>
                         </div>
-                      )}
-                    </motion.button>
-                  ))}
+                        {template.isPremium && (
+                          <Badge className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                            PRO
+                          </Badge>
+                        )}
+                        {selectedTemplate?._id === template._id && (
+                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full p-1">
+                            <Check className="w-4 h-4" />
+                          </div>
+                        )}
+                      </motion.button>
+                    ))}
+                  </div>
                 </div>
 
-                {availableTemplates.length === 0 && (
+                {availableTemplates.length === 0 && userCustomFrames.length === 0 && (
                   <div className="text-center py-12 text-muted-foreground">
                     <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
                     <p>Loading templates...</p>
