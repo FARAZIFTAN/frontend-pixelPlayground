@@ -11,8 +11,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import analytics from "@/lib/analytics";
 import { templateAPI, userFrameAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
-import PremiumModal from "@/components/PremiumModal";
+import { safeSessionStorageGet, safeSessionStorageSet, validateTemplateArray } from "@/lib/utils";
 import Fuse from "fuse.js";
+import PremiumModal from "@/components/PremiumModal";
 
 interface Template {
   _id: string;
@@ -94,19 +95,22 @@ const Gallery = () => {
     
     // Check cache first for faster loading (only for first page)
     if (page === 1 && !append) {
-      const cachedTemplates = sessionStorage.getItem('templates_cache');
-      if (cachedTemplates) {
-        try {
-          const parsed = JSON.parse(cachedTemplates);
-          console.log('⚡ Using cached templates:', parsed.length);
-          setTemplates(parsed);
-          setIsLoading(false);
-          // Still fetch in background to update cache
-          fetchTemplates(page, append);
-          return;
-        } catch (e) {
-          console.warn('Cache parse error, fetching fresh');
-        }
+      const cacheResult = safeSessionStorageGet<Template[]>('templates_cache', {
+        maxAge: 5 * 60 * 1000, // 5 minutes cache
+        validateStructure: validateTemplateArray
+      });
+
+      if (cacheResult.isValid && cacheResult.data) {
+        console.log('⚡ Using valid cached templates:', cacheResult.data.length);
+        setTemplates(cacheResult.data);
+        setIsLoading(false);
+        // Still fetch in background to update cache
+        fetchTemplates(page, append);
+        return;
+      } else if (cacheResult.error) {
+        console.warn('Cache validation failed:', cacheResult.error);
+        // Remove invalid cache
+        sessionStorage.removeItem('templates_cache');
       }
     }
     
@@ -140,24 +144,29 @@ const Gallery = () => {
         const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
         setHasMore(loadedCount < totalTemplates);
         
-        // Cache only first page
+        // Cache only first page with robust error handling
         if (page === 1 && !append) {
-          try {
-            const lightweightCache = response.data.templates.map(t => ({
-              _id: t._id,
-              name: t.name,
-              category: t.category,
-              thumbnail: t.thumbnail,
-              frameUrl: t.frameUrl,
-              isPremium: t.isPremium,
-              frameCount: t.frameCount,
-            }));
-            sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
-          } catch (cacheError) {
-            if (cacheError instanceof Error && cacheError.name === 'QuotaExceededError') {
-              console.warn('⚠️ Cache quota exceeded, clearing old cache');
-              sessionStorage.removeItem('templates_cache');
-            }
+          const lightweightCache = response.data.templates.map(t => ({
+            _id: t._id,
+            name: t.name,
+            category: t.category,
+            thumbnail: t.thumbnail,
+            frameUrl: t.frameUrl,
+            isPremium: t.isPremium,
+            frameCount: t.frameCount,
+          }));
+
+          const cacheData = {
+            data: lightweightCache,
+            timestamp: Date.now(),
+            version: '1.0' // For future cache invalidation
+          };
+
+          const cacheSuccess = safeSessionStorageSet('templates_cache', cacheData);
+          if (cacheSuccess) {
+            console.log('💾 Templates cached successfully');
+          } else {
+            console.warn('❌ Failed to cache templates');
           }
         }
       } else {

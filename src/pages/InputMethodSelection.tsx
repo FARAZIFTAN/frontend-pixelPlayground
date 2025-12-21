@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { templateAPI, userFrameAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { safeSessionStorageGet, validateTemplateArray } from '@/lib/utils';
 
 const InputMethodSelection = () => {
   const navigate = useNavigate();
@@ -32,66 +33,78 @@ const InputMethodSelection = () => {
           // Get AI frame data from sessionStorage
           const aiFrameSpec = sessionStorage.getItem('aiFrameSpec');
           const aiFrameImage = sessionStorage.getItem('aiFrameImage');
-          
+
           if (aiFrameSpec && aiFrameImage) {
-            const spec = JSON.parse(aiFrameSpec);
-            const aiTemplate = {
-              _id: templateId,
-              name: `AI ${spec.frameCount}-Photo ${spec.layout} Frame`,
-              category: 'AI Generated',
-              thumbnail: aiFrameImage,
-              frameUrl: aiFrameImage,
-              frameCount: spec.frameCount,
-            };
-            setSelectedTemplate(aiTemplate);
-            setLoading(false);
-            return;
+            try {
+              const spec = JSON.parse(aiFrameSpec);
+              // Basic validation for AI frame spec
+              if (spec && typeof spec.frameCount === 'number' && typeof spec.layout === 'string') {
+                const aiTemplate = {
+                  _id: templateId,
+                  name: `AI ${spec.frameCount}-Photo ${spec.layout} Frame`,
+                  category: 'AI Generated',
+                  thumbnail: aiFrameImage,
+                  frameUrl: aiFrameImage,
+                  frameCount: spec.frameCount,
+                };
+                setSelectedTemplate(aiTemplate);
+                setLoading(false);
+                return;
+              } else {
+                console.warn('Invalid AI frame spec structure');
+              }
+            } catch (error) {
+              console.warn('Failed to parse AI frame spec:', error);
+              // Clean up invalid cache
+              sessionStorage.removeItem('aiFrameSpec');
+            }
           }
         }
         
         // Try to get from cache first
-        const cachedTemplates = sessionStorage.getItem('templates_cache');
-        if (cachedTemplates) {
-          try {
-            const templates = JSON.parse(cachedTemplates);
-            const foundTemplate = templates.find((t: any) => t._id === templateId);
-            if (foundTemplate) {
-              // Check if template is premium and user is not logged in or not premium
-              if (foundTemplate.isPremium && !user) {
-                toast.error('Login required untuk menggunakan frame premium', { 
-                  duration: 4000,
-                  icon: "🔒"
-                });
-                setTimeout(() => {
-                  navigate('/login');
-                }, 1500);
-                return;
-              }
-              
-              if (foundTemplate.isPremium && !isPremium) {
-                toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
-                  duration: 3000,
-                  icon: "👑"
-                });
-                navigate('/gallery');
-                return;
-              }
-              
-              setSelectedTemplate(foundTemplate);
-              setLoading(false);
-              
-              // Preload template image for instant display in Booth
-              if (foundTemplate.frameUrl) {
-                const img = document.createElement('img');
-                img.src = foundTemplate.frameUrl;
-                console.log('⚡ Preloading frame image:', foundTemplate.name);
-              }
-              
+        const cacheResult = safeSessionStorageGet<Template[]>('templates_cache', {
+          maxAge: 5 * 60 * 1000, // 5 minutes
+          validateStructure: validateTemplateArray
+        });
+
+        if (cacheResult.isValid && cacheResult.data) {
+          const foundTemplate = cacheResult.data.find((t: any) => t._id === templateId);
+          if (foundTemplate) {
+            // Check if template is premium and user is not logged in or not premium
+            if (foundTemplate.isPremium && !user) {
+              toast.error('Login required untuk menggunakan frame premium', {
+                duration: 4000,
+                icon: "🔒"
+              });
+              setTimeout(() => {
+                navigate('/login');
+              }, 1500);
               return;
             }
-          } catch (e) {
-            console.warn('Cache read error');
+
+            if (foundTemplate.isPremium && !isPremium) {
+              toast.error('Upgrade ke Premium untuk menggunakan frame PRO', {
+                duration: 3000,
+                icon: "👑"
+              });
+              navigate('/gallery');
+              return;
+            }
+
+            setSelectedTemplate(foundTemplate);
+            setLoading(false);
+
+            // Preload template image for instant display in Booth
+            if (foundTemplate.frameUrl) {
+              const img = document.createElement('img');
+              img.src = foundTemplate.frameUrl;
+              console.log('⚡ Preloading frame image:', foundTemplate.name);
+            }
+
+            return;
           }
+        } else if (cacheResult.error) {
+          console.warn('Template cache validation failed:', cacheResult.error);
         }
         
         // Try to load regular template from backend

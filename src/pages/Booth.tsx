@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "react-hot-toast";
 import { sessionAPI, photoAPI, compositeAPI, templateAPI, userFrameAPI } from "@/services/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { safeSessionStorageGet, safeSessionStorageSet, validateTemplate } from "@/lib/utils";
 
 interface Template {
   _id: string;
@@ -535,7 +536,12 @@ const Booth = () => {
       if (aiFrameSpec && aiFrameImage) {
         try {
           const spec = JSON.parse(aiFrameSpec);
-          
+
+          // Validate AI frame spec structure
+          if (!spec || typeof spec.frameCount !== 'number' || typeof spec.layout !== 'string') {
+            throw new Error('Invalid AI frame spec structure');
+          }
+
           // Generate layout positions based on frame spec
           const layoutPositions = generateLayoutPositions(
             spec.frameCount,
@@ -543,7 +549,7 @@ const Booth = () => {
             600, // frame width (SVG default)
             900  // frame height (SVG default)
           );
-          
+
           // Create a mock template object from AI frame spec
           const aiTemplate: Template = {
             _id: templateIdFromUrl || 'ai-generated-' + Date.now(),
@@ -597,23 +603,23 @@ const Booth = () => {
       const loadTemplate = async (templateId: string) => {
         try {
           // Try to load from cache first for INSTANT display
-          const cached = sessionStorage.getItem('booth_template_cache');
-          if (cached) {
-            try {
-              const { template, timestamp } = JSON.parse(cached);
-              // Use cache if less than 30 seconds old
-              if (Date.now() - timestamp < 30000) {
-                console.log('⚡ INSTANT template load from cache!');
-                setSelectedTemplate(template);
-                setPhotoCount(template.frameCount);
-                setHasLoadedTemplate(true);
-                // Clean cache after use
-                sessionStorage.removeItem('booth_template_cache');
-                return;
-              }
-            } catch (e) {
-              console.warn('Cache parse error');
-            }
+          const cacheResult = safeSessionStorageGet<{ template: any; timestamp: number }>('booth_template_cache', {
+            maxAge: 30 * 1000, // 30 seconds
+            validateStructure: (data) => data && data.template && data.timestamp && validateTemplate(data.template)
+          });
+
+          if (cacheResult.isValid && cacheResult.data) {
+            console.log('⚡ INSTANT template load from valid cache!');
+            setSelectedTemplate(cacheResult.data.template);
+            setPhotoCount(cacheResult.data.template.frameCount);
+            setHasLoadedTemplate(true);
+            // Clean cache after use
+            sessionStorage.removeItem('booth_template_cache');
+            return;
+          } else if (cacheResult.error) {
+            console.warn('Booth template cache validation failed:', cacheResult.error);
+            // Remove invalid cache
+            sessionStorage.removeItem('booth_template_cache');
           }
           
           // Fallback: Load from API
