@@ -791,47 +791,6 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                       </div>
                     )}
 
-                    {/* Use Frame Button - untuk ke booth editor */}
-                    <Button
-                      onClick={() => {
-                        if (!frameSpec || !generatedImage) {
-                          toast({
-                            title: 'Error',
-                            description: 'Frame data is missing.',
-                            variant: 'destructive',
-                          });
-                          return;
-                        }
-
-                        // Pass frame spec via query parameter (smaller data)
-                        const specParam = encodeURIComponent(JSON.stringify(frameSpec));
-                        const imageBlobParam = encodeURIComponent(generatedImage);
-                        
-                        // Use sessionStorage for temporary storage (better than localStorage for large data)
-                        sessionStorage.setItem('aiFrameSpec', JSON.stringify(frameSpec));
-                        sessionStorage.setItem('aiFrameImage', generatedImage);
-                        
-                        toast({
-                          title: '✨ Frame Siap Digunakan!',
-                          description: 'Frame akan terbuka di Booth untuk foto Anda',
-                        });
-                        
-                        // Redirect to booth with aiFrame indicator
-                        setTimeout(() => {
-                          navigate('/booth?aiFrame=true');
-                        }, 500);
-                      }}
-                      className="w-full bg-gradient-to-r from-[#3498DB] to-[#2980B9] hover:from-[#2980B9] hover:to-[#3498DB] text-white font-semibold shadow-lg transition-all"
-                    >
-                      📸 Gunakan Frame untuk Foto
-                    </Button>
-                    
-                    <div className="bg-gradient-to-r from-[#3498DB]/10 to-[#2980B9]/10 border border-[#3498DB]/30 rounded-lg p-3 text-sm">
-                      <p className="text-gray-300 text-center">
-                        <span className="font-semibold text-[#3498DB]">💡 Tip:</span> Klik tombol di atas untuk langsung menggunakan frame ini di Photo Booth!
-                      </p>
-                    </div>
-
                     {/* Frame Specifications */}
                     {frameSpec && (
                       <div className="bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg p-3 text-sm">

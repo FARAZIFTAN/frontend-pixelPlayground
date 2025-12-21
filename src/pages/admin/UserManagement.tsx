@@ -17,6 +17,9 @@ import {
   LogOut,
   Award,
   Clock,
+  Camera,
+  Image,
+  Activity,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,6 +42,8 @@ interface User {
   createdAt: string;
   lastLogin?: string;
   isActive: boolean;
+  isPremium: boolean;
+  premiumExpiresAt?: string;
   photosCount?: number;
   downloadsCount?: number;
 }
@@ -369,6 +374,9 @@ const UserManagement = () => {
                         Status
                       </th>
                       <th className="px-6 py-4 text-left font-semibold text-gray-300">
+                        Premium
+                      </th>
+                      <th className="px-6 py-4 text-left font-semibold text-gray-300">
                         Joined
                       </th>
                       <th className="px-6 py-4 text-left font-semibold text-gray-300">
@@ -427,6 +435,18 @@ const UserManagement = () => {
                               }`}
                             >
                               {user.isActive ? "Active" : "Inactive"}
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4">
+                            <Badge
+                              className={`${
+                                user.isPremium
+                                  ? "bg-yellow-500/20 text-yellow-300 border border-yellow-500/50"
+                                  : "bg-gray-500/20 text-gray-300 border border-gray-500/50"
+                              }`}
+                            >
+                              <Award className="w-3 h-3 mr-1" />
+                              {user.isPremium ? "Premium" : "Free"}
                             </Badge>
                           </td>
                           <td className="px-6 py-4">
@@ -540,7 +560,7 @@ const UserManagement = () => {
                       <Mail className="w-4 h-4" />
                       {selectedUser.email}
                     </p>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Badge className={selectedUser.role === "admin" ? "bg-purple-500/20 text-purple-300 border-purple-500/50" : "bg-blue-500/20 text-blue-300 border-blue-500/50"}>
                         <Shield className="w-3 h-3 mr-1" />
                         {selectedUser.role}
@@ -548,10 +568,20 @@ const UserManagement = () => {
                       <Badge className={selectedUser.isActive ? "bg-green-500/20 text-green-300 border-green-500/50" : "bg-red-500/20 text-red-300 border-red-500/50"}>
                         {selectedUser.isActive ? "Active" : "Blocked"}
                       </Badge>
+                      <Badge className={selectedUser.isPremium ? "bg-yellow-500/20 text-yellow-300 border-yellow-500/50" : "bg-gray-500/20 text-gray-300 border-gray-500/50"}>
+                        <Award className="w-3 h-3 mr-1" />
+                        {selectedUser.isPremium ? "Premium" : "Free"}
+                      </Badge>
                       <Badge className="bg-gray-500/20 text-gray-300 border-gray-500/50">
                         <Calendar className="w-3 h-3 mr-1" />
                         Joined {new Date(selectedUser.createdAt).toLocaleDateString()}
                       </Badge>
+                      {selectedUser.isPremium && selectedUser.premiumExpiresAt && (
+                        <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/50">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Expires {new Date(selectedUser.premiumExpiresAt).toLocaleDateString()}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>

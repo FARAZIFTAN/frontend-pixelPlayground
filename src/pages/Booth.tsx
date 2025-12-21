@@ -2072,24 +2072,43 @@ const Booth = () => {
       const blob = await (await fetch(imageWithStickers)).blob();
       const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
       
-      // Try native share API (works on mobile and some modern browsers)
+      // Try native share API first (works best on mobile)
       if (navigator.share && navigator.canShare({ files: [file] })) {
+        console.log('📱 Using native Web Share API');
         await navigator.share({
           files: [file],
           title: "My PixelPlayground Photo Strip",
           text: "Check out my photo strip from PixelPlayground! 📸✨",
         });
+        toast.success("Photo shared successfully!", { duration: 2000 });
 
       } else {
-        // Fallback: Open WhatsApp Web (plain, no message)
-        window.open('https://web.whatsapp.com/', '_blank');
-
+        // Fallback: Download & suggest WhatsApp
+        console.log('📱 Using WhatsApp Web fallback');
+        
+        // Create download link for the image
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `pixelplayground-photo-strip-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        // Open WhatsApp Web
+        setTimeout(() => {
+          window.open('https://web.whatsapp.com/', '_blank');
+          toast.success("Image downloaded! Open WhatsApp to share it.", { duration: 3000 });
+        }, 500);
       }
     } catch (error) {
-      console.error("❌ WhatsApp share error:", error);
-      toast.error("Could not share. Please try again.", {
-        duration: 3000,
-      });
+      if (error instanceof Error && error.name !== 'AbortError') {
+        console.error("❌ WhatsApp share error:", error);
+        toast.error("Could not share. Please try again.", {
+          duration: 3000,
+        });
+      }
     }
   };
 
@@ -2651,11 +2670,11 @@ const Booth = () => {
 
                       {/* SECONDARY ACTIONS */}
                       <Button
-                        onClick={handleShare}
+                        onClick={handleShareToWhatsApp}
                         className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all py-5 font-semibold"
                       >
                         <Share2 className="w-4 h-4 mr-2" />
-                        Share
+                        Share Photo
                       </Button>
 
                       <Button
