@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ import analytics from "@/lib/analytics";
 import { templateAPI, userFrameAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
 import PremiumModal from "@/components/PremiumModal";
+import Fuse from "fuse.js";
 
 interface Template {
   _id: string;
@@ -28,7 +29,9 @@ const Gallery = () => {
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
   const [selectedTemplateForPreview, setSelectedTemplateForPreview] = useState<Template | null>(null);
+  const [hoveredTemplate, setHoveredTemplateForPreview] = useState<Template | null>(null);
   const [hoveredTemplate, setHoveredTemplate] = useState<string | null>(null);
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [templates, setTemplates] = useState<Template[]>([]);
   const [userCustomFrames, setUserCustomFrames] = useState<Template[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -60,6 +63,18 @@ const Gallery = () => {
   
   // All templates count
   categoryCounts["All"] = templates.length;
+
+  // Handle image loading errors
+  const handleImageError = (imageUrl: string) => {
+    setFailedImages(prev => new Set(prev).add(imageUrl));
+  };
+
+  // Image placeholder component
+  const ImagePlaceholder = ({ className = "", iconSize = "w-12 h-12" }: { className?: string; iconSize?: string }) => (
+    <div className={`flex items-center justify-center bg-secondary/50 ${className}`}>
+      <Image className={`${iconSize} text-muted-foreground`} />
+    </div>
+  );
 
   // Load templates from API immediately on mount
   useEffect(() => {
@@ -217,13 +232,38 @@ const Gallery = () => {
     loadTemplates(1, false);
   }, [selectedCategories, searchQuery]);
 
+  // Fuse.js instance for fuzzy search
+  const fuse = useMemo(() => {
+    return new Fuse(templates, {
+      keys: ['name', 'category'],
+      threshold: 0.3, // Lower = more strict, higher = more fuzzy
+      includeScore: true,
+      ignoreLocation: true,
+      useExtendedSearch: true,
+      includeMatches: true,
+    });
+  }, [templates]);
+
   // Filter templates based on search and categories (from loaded templates)
-  const filteredTemplates = templates.filter(template => {
-    const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchCategory = selectedCategories.includes("All") || selectedCategories.includes(template.category);
-    
-    return matchSearch && matchCategory;
-  });
+  const filteredTemplates = useMemo(() => {
+    let searchResults: Template[] = [];
+
+    if (searchQuery.trim()) {
+      // Use Fuse.js for fuzzy search
+      const fuseResults = fuse.search(searchQuery);
+      searchResults = fuseResults.map(result => result.item);
+    } else {
+      // No search query, use all templates
+      searchResults = templates;
+    }
+
+    // Filter by categories
+    const categoryFiltered = searchResults.filter(template => {
+      return selectedCategories.includes("All") || selectedCategories.includes(template.category);
+    });
+
+    return categoryFiltered;
+  }, [templates, searchQuery, selectedCategories, fuse]);
 
   // Track page view
   useEffect(() => {
@@ -613,12 +653,17 @@ const Gallery = () => {
                     <CardContent className="p-0 relative flex-1 overflow-hidden">
                       {/* Template Image */}
                       <div className="relative w-full aspect-[3/4] overflow-hidden bg-black/20">
-                        <img
-                          src={frame.thumbnail}
-                          alt={frame.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          loading="lazy"
-                        />
+                        {failedImages.has(frame.thumbnail) ? (
+                          <ImagePlaceholder className="w-full h-full" />
+                        ) : (
+                          <img
+                            src={frame.thumbnail}
+                            alt={frame.name}
+                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            loading="lazy"
+                            onError={() => handleImageError(frame.thumbnail)}
+                          />
+                        )}
                         
                         {/* Custom Frame Badge */}
                         <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
@@ -693,12 +738,17 @@ const Gallery = () => {
                 <div className="relative cursor-pointer">
                   <CardContent className="p-0">
                     <div className="aspect-[3/4] bg-secondary relative overflow-hidden">
-                      <img
-                        src={template.thumbnail}
-                        alt={template.name}
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        loading="lazy"
-                      />
+                      {failedImages.has(template.thumbnail) ? (
+                        <ImagePlaceholder className="w-full h-full" />
+                      ) : (
+                        <img
+                          src={template.thumbnail}
+                          alt={template.name}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          loading="lazy"
+                          onError={() => handleImageError(template.thumbnail)}
+                        />
+                      )}
                       
                       {/* Premium Badge */}
                       {template.isPremium && (
@@ -865,11 +915,16 @@ const Gallery = () => {
               <div className="space-y-6">
                 {/* Template Preview Image */}
                 <div className="aspect-video rounded-lg overflow-hidden bg-secondary relative group">
-                  <img
-                    src={selectedTemplateForPreview.frameUrl}
-                    alt={selectedTemplateForPreview.name}
-                    className="w-full h-full object-cover"
-                  />
+                  {selectedTemplateForPreview && failedImages.has(selectedTemplateForPreview.frameUrl) ? (
+                    <ImagePlaceholder className="w-full h-full" iconSize="w-16 h-16" />
+                  ) : (
+                    <img
+                      src={selectedTemplateForPreview?.frameUrl}
+                      alt={selectedTemplateForPreview?.name}
+                      className="w-full h-full object-cover"
+                      onError={() => selectedTemplateForPreview && handleImageError(selectedTemplateForPreview.frameUrl)}
+                    />
+                  )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                     <Badge className="bg-white/90 text-black">
                       <Eye className="w-3 h-3 mr-1" />
