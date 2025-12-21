@@ -255,13 +255,13 @@ const Navbar = () => {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="absolute left-0 mt-2 w-64 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
+                    className="absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-80 md:w-64 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
                   >
                     <div className="py-2">
                       <Link
                         to="/gallery"
                         onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
                       >
@@ -274,7 +274,7 @@ const Navbar = () => {
                       <Link
                         to="/my-gallery"
                         onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
                       >
@@ -287,7 +287,7 @@ const Navbar = () => {
                       <Link
                         to="/ai-template-creator"
                         onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
                       >
@@ -301,7 +301,7 @@ const Navbar = () => {
                         <Link
                           to="/user/my-submissions"
                           onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-3 group ${
+                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
                         >
@@ -416,7 +416,7 @@ const Navbar = () => {
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="absolute right-0 mt-2 w-48 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
+                      className="absolute right-4 md:right-0 mt-2 w-72 md:w-48 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
                     >
                       <div className="px-4 py-3 border-b border-white/10">
                         <p className="text-sm text-gray-400">Signed in as</p>
@@ -431,7 +431,7 @@ const Navbar = () => {
                         <Link
                           to="/my-account"
                           onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2 ${
+                          className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 min-h-[48px] ${
                             userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                         >
@@ -440,7 +440,7 @@ const Navbar = () => {
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className={`w-full px-4 py-3 text-left text-white hover:bg-[#C62828] transition-colors flex items-center space-x-2 ${
+                          className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-colors flex items-center space-x-2 min-h-[48px] ${
                             userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                         >
