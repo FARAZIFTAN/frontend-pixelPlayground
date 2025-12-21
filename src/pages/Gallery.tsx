@@ -36,6 +36,7 @@ const Gallery = () => {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["All"]);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Gallery tidak perlu proteksi - user bisa lihat semua template
   // Hanya frame premium yang di-lock untuk non-premium user
@@ -61,6 +62,7 @@ const Gallery = () => {
   const loadTemplates = async () => {
     console.log('🔄 Loading templates...');
     setIsLoading(true);
+    setError(null); // Reset error state
     
     // Check cache first for faster loading
     const cachedTemplates = sessionStorage.getItem('templates_cache');
@@ -136,12 +138,15 @@ const Gallery = () => {
     } catch (error) {
       console.error('❌ Load templates error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      if (errorMsg.includes('fetch')) {
-        toast.error('Backend server not running. Start backend first!', { duration: 5000 });
-      } else {
-        toast.error('Failed to load templates');
+      let userFriendlyMsg = 'Failed to load templates. Please try again.';
+      
+      if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
+        userFriendlyMsg = 'Unable to connect to server. Please check your connection and try again.';
+      } else if (errorMsg.includes('500') || errorMsg.includes('server')) {
+        userFriendlyMsg = 'Server error occurred. Please try again later.';
       }
-    } finally {
+      
+      setError(userFriendlyMsg);
       setIsLoading(false);
     }
   };
@@ -626,7 +631,32 @@ const Gallery = () => {
         )}
 
         {/* Template Grid */}
-        {isLoading ? (
+        {error ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center py-20"
+          >
+            <div className="max-w-md mx-auto">
+              <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <X className="w-12 h-12 text-red-500" />
+              </div>
+              <h3 className="text-2xl font-heading font-semibold mb-2 text-white">
+                Failed to Load Templates
+              </h3>
+              <p className="text-muted-foreground mb-6">
+                {error}
+              </p>
+              <Button 
+                onClick={() => loadTemplates()}
+                className="rounded-full bg-primary hover:bg-primary/90"
+              >
+                <ArrowRight className="w-4 h-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </motion.div>
+        ) : isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-[#C62828]" />
             <span className="ml-3 text-white">Loading templates...</span>

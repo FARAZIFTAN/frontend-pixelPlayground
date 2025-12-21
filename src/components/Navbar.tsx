@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -228,6 +228,7 @@ const Navbar = () => {
               <div className="relative" ref={exploreMenuRef}>
                 <button
                   ref={exploreButtonRef}
+                  id="explore-button"
                   onClick={() => setShowExploreMenu(!showExploreMenu)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
@@ -244,19 +245,25 @@ const Navbar = () => {
                       : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
                   }`}
                   aria-expanded={showExploreMenu}
-                  aria-haspopup="true"
+                  aria-haspopup="menu"
                   aria-label="Explore menu"
+                  aria-activedescendant={showExploreMenu && exploreFocusIndex >= 0 ? `explore-item-${exploreFocusIndex}` : undefined}
                 >
                   <span>Explore</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showExploreMenu ? 'rotate-180' : ''}`} />
                 </button>
 
-                {showExploreMenu && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-80 md:w-64 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
-                  >
+                <AnimatePresence>
+                  {showExploreMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-80 md:w-64 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-[9999]"
+                      role="menu"
+                      aria-labelledby="explore-button"
+                    >
                     <div className="py-2">
                       <Link
                         to="/gallery"
@@ -264,6 +271,8 @@ const Navbar = () => {
                         className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
+                        role="menuitem"
+                        id="explore-item-0"
                       >
                         <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
                         <div>
@@ -277,6 +286,8 @@ const Navbar = () => {
                         className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
+                        role="menuitem"
+                        id="explore-item-1"
                       >
                         <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
                         <div>
@@ -290,6 +301,8 @@ const Navbar = () => {
                         className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
+                        role="menuitem"
+                        id="explore-item-2"
                       >
                         <Sparkles className="w-5 h-5 text-yellow-400" />
                         <div>
@@ -304,6 +317,8 @@ const Navbar = () => {
                         className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
                           exploreFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                         }`}
+                        role="menuitem"
+                        id="explore-item-3"
                         >
                           <Upload className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
                           <div>
@@ -314,7 +329,8 @@ const Navbar = () => {
                       )}
                     </div>
                   </motion.div>
-                )}
+                  )}
+                </AnimatePresence>
               </div>
             )}
 
@@ -358,6 +374,7 @@ const Navbar = () => {
                 <div className="relative" ref={userMenuRef}>
                   <button
                     ref={userButtonRef}
+                    id="user-button"
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -370,8 +387,9 @@ const Navbar = () => {
                     }}
                     className="flex items-center space-x-3 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
                     aria-expanded={showUserMenu}
-                    aria-haspopup="true"
+                    aria-haspopup="menu"
                     aria-label="User menu"
+                    aria-activedescendant={showUserMenu && userFocusIndex >= 0 ? `user-item-${userFocusIndex}` : undefined}
                   >
                     {user.profilePicture ? (
                       <div className="relative">
@@ -391,9 +409,7 @@ const Navbar = () => {
                           }}
                         />
                         {isProfileLoading && (
-                          <div className="absolute inset-0 bg-white/20 rounded-full animate-pulse flex items-center justify-center">
-                            <div className="w-3 h-3 border border-white/30 border-t-white rounded-full animate-spin"></div>
-                          </div>
+                          <div className="absolute inset-0 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-600 rounded-full animate-pulse"></div>
                         )}
                       </div>
                     ) : (
@@ -412,12 +428,17 @@ const Navbar = () => {
                     <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                   </button>
                   
-                  {showUserMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="absolute right-4 md:right-0 mt-2 w-72 md:w-48 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-50"
-                    >
+                  <AnimatePresence>
+                    {showUserMenu && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        transition={{ duration: 0.2 }}
+                        className="absolute right-4 md:right-0 mt-2 w-72 md:w-48 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-[9999]"
+                        role="menu"
+                        aria-labelledby="user-button"
+                      >
                       <div className="px-4 py-3 border-b border-white/10">
                         <p className="text-sm text-gray-400">Signed in as</p>
                         <p className="text-white font-medium truncate">{user.email}</p>
@@ -434,6 +455,8 @@ const Navbar = () => {
                           className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 min-h-[48px] ${
                             userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
+                          role="menuitem"
+                          id="user-item-0"
                         >
                           <User className="w-4 h-4" />
                           <span>My Account</span>
@@ -443,13 +466,16 @@ const Navbar = () => {
                           className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-colors flex items-center space-x-2 min-h-[48px] ${
                             userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
+                          role="menuitem"
+                          id="user-item-1"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
                         </button>
                       </div>
                     </motion.div>
-                  )}
+                    )}
+                  </AnimatePresence>
                 </div>
               </>
             ) : (
@@ -508,19 +534,26 @@ const Navbar = () => {
                   <div className="pt-3 pb-3 px-4 border-t border-white/10">
                     <div className="flex items-center space-x-3 mb-2">
                       {user.profilePicture ? (
-                        <img 
-                          src={user.profilePicture.startsWith('http') 
-                            ? `${user.profilePicture}?t=${profilePicVersion}` 
-                            : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
-                          } 
-                          alt={user.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
-                          loading="lazy"
-                          onError={(e) => {
-                            console.error('Mobile menu profile pic load error');
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
+                        <div className="relative">
+                          <img 
+                            src={user.profilePicture.startsWith('http') 
+                              ? `${user.profilePicture}?t=${profilePicVersion}` 
+                              : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
+                            } 
+                            alt={user.name}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                            loading="lazy"
+                            onLoad={() => setIsProfileLoading(false)}
+                            onError={(e) => {
+                              console.error('Mobile menu profile pic load error');
+                              setIsProfileLoading(false);
+                              e.currentTarget.style.display = 'none';
+                            }}
+                          />
+                          {isProfileLoading && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-600 rounded-full animate-pulse"></div>
+                          )}
+                        </div>
                       ) : (
                         <User className="w-10 h-10 text-white/70" />
                       )}
