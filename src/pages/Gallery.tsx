@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -36,7 +36,15 @@ const Gallery = () => {
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["All"]);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const itemsPerPage = 20;
+
+  // Ref for infinite scroll trigger
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // Gallery tidak perlu proteksi - user bisa lihat semua template
   // Hanya frame premium yang di-lock untuk non-premium user
@@ -59,95 +67,100 @@ const Gallery = () => {
     loadCustomFrames();
   }, [user]);
 
-  const loadTemplates = async () => {
-    console.log('🔄 Loading templates...');
-    setIsLoading(true);
-    setError(null); // Reset error state
+  const loadTemplates = async (page = 1, append = false) => {
+    if (page === 1 && !append) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     
-    // Check cache first for faster loading
-    const cachedTemplates = sessionStorage.getItem('templates_cache');
-    if (cachedTemplates) {
-      try {
-        const parsed = JSON.parse(cachedTemplates);
-        console.log('⚡ Using cached templates:', parsed.length);
-        setTemplates(parsed);
-        setIsLoading(false);
-        // Still fetch in background to update cache
-        fetchTemplates();
-        return;
-      } catch (e) {
-        console.warn('Cache parse error, fetching fresh');
+    // Check cache first for faster loading (only for first page)
+    if (page === 1 && !append) {
+      const cachedTemplates = sessionStorage.getItem('templates_cache');
+      if (cachedTemplates) {
+        try {
+          const parsed = JSON.parse(cachedTemplates);
+          console.log('⚡ Using cached templates:', parsed.length);
+          setTemplates(parsed);
+          setIsLoading(false);
+          // Still fetch in background to update cache
+          fetchTemplates(page, append);
+          return;
+        } catch (e) {
+          console.warn('Cache parse error, fetching fresh');
+        }
       }
     }
     
-    await fetchTemplates();
+    await fetchTemplates(page, append);
   };
   
-  const fetchTemplates = async () => {
+  const fetchTemplates = async (page = 1, append = false) => {
     try {
-      const response = await templateAPI.getTemplates({ limit: 100 }) as {
+      const response = await templateAPI.getTemplates({ 
+        limit: itemsPerPage, 
+        page,
+        skip: (page - 1) * itemsPerPage 
+      }) as {
         success: boolean;
-        data?: { templates: Template[] };
+        data?: { templates: Template[]; total?: number };
       };
       
       console.log('📦 Template response:', response);
       
       if (response.success && response.data) {
         console.log('✅ Templates loaded:', response.data.templates.length);
-        setTemplates(response.data.templates);
         
-        // Cache dengan data yang lebih ringan (tanpa layoutPositions yang besar)
-        try {
-          const lightweightCache = response.data.templates.map(t => ({
-            _id: t._id,
-            name: t.name,
-            category: t.category,
-            thumbnail: t.thumbnail,
-            frameUrl: t.frameUrl,
-            isPremium: t.isPremium,
-            frameCount: t.frameCount,
-            // Exclude layoutPositions untuk menghemat space
-          }));
-          sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
-        } catch (cacheError) {
-          // Handle QuotaExceededError
-          if (cacheError instanceof Error && cacheError.name === 'QuotaExceededError') {
-            console.warn('⚠️ Cache quota exceeded, clearing old cache');
-            // Clear old cache and try again
-            sessionStorage.removeItem('templates_cache');
-            try {
-              const lightweightCache = response.data.templates.map(t => ({
-                _id: t._id,
-                name: t.name,
-                category: t.category,
-                thumbnail: t.thumbnail,
-                frameUrl: t.frameUrl,
-                isPremium: t.isPremium,
-                frameCount: t.frameCount,
-              }));
-              sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
-            } catch (e) {
-              console.warn('⚠️ Still cannot cache, continuing without cache');
+        if (append) {
+          setTemplates(prev => [...prev, ...response.data!.templates]);
+        } else {
+          setTemplates(response.data.templates);
+        }
+        
+        // Check if there are more pages
+        const totalTemplates = response.data.total || 0;
+        const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
+        setHasMore(loadedCount < totalTemplates);
+        
+        // Cache only first page
+        if (page === 1 && !append) {
+          try {
+            const lightweightCache = response.data.templates.map(t => ({
+              _id: t._id,
+              name: t.name,
+              category: t.category,
+              thumbnail: t.thumbnail,
+              frameUrl: t.frameUrl,
+              isPremium: t.isPremium,
+              frameCount: t.frameCount,
+            }));
+            sessionStorage.setItem('templates_cache', JSON.stringify(lightweightCache));
+          } catch (cacheError) {
+            if (cacheError instanceof Error && cacheError.name === 'QuotaExceededError') {
+              console.warn('⚠️ Cache quota exceeded, clearing old cache');
+              sessionStorage.removeItem('templates_cache');
             }
           }
         }
       } else {
         console.warn('⚠️ No templates data in response');
-        toast.error('No templates found');
+        setHasMore(false);
+        if (!append) {
+          toast.error('No templates found');
+        }
       }
     } catch (error) {
       console.error('❌ Load templates error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      let userFriendlyMsg = 'Failed to load templates. Please try again.';
-      
-      if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
-        userFriendlyMsg = 'Unable to connect to server. Please check your connection and try again.';
-      } else if (errorMsg.includes('500') || errorMsg.includes('server')) {
-        userFriendlyMsg = 'Server error occurred. Please try again later.';
+      if (errorMsg.includes('fetch')) {
+        toast.error('Backend server not running. Start backend first!', { duration: 5000 });
+      } else {
+        toast.error('Failed to load templates');
       }
-      
-      setError(userFriendlyMsg);
+      setHasMore(false);
+    } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   };
 
@@ -178,12 +191,37 @@ const Gallery = () => {
     }
   };
 
-  // Filter templates based on search and categories
+  // Infinite scroll effect
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
+          setCurrentPage(prev => prev + 1);
+          loadTemplates(currentPage + 1, true);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, isLoading, currentPage]);
+
+  // Reset pagination when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+    setHasMore(true);
+    loadTemplates(1, false);
+  }, [selectedCategories, searchQuery]);
+
+  // Filter templates based on search and categories (from loaded templates)
   const filteredTemplates = templates.filter(template => {
     const matchSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchCategory = selectedCategories.includes("All") || selectedCategories.includes(template.category);
     
-    // Tampilkan semua template, tidak ada filter premium
     return matchSearch && matchCategory;
   });
 
@@ -579,6 +617,7 @@ const Gallery = () => {
                           src={frame.thumbnail}
                           alt={frame.name}
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                          loading="lazy"
                         />
                         
                         {/* Custom Frame Badge */}
@@ -631,32 +670,7 @@ const Gallery = () => {
         )}
 
         {/* Template Grid */}
-        {error ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <div className="max-w-md mx-auto">
-              <div className="w-24 h-24 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <X className="w-12 h-12 text-red-500" />
-              </div>
-              <h3 className="text-2xl font-heading font-semibold mb-2 text-white">
-                Failed to Load Templates
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                {error}
-              </p>
-              <Button 
-                onClick={() => loadTemplates()}
-                className="rounded-full bg-primary hover:bg-primary/90"
-              >
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          </motion.div>
-        ) : isLoading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-8 h-8 animate-spin text-[#C62828]" />
             <span className="ml-3 text-white">Loading templates...</span>
@@ -670,7 +684,7 @@ const Gallery = () => {
               key={template._id}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
+              transition={{ duration: 0.4, delay: (index % itemsPerPage) * 0.05 }}
               onHoverStart={() => setHoveredTemplate(template._id)}
               onHoverEnd={() => setHoveredTemplate(null)}
             >
@@ -683,6 +697,7 @@ const Gallery = () => {
                         src={template.thumbnail}
                         alt={template.name}
                         className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                        loading="lazy"
                       />
                       
                       {/* Premium Badge */}
@@ -781,6 +796,20 @@ const Gallery = () => {
             );
           })}
         </div>
+        )}
+
+        {/* Load More Trigger */}
+        {hasMore && !isLoading && (
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            {isLoadingMore ? (
+              <div className="flex items-center gap-2 text-white">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Loading more templates...</span>
+              </div>
+            ) : (
+              <div className="h-10" /> // Invisible trigger for intersection observer
+            )}
+          </div>
         )}
 
         {/* Enhanced No Results */}
