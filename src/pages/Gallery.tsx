@@ -975,9 +975,9 @@ const Gallery = () => {
 
         {/* Enhanced Template Preview Modal */}
         <Dialog open={!!selectedTemplateForPreview} onOpenChange={(open) => !open && setSelectedTemplateForPreview(null)}>
-          <DialogContent className="max-w-4xl bg-card border-border">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl bg-card border-border w-full">
             <DialogHeader>
-              <DialogTitle className="text-2xl font-heading flex items-center gap-2">
+              <DialogTitle className="text-xl sm:text-2xl font-heading flex items-center gap-2">
                 {selectedTemplateForPreview?.name}
                 {selectedTemplateForPreview?.isPremium && (
                   <Badge className="bg-amber-500 text-white border-0">
@@ -986,13 +986,13 @@ const Gallery = () => {
                   </Badge>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
+              <DialogDescription className="text-muted-foreground text-sm">
                 {selectedTemplateForPreview?.category} Template • Perfect for your event
               </DialogDescription>
             </DialogHeader>
             
             {selectedTemplateForPreview && (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
                 {/* Template Preview Image */}
                 <div className="aspect-video rounded-lg overflow-hidden bg-secondary relative group">
                   {selectedTemplateForPreview && failedImages.has(selectedTemplateForPreview.frameUrl) ? (
@@ -1014,25 +1014,25 @@ const Gallery = () => {
                 </div>
 
                 {/* Template Details Grid */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-4 bg-secondary/50 rounded-lg text-center border border-border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
                     <Image className="w-5 h-5 text-primary mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground mb-1">Category</p>
                     <p className="font-semibold text-white text-sm">{selectedTemplateForPreview.category}</p>
                   </div>
-                  <div className="p-4 bg-secondary/50 rounded-lg text-center border border-border">
+                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
                     <Award className="w-5 h-5 text-amber-500 mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground mb-1">Type</p>
                     <p className="font-semibold text-white text-sm">
                       {selectedTemplateForPreview.isPremium ? "Premium" : "Free"}
                     </p>
                   </div>
-                  <div className="p-4 bg-secondary/50 rounded-lg text-center border border-border">
+                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
                     <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground mb-1">Quality</p>
                     <p className="font-semibold text-white text-sm">High-Res</p>
                   </div>
-                  <div className="p-4 bg-secondary/50 rounded-lg text-center border border-border">
+                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
                     <Star className="w-5 h-5 text-yellow-500 mx-auto mb-2" />
                     <p className="text-xs text-muted-foreground mb-1">Rating</p>
                     <p className="font-semibold text-white text-sm">4.8/5</p>
@@ -1040,12 +1040,12 @@ const Gallery = () => {
                 </div>
 
                 {/* Features List */}
-                <div className="p-4 bg-secondary/30 rounded-lg border border-border">
+                <div className="p-3 sm:p-4 bg-secondary/30 rounded-lg border border-border">
                   <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-primary" />
                     Template Features
                   </p>
-                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-muted-foreground">
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
                     <li className="flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-primary rounded-full" />
                       Professional design
@@ -1066,11 +1066,11 @@ const Gallery = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex gap-3">
+                <div className="flex flex-col sm:flex-row gap-3">
                   <Button
                     onClick={() => handleUseTemplate(selectedTemplateForPreview)}
                     disabled={authLoading}
-                    className={`flex-1 bg-primary hover:bg-primary/90 rounded-full py-6 shadow-lg shadow-primary/20 ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`flex-1 bg-primary hover:bg-primary/90 rounded-full py-4 sm:py-6 shadow-lg shadow-primary/20 ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     size="lg"
                   >
                     <Camera className="w-5 h-5 mr-2" />
@@ -1080,7 +1080,7 @@ const Gallery = () => {
                   <Button 
                     variant="outline" 
                     onClick={() => setSelectedTemplateForPreview(null)}
-                    className="rounded-full px-8"
+                    className="rounded-full px-6 sm:px-8 py-4 sm:py-6"
                     size="lg"
                   >
                     Close
