@@ -7,7 +7,8 @@ import {
   LogOut,
   Camera,
   ChevronDown,
-  MessageSquare
+  MessageSquare,
+  CheckCircle
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,7 +38,8 @@ const Sidebar = () => {
       icon: Image, 
       label: "Templates",
       submenu: [
-        { path: "/admin/template-creator", label: "Download Template" }
+        { path: "/admin/template-creator", label: "Download Template" },
+        { path: "/admin/frame-approvals", icon: CheckCircle, label: "Frame Approvals" }
       ]
     },
     { 
@@ -152,22 +154,29 @@ const Sidebar = () => {
               {/* Submenu Items */}
               {hasSubmenu && showSubmenu && !isCollapsed && (
                 <div className="ml-4 space-y-1 mt-1">
-                  {item.submenu.map((subitem) => (
-                    <NavLink
-                      key={subitem.path}
-                      to={subitem.path}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
-                          isActive
-                            ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
-                            : "text-gray-300 hover:bg-white/10 hover:text-white"
-                        }`
-                      }
-                    >
-                      <div className="w-2 h-2 bg-current rounded-full"></div>
-                      <span className="font-medium">{subitem.label}</span>
-                    </NavLink>
-                  ))}
+                  {item.submenu.map((subitem) => {
+                    const SubIcon = subitem.icon;
+                    return (
+                      <NavLink
+                        key={subitem.path}
+                        to={subitem.path}
+                        className={({ isActive }) =>
+                          `flex items-center gap-3 px-4 py-2 rounded-lg text-sm transition-all duration-200 ${
+                            isActive
+                              ? "bg-[#C62828] text-white shadow-lg shadow-[#C62828]/50"
+                              : "text-gray-300 hover:bg-white/10 hover:text-white"
+                          }`
+                        }
+                      >
+                        {SubIcon ? (
+                          <SubIcon className="w-4 h-4 flex-shrink-0" />
+                        ) : (
+                          <div className="w-2 h-2 bg-current rounded-full"></div>
+                        )}
+                        <span className="font-medium">{subitem.label}</span>
+                      </NavLink>
+                    );
+                  })}
                 </div>
               )}
             </div>

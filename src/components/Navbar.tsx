@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -306,6 +306,16 @@ const Navbar = () => {
                           <ImageIcon className="w-4 h-4" />
                           <span>My Gallery</span>
                         </Link>
+                        {user.isPremium && (
+                          <Link
+                            to="/user/my-submissions"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full px-4 py-2.5 text-left text-white hover:bg-white/5 transition-colors flex items-center space-x-2 text-sm"
+                          >
+                            <Upload className="w-4 h-4 text-blue-400" />
+                            <span>My Frame Submissions</span>
+                          </Link>
+                        )}
                       </div>
                       <div className="border-t border-white/10">
                         <Link

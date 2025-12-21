@@ -38,6 +38,11 @@ import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
 import UserManagement from "./pages/admin/UserManagement";
 import FeedbackManagement from "./pages/admin/Feedback";
+import FrameApprovals from "./pages/admin/FrameApprovals";
+
+// User Pages
+import UserFrameSubmission from "./pages/user/UserFrameSubmission";
+import UserFrameSubmissions from "./pages/user/UserFrameSubmissions";
 
 
 const queryClient = new QueryClient();
@@ -82,6 +87,7 @@ const App = () => (
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="templates" element={<Templates />} />
               <Route path="template-creator" element={<TemplateCreator />} />
+              <Route path="frame-approvals" element={<FrameApprovals />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="feedback" element={<FeedbackManagement />} />
@@ -110,6 +116,16 @@ const App = () => (
                     <Route path="/change-password" element={
                       <ProtectedRoute>
                         <ChangePassword />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/frame-submission" element={
+                      <ProtectedRoute>
+                        <UserFrameSubmission />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/user/my-submissions" element={
+                      <ProtectedRoute>
+                        <UserFrameSubmissions />
                       </ProtectedRoute>
                     } />
                     <Route path="/input-method" element={<InputMethodSelection />} />
