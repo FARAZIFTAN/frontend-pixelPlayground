@@ -678,6 +678,7 @@ const Booth = () => {
     };
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };

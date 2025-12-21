@@ -12,6 +12,7 @@ export function useIsMobile() {
     };
     mql.addEventListener("change", onChange);
     setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+    // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
     return () => mql.removeEventListener("change", onChange);
   }, []);
 

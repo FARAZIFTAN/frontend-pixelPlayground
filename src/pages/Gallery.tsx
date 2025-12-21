@@ -34,6 +34,7 @@ const Gallery = () => {
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set());
   const [templates, setTemplates] = useState<Template[]>([]);
   const [userCustomFrames, setUserCustomFrames] = useState<Template[]>([]);
+  const [customFramesError, setCustomFramesError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [categorySearchQuery, setCategorySearchQuery] = useState("");
@@ -195,10 +196,12 @@ const Gallery = () => {
   const loadCustomFrames = async () => {
     if (!user) {
       setUserCustomFrames([]);
+      setCustomFramesError(null);
       return;
     }
 
     try {
+      setCustomFramesError(null); // Reset error state
       const response = await userFrameAPI.getAll();
       if (response.data) {
         console.log('📸 Custom frames loaded:', response.data.length);
@@ -213,8 +216,8 @@ const Gallery = () => {
       }
     } catch (error) {
       console.error('Error loading custom frames:', error);
-      // Tidak perlu toast error untuk custom frames
       setUserCustomFrames([]);
+      setCustomFramesError('Failed to load your custom frames. Please try refreshing the page.');
     }
   };
 
@@ -317,6 +320,7 @@ const Gallery = () => {
   }, [searchQuery, selectedCategories]);
 
   // Expand visible range on scroll for better UX
+  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
   useEffect(() => {
     const handleScroll = () => {
       if (filteredTemplates.length > visibleRange.end) {
@@ -700,7 +704,7 @@ const Gallery = () => {
         </motion.div>
 
         {/* Custom Frames Section */}
-        {userCustomFrames.length > 0 && (
+        {(userCustomFrames.length > 0 || customFramesError) && (
           <div className="mt-12">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -711,9 +715,26 @@ const Gallery = () => {
                 <Heart className="w-6 h-6 text-red-500" />
                 My Custom Frames
               </h2>
-            </motion.div>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
-              {userCustomFrames.map((frame, index) => (
+
+              {customFramesError ? (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
+                  <div className="text-red-400 mb-2">
+                    <Heart className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="font-medium">Unable to Load Custom Frames</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">{customFramesError}</p>
+                  <Button
+                    onClick={loadCustomFrames}
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+                  {userCustomFrames.map((frame, index) => (
                 <motion.div
                   key={`custom-${frame._id}`}
                   initial={{ opacity: 0, scale: 0.9 }}
@@ -786,7 +807,9 @@ const Gallery = () => {
                   </Card>
                 </motion.div>
               ))}
-            </div>
+                </div>
+              )}
+            </motion.div>
           </div>
         )}
 

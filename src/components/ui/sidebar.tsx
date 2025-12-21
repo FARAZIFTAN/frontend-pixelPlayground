@@ -85,6 +85,7 @@ const SidebarProvider = React.forwardRef<
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [toggleSidebar]);
 

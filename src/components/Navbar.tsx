@@ -40,6 +40,8 @@ const Navbar = () => {
     navigate("/");
   };
 
+  // Scroll detection for navbar styling
+  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -48,7 +50,8 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Keyboard navigation support
+  // Keyboard navigation support for accessibility
+  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -63,6 +66,7 @@ const Navbar = () => {
   }, []);
 
   // Global keyboard navigation
+  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -77,6 +81,7 @@ const Navbar = () => {
   }, []);
 
   // Click outside handler for dropdowns
+  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exploreMenuRef.current && !exploreMenuRef.current.contains(event.target as Node)) {
@@ -163,6 +168,7 @@ const Navbar = () => {
       document.addEventListener('keydown', handleKeyDown);
     }
 
+    // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [showExploreMenu, showUserMenu, exploreFocusIndex, userFocusIndex, user?.isPremium, navigate]);
 

@@ -38,6 +38,7 @@ const Register: React.FC = () => {
     const scrollContainer = scrollContainerRef.current;
     if (scrollContainer) {
       scrollContainer.addEventListener('scroll', handleScroll);
+      // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
       return () => scrollContainer.removeEventListener('scroll', handleScroll);
     }
   }, []);

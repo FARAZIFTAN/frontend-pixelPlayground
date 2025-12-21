@@ -146,3 +146,69 @@ export function validateTemplate(data: any): boolean {
     typeof data.isPremium === 'boolean' &&
     typeof data.frameCount === 'number';
 }
+
+/**
+ * Utility for safe event listener management to prevent memory leaks
+ * Ensures proper cleanup of event listeners in React useEffect hooks
+ *
+ * Usage in React components:
+ * ```tsx
+ * useEffect(() => {
+ *   const cleanup = addEventListenerWithCleanup(
+ *     window,
+ *     'scroll',
+ *     handleScroll,
+ *     { passive: true }
+ *   );
+ *
+ *   return cleanup; // Automatically removes listener on unmount
+ * }, []);
+ * ```
+ *
+ * Or use directly in useEffect return:
+ * ```tsx
+ * useEffect(() => {
+ *   return addEventListenerWithCleanup(window, 'scroll', handleScroll);
+ * }, []);
+ * ```
+ *
+ * @param target - The event target (window, document, element, etc.)
+ * @param eventType - The event type (e.g., 'scroll', 'click', 'keydown')
+ * @param handler - The event handler function
+ * @param options - Event listener options (optional)
+ * @returns Cleanup function to remove the event listener
+ */
+export function addEventListenerWithCleanup<K extends keyof WindowEventMap>(
+  target: Window,
+  eventType: K,
+  handler: (event: WindowEventMap[K]) => void,
+  options?: boolean | AddEventListenerOptions
+): () => void;
+
+export function addEventListenerWithCleanup<K extends keyof DocumentEventMap>(
+  target: Document,
+  eventType: K,
+  handler: (event: DocumentEventMap[K]) => void,
+  options?: boolean | AddEventListenerOptions
+): () => void;
+
+export function addEventListenerWithCleanup(
+  target: EventTarget,
+  eventType: string,
+  handler: EventListener,
+  options?: boolean | AddEventListenerOptions
+): () => void;
+
+export function addEventListenerWithCleanup(
+  target: EventTarget,
+  eventType: string,
+  handler: EventListener,
+  options?: boolean | AddEventListenerOptions
+): () => void {
+  target.addEventListener(eventType, handler, options);
+
+  // Return cleanup function for useEffect
+  return () => {
+    target.removeEventListener(eventType, handler, options);
+  };
+}
