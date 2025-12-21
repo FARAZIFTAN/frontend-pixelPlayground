@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "react-hot-toast";
+import { feedbackAPI } from "@/services/api";
 
 // Form validation schema
 const contactFormSchema = z.object({
@@ -36,24 +37,17 @@ const Contact = () => {
     try {
       setIsSubmitting(true);
 
-      // TODO: Replace with actual API endpoint when backend is ready
-      // const response = await fetch("/api/contact", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify(data),
-      // });
-      //
-      // if (!response.ok) throw new Error("Failed to send message");
-
-      // Simulate API call for now
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      toast.success("✅ Message sent successfully! We'll get back to you within 24 hours.", {
-        duration: 5000,
-        icon: "📧",
+      const response = await feedbackAPI.submit({
+        name: data.name,
+        email: data.email,
+        message: data.message,
       });
 
-      reset(); // Clear form after successful submission
+      if (response.success) {
+        reset();
+      } else {
+        throw new Error(response.message || "Failed to send message");
+      }
     } catch (error) {
       console.error("Contact form error:", error);
       toast.error("❌ Failed to send message. Please try again or email us directly at karyaklik2025@gmail.com", {

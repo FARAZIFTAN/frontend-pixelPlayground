@@ -6,7 +6,8 @@ import {
   Settings,
   LogOut,
   Camera,
-  ChevronDown
+  ChevronDown,
+  MessageSquare
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -46,6 +47,11 @@ const Sidebar = () => {
       submenu: [
         { path: "/admin/users", label: "Users" }
       ]
+    },
+    { 
+      path: "/admin/feedback", 
+      icon: MessageSquare, 
+      label: "Feedback" 
     },
     { 
       path: "/admin/settings", 

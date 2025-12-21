@@ -257,12 +257,7 @@ const Booth = () => {
 
   // Warn if using premium template without logging in (but don't block)
   useEffect(() => {
-    if (selectedTemplate && selectedTemplate.isPremium && !user) {
-      toast.info("💡 Tip: Login to save your premium frame photos to gallery!", { 
-        duration: 4000,
-        icon: "ℹ️"
-      });
-    }
+    // Tip notification removed - not necessary
   }, [selectedTemplate, user]);
 
   // Define handleCapture as regular function (not useCallback to avoid dependency issues)
@@ -469,7 +464,7 @@ const Booth = () => {
       if (newSessionId) {
         setSessionId(newSessionId);
         console.log('✅ Photo session created successfully:', newSessionId);
-        toast.success('Session created! Ready to capture photos 📸', { duration: 2000 });
+
       } else {
         console.error('❌ No session ID found in response:', data);
         throw new Error('No session ID in response');
@@ -566,10 +561,7 @@ const Booth = () => {
           // If no input method is selected, redirect to input method selection
           if (!currentInputMethod) {
             console.log('No input method, redirecting to input-method page');
-            toast.success(`✨ AI Frame loaded! Please select input method`, {
-              duration: 2000,
-              icon: "🤖",
-            });
+
             setTimeout(() => {
               navigate(`/input-method?template=${aiTemplate._id}&aiFrame=true`);
             }, 500);
@@ -778,10 +770,6 @@ const Booth = () => {
     };
     setStickers([...stickers, newSticker]);
     setSelectedStickerId(newSticker.id);
-    toast.success('Sticker ditambahkan! Drag untuk posisi', { 
-      duration: 1500,
-      icon: emoji 
-    });
   };
 
   const handleDeleteSticker = (id: string) => {
@@ -925,11 +913,6 @@ const Booth = () => {
       
       setShowFrameSelector(false);
       setIsLoading(false);
-      
-      toast.success(`✨ Frame berhasil diganti ke "${newTemplate.name}"!`, { 
-        duration: 2500,
-        icon: '🎨'
-      });
     } catch (error) {
       console.error('Failed to change frame:', error);
       setIsLoading(false);
@@ -1225,9 +1208,7 @@ const Booth = () => {
         if (nextPhotoIndex >= photoCount) {
           // All photos captured, auto-create composite and show results
           setAllPhotosCaptured(true);
-          toast.success("All photos captured! ✨ Creating preview...", {
-            duration: 2000,
-          });
+
           // Auto-create composite image after slight delay
           setTimeout(() => {
             createCompositeImage(newCapturedImages);
@@ -1235,9 +1216,7 @@ const Booth = () => {
         } else {
           // More photos to capture - auto trigger next countdown after 1 second
           setCurrentPhotoIndex(nextPhotoIndex);
-          toast.success(`Photo ${nextPhotoIndex} of ${photoCount} captured! 📸`, {
-            duration: 1500,
-          });
+
           // Auto trigger next capture countdown after 1.5 seconds
           setTimeout(() => {
             setCountdown(3);
@@ -1314,9 +1293,7 @@ const Booth = () => {
           } else {
             // Schedule next capture
             setCurrentPhotoIndex(nextPhotoIdx);
-            toast.success(`Photo ${nextPhotoIdx} of ${photoCount} captured! 📸`, {
-              duration: 1500,
-            });
+
             
             setTimeout(() => {
               setCountdown(3);
@@ -1494,11 +1471,6 @@ const Booth = () => {
               setFinalCompositeImage(finalImage);
               setCompositeImageDimensions({ width: canvas.width, height: canvas.height });
               console.log('🎉 Composite complete! Size:', canvas.width, 'x', canvas.height);
-              
-              toast.success("🎉 Photo strip created successfully!", {
-                duration: 3000,
-                icon: '✨'
-              });
             } catch (error) {
               console.error('❌ Error creating composite:', error);
               toast.error("Failed to create photo strip. Please try again.");
@@ -1508,9 +1480,7 @@ const Booth = () => {
             // Auto-save to gallery if user is logged in
             if (user && sessionId) {
               console.log('💾 Auto-saving to gallery...');
-              toast.success("✅ Photo ready! Saving to gallery...", {
-                duration: 2000,
-              });
+
               
               // Auto-save after short delay
               setTimeout(async () => {
@@ -1526,10 +1496,7 @@ const Booth = () => {
                   console.log('✅ Auto-saved to gallery:', response);
                   setIsSaving(false);
                   
-                  toast.success('✅ Photo saved to My Gallery!', {
-                    duration: 3000,
-                    icon: '🎉',
-                  });
+
                 } catch (error) {
                   console.error('❌ Auto-save failed:', error);
                   setIsSaving(false);
@@ -1540,9 +1507,7 @@ const Booth = () => {
               }, 500);
             } else {
               // User not logged in - just show download option
-              toast.success("✅ Photo ready! Click 'Download' to save to device", {
-                duration: 4000,
-              });
+
             }
           }
         };
@@ -1641,16 +1606,8 @@ const Booth = () => {
       // Check if all photos are uploaded
       if (newCapturedImages.length >= photoCount) {
         setAllPhotosCaptured(true);
-        toast.success(`✅ All ${photoCount} photos uploaded successfully!`, {
-          duration: 3000,
-          icon: '📸'
-        });
       } else {
         const remaining = photoCount - newCapturedImages.length;
-        toast.success(`✅ Uploaded ${uploadedImages.length} photo(s). ${remaining} more needed.`, {
-          duration: 3000,
-          icon: '📸'
-        });
       }
 
       // Warn if user selected more files than available slots
@@ -1776,9 +1733,7 @@ const Booth = () => {
       sessionStorage.removeItem('booth_pending_save');
       
       // Show success notification
-      toast.success('✅ Photo saved to My Gallery!', {
-        duration: 3000,
-      });
+
       
       // Navigate to gallery after short delay
       setTimeout(() => {
@@ -1838,9 +1793,7 @@ const Booth = () => {
     
     console.log(`✅ RETAKE: Set retakeIndexRef to ${photoIndex}`);
     
-    toast.success(`Retaking frame ${photoIndex + 1}... 📸`, {
-      duration: 1500,
-    });
+
 
     // Restart camera - stop current stream and start fresh
     if (stream) {
@@ -1889,7 +1842,7 @@ const Booth = () => {
         });
       }
 
-      toast.success('🎉 Photo strip saved successfully!');
+  
       
       // Redirect to PhotoSessions page after 1.5 seconds
       setTimeout(() => {
@@ -2005,10 +1958,7 @@ const Booth = () => {
       link.click();
       document.body.removeChild(link);
       
-      toast.success("📥 Photo downloaded to your device!", {
-        duration: 3000,
-        icon: "✅",
-      });
+
       
       console.log('✅ Photo downloaded successfully');
     } catch (error) {
@@ -2052,16 +2002,11 @@ const Booth = () => {
           title: "My PixelPlayground Photo Strip",
           text: "Check out my photo strip from PixelPlayground!",
         });
-        toast.success("📤 Shared successfully!", {
-          duration: 3000,
-          icon: "✅",
-        });
+
       } else {
         // Fallback: Copy image data URL to clipboard
         await navigator.clipboard.writeText(finalCompositeImage);
-        toast.success("📋 Image data copied to clipboard!", {
-          duration: 3000,
-        });
+
       }
     } catch (error) {
       console.error("❌ Share error:", error);
@@ -2093,16 +2038,11 @@ const Booth = () => {
           title: "My PixelPlayground Photo Strip",
           text: "Check out my photo strip from PixelPlayground! 📸✨",
         });
-        toast.success("📤 Shared successfully!", {
-          duration: 2000,
-          icon: "✅",
-        });
+
       } else {
         // Fallback: Open WhatsApp Web (plain, no message)
         window.open('https://web.whatsapp.com/', '_blank');
-        toast.success("💚 WhatsApp opened!", {
-          duration: 2000,
-        });
+
       }
     } catch (error) {
       console.error("❌ WhatsApp share error:", error);
@@ -3330,7 +3270,6 @@ const Booth = () => {
                               setGlobalFilter(FILTER_PRESETS.none);
                               setFilterIntensity(100);
                               setPreviewZoom(1);
-                              toast.success('All changes reset', { duration: 2000 });
                             }
                           }}
                           className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-[11px] transition-colors flex items-center gap-0.5"
@@ -3373,7 +3312,6 @@ const Booth = () => {
                         <button
                           onClick={() => {
                             setShowEditPanel(false);
-                            toast.success('Changes applied!', { duration: 2000, icon: '✨' });
                           }}
                           className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[11px] transition-colors flex items-center gap-1 font-semibold shadow-lg"
                         >

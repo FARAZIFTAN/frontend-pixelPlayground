@@ -688,4 +688,38 @@ export const aiAPI = {
       method: 'POST',
       body: JSON.stringify(data),
     });
-  },};
+  },
+};
+
+// Feedback API
+export const feedbackAPI = {
+  submit: async (data: {
+    name: string;
+    email: string;
+    message: string;
+  }): Promise<any> => {
+    return apiCall<any>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  getAll: async (): Promise<any> => {
+    return apiCall<any>('/feedback', {
+      method: 'GET',
+    });
+  },
+
+  updateStatus: async (id: string, status: 'unread' | 'read' | 'replied'): Promise<any> => {
+    return apiCall<any>(`/feedback/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+  },
+
+  delete: async (id: string): Promise<any> => {
+    return apiCall<any>(`/feedback/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};

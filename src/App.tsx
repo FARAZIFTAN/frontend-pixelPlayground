@@ -37,6 +37,7 @@ import TemplateCreator from "./pages/admin/TemplateCreator";
 import Analytics from "./pages/admin/Analytics";
 import Settings from "./pages/admin/Settings";
 import UserManagement from "./pages/admin/UserManagement";
+import FeedbackManagement from "./pages/admin/Feedback";
 
 
 const queryClient = new QueryClient();
@@ -83,6 +84,7 @@ const App = () => (
               <Route path="template-creator" element={<TemplateCreator />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="feedback" element={<FeedbackManagement />} />
               <Route path="settings" element={<Settings />} />
             </Route>
 
