@@ -35,7 +35,10 @@ const Login: React.FC = () => {
     }
 
     try {
+      console.log('[LOGIN PAGE] Attempting login...');
       const userData = await login(email, password);
+      
+      console.log('[LOGIN PAGE] Login response:', userData);
       
       if (!userData) {
         throw new Error("Login failed - no user data received");
@@ -44,18 +47,23 @@ const Login: React.FC = () => {
       // Track successful login
       analytics.userLogin(userData.id, 'email');
       
-      // Give a small delay to ensure state is updated
-      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('[LOGIN PAGE] User role:', userData.role);
+      console.log('[LOGIN PAGE] Navigating to appropriate page...');
       
       // Redirect based on user role
       if (userData.role === 'admin') {
         // Admin user -> redirect to admin dashboard
+        console.log('[LOGIN PAGE] Redirecting to admin dashboard');
         navigate("/admin/dashboard", { replace: true });
       } else {
         // Regular user -> redirect to home
+        console.log('[LOGIN PAGE] Redirecting to home');
         navigate("/", { replace: true });
       }
+      
+      setIsLoading(false);
     } catch (err: any) {
+      console.error('[LOGIN PAGE] Login error:', err);
       setError(err.message || "Login failed. Please check your credentials.");
       setIsLoading(false);
     }
@@ -74,8 +82,8 @@ const Login: React.FC = () => {
       const response = await authAPI.googleAuth(credentialResponse.credential!);
       
       // Store token and user data
-      localStorage.setItem("token", response.token);
-      localStorage.setItem("user", JSON.stringify(response.user));
+      sessionStorage.setItem("token", response.token);
+      sessionStorage.setItem("user", JSON.stringify(response.user));
       
       // Update auth context
       const userData = response.user;

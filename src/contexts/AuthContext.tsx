@@ -40,8 +40,11 @@ function AuthProvider({ children }: AuthProviderProps) {
 
   // Check if token is valid and get user data
   const checkAuth = useCallback(async (silent = false) => {
-    const savedToken = localStorage.getItem('token');
+    console.log('[AUTH] checkAuth called, silent:', silent);
+    const savedToken = sessionStorage.getItem('token');
+    console.log('[AUTH] Token found:', !!savedToken);
     if (!savedToken) {
+      console.log('[AUTH] No token, setting loading to false');
       if (!silent) {
         setIsLoading(false);
       }
@@ -63,15 +66,16 @@ function AuthProvider({ children }: AuthProviderProps) {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Load premium status from localStorage and merge with user data
-        const isPremiumFromStorage = localStorage.getItem('isPremium') === 'true';
+        // Load premium status from sessionStorage and merge with user data
+        const isPremiumFromStorage = sessionStorage.getItem('isPremium') === 'true';
         const userData = { ...data.data.user, isPremium: isPremiumFromStorage || data.data.user.isPremium };
+        console.log('[AUTH] Verify successful, setting user:', userData.name, userData.role);
         setUser(userData);
         setToken(savedToken);
       } else {
         // Only logout if not silent mode (i.e., initial load or explicit check)
         if (!silent) {
-          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
           setToken(null);
           setUser(null);
         } else {
@@ -82,7 +86,7 @@ function AuthProvider({ children }: AuthProviderProps) {
       console.error('Auth check failed:', error);
       // On silent mode, don't logout on network errors
       if (!silent) {
-        localStorage.removeItem('token');
+        sessionStorage.removeItem('token');
         setToken(null);
         setUser(null);
       } else {
@@ -95,16 +99,20 @@ function AuthProvider({ children }: AuthProviderProps) {
     }
   }, []);
 
-  // Load token from localStorage on mount
+  // Load token from sessionStorage on mount
   useEffect(() => {
-    const savedToken = localStorage.getItem('token');
+    console.log('[AUTH] Initial mount effect');
+    const savedToken = sessionStorage.getItem('token');
     if (savedToken) {
+      console.log('[AUTH] Found saved token, checking auth');
       setToken(savedToken);
       checkAuth();
     } else {
+      console.log('[AUTH] No saved token');
       setIsLoading(false);
     }
-  }, [checkAuth]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Login function
   const login = async (email: string, password: string): Promise<User | null> => {
@@ -127,16 +135,21 @@ function AuthProvider({ children }: AuthProviderProps) {
       if (data.success && data.data.token) {
         const { token: newToken, user: userData } = data.data;
         
-        // Save token to localStorage
-        localStorage.setItem('token', newToken);
+        console.log('[AUTH] Login successful:', userData.name, userData.role);
         
-        // Load premium status from localStorage and merge
-        const isPremiumFromStorage = localStorage.getItem('isPremium') === 'true';
+        // Save token to sessionStorage
+        sessionStorage.setItem('token', newToken);
+        console.log('[AUTH] Token saved to sessionStorage');
+        
+        // Load premium status from sessionStorage and merge
+        const isPremiumFromStorage = sessionStorage.getItem('isPremium') === 'true';
         const userWithPremium = { ...userData, isPremium: isPremiumFromStorage || userData.isPremium };
         
         // Update state
         setToken(newToken);
         setUser(userWithPremium);
+        console.log('[AUTH] State updated, isAuthenticated:', !!(userWithPremium && newToken));
+        setIsLoading(false);
         
         // Return user data (including role)
         return userData;
@@ -192,8 +205,8 @@ function AuthProvider({ children }: AuthProviderProps) {
       analytics.userLogout(user.id);
     }
     
-    localStorage.removeItem('token');
-    localStorage.removeItem('isPremium');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('isPremium');
     setToken(null);
     setUser(null);
   };
@@ -203,7 +216,7 @@ function AuthProvider({ children }: AuthProviderProps) {
     if (user) {
       const updatedUser = { ...user, isPremium: true };
       setUser(updatedUser);
-      localStorage.setItem('isPremium', 'true');
+      sessionStorage.setItem('isPremium', 'true');
       
       // Force re-render dengan mengupdate user object reference
       // Ini akan memicu useEffect di komponen yang depend pada isPremium
