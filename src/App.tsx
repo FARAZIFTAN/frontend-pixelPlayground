@@ -110,16 +110,8 @@ const App = () => (
                         <ChangePassword />
                       </ProtectedRoute>
                     } />
-                    <Route path="/input-method" element={
-                      <ProtectedRoute>
-                        <InputMethodSelection />
-                      </ProtectedRoute>
-                    } />
-                    <Route path="/booth" element={
-                      <ProtectedRoute>
-                        <Booth />
-                      </ProtectedRoute>
-                    } />
+                    <Route path="/input-method" element={<InputMethodSelection />} />
+                    <Route path="/booth" element={<Booth />} />
                     <Route path="/booth/sessions" element={
                       <ProtectedRoute>
                         <PhotoSessions />

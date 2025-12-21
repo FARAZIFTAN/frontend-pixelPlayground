@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Camera, Upload, ArrowRight, Loader2 } from 'lucide-react';
+import { Camera, Upload, ArrowRight, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { templateAPI } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 
 const InputMethodSelection = () => {
@@ -11,6 +12,7 @@ const InputMethodSelection = () => {
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('template');
   const isAIFrame = searchParams.get('aiFrame') === 'true';
+  const { user, isPremium } = useAuth();
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -54,6 +56,27 @@ const InputMethodSelection = () => {
             const templates = JSON.parse(cachedTemplates);
             const foundTemplate = templates.find((t: any) => t._id === templateId);
             if (foundTemplate) {
+              // Check if template is premium and user is not logged in or not premium
+              if (foundTemplate.isPremium && !user) {
+                toast.error('Login required untuk menggunakan frame premium', { 
+                  duration: 4000,
+                  icon: "🔒"
+                });
+                setTimeout(() => {
+                  navigate('/login');
+                }, 1500);
+                return;
+              }
+              
+              if (foundTemplate.isPremium && !isPremium) {
+                toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
+                  duration: 3000,
+                  icon: "👑"
+                });
+                navigate('/gallery');
+                return;
+              }
+              
               setSelectedTemplate(foundTemplate);
               setLoading(false);
               
@@ -80,12 +103,35 @@ const InputMethodSelection = () => {
         console.log('📦 Template API response:', response);
         
         if (response.success && response.data?.template) {
-          setSelectedTemplate(response.data.template);
+          const template = response.data.template;
+          
+          // Check if template is premium and user is not logged in or not premium
+          if (template.isPremium && !user) {
+            toast.error('Login required untuk menggunakan frame premium', { 
+              duration: 4000,
+              icon: "🔒"
+            });
+            setTimeout(() => {
+              navigate('/login');
+            }, 1500);
+            return;
+          }
+          
+          if (template.isPremium && !isPremium) {
+            toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
+              duration: 3000,
+              icon: "👑"
+            });
+            navigate('/gallery');
+            return;
+          }
+          
+          setSelectedTemplate(template);
           
           // Preload template image immediately
-          if (response.data.template.frameUrl) {
+          if (template.frameUrl) {
             const img = document.createElement('img');
-            img.src = response.data.template.frameUrl;
+            img.src = template.frameUrl;
             console.log('⚡ Preloading frame image from API');
           }
         } else {

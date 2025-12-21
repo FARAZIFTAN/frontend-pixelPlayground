@@ -255,15 +255,15 @@ const Booth = () => {
   const isMountedRef = useRef(true); // Track component mounted state
   const isStartingCameraRef = useRef(false); // Prevent multiple camera starts
 
-  // Cegah akses premium jika belum login
+  // Warn if using premium template without logging in (but don't block)
   useEffect(() => {
     if (selectedTemplate && selectedTemplate.isPremium && !user) {
-      toast.error("Login diperlukan untuk menggunakan frame premium!", { duration: 4000 });
-      setTimeout(() => {
-        navigate("/login");
-      }, 1500);
+      toast.info("💡 Tip: Login to save your premium frame photos to gallery!", { 
+        duration: 4000,
+        icon: "ℹ️"
+      });
     }
-  }, [selectedTemplate, user, navigate]);
+  }, [selectedTemplate, user]);
 
   // Define handleCapture as regular function (not useCallback to avoid dependency issues)
   const handleCapture = () => {
@@ -1712,12 +1712,23 @@ const Booth = () => {
 
     // Check if user is logged in first
     if (!user) {
-      console.warn('⚠️ User not logged in, cannot save to gallery');
+      console.warn('⚠️ User not logged in, saving state for later...');
+      
+      // Save current state to sessionStorage sebelum login
+      sessionStorage.setItem('booth_pending_save', JSON.stringify({
+        finalCompositeImage,
+        templateId: selectedTemplate?._id,
+        capturedImages,
+        timestamp: Date.now()
+      }));
+      
       toast.error('Please login to save photos to your gallery', {
         duration: 4000,
         icon: '🔒',
       });
-      navigate('/login');
+      setTimeout(() => {
+        navigate('/login', { state: { from: '/booth' } });
+      }, 1500);
       return;
     }
 
@@ -1760,6 +1771,9 @@ const Booth = () => {
       console.log('✅ Composite saved to gallery:', response);
       
       setIsSaving(false);
+      
+      // Clear pending save state
+      sessionStorage.removeItem('booth_pending_save');
       
       // Show success notification
       toast.success('✅ Photo saved to My Gallery!', {
@@ -1960,6 +1974,23 @@ const Booth = () => {
       toast.error("No photo to download. Please take photos first.");
       return;
     }
+
+    // Check if template is premium and user not logged in
+    if (selectedTemplate?.isPremium && !user) {
+      toast.error("Please login to download premium frame photos", {
+        duration: 4000,
+        icon: '🔒',
+      });
+      sessionStorage.setItem('booth_pending_download', JSON.stringify({
+        finalCompositeImage,
+        templateId: selectedTemplate?._id,
+        timestamp: Date.now()
+      }));
+      setTimeout(() => {
+        navigate('/login', { state: { from: '/booth' } });
+      }, 1500);
+      return;
+    }
     
     try {
       // Render stickers to image
@@ -1991,6 +2022,23 @@ const Booth = () => {
   const handleShare = async () => {
     if (!finalCompositeImage) {
       toast.error("No photo to share. Please take photos first.");
+      return;
+    }
+
+    // Check if template is premium and user not logged in
+    if (selectedTemplate?.isPremium && !user) {
+      toast.error('Please login to share premium frame photos', {
+        duration: 4000,
+        icon: '🔒',
+      });
+      sessionStorage.setItem('booth_pending_share', JSON.stringify({
+        finalCompositeImage,
+        templateId: selectedTemplate?._id,
+        timestamp: Date.now()
+      }));
+      setTimeout(() => {
+        navigate('/login', { state: { from: '/booth' } });
+      }, 1500);
       return;
     }
     
