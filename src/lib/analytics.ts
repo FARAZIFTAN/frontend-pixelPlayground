@@ -9,27 +9,54 @@ interface TrackEventParams {
   metadata?: Record<string, string | number | boolean>;
 }
 
-export const trackEvent = async (params: TrackEventParams): Promise<void> => {
+// Flag to track if analytics backend is available
+let analyticsEnabled: boolean | null = null;
+
+// Check if backend is running by trying to connect once
+const checkBackendAvailability = async (): Promise<boolean> => {
+  // Return cached result if already checked
+  if (analyticsEnabled !== null) return analyticsEnabled;
+  
   try {
-    // Don't block the main thread
-    setTimeout(async () => {
-      try {
-        await fetch('http://localhost:3001/api/analytics/track', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(params),
-        });
-      } catch (error) {
-        // Silently fail - analytics shouldn't break the app
-        console.debug('Analytics tracking failed:', error);
-      }
-    }, 0);
-  } catch (error) {
-    // Silently fail
-    console.debug('Analytics tracking error:', error);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 500); // 500ms timeout
+    
+    const response = await fetch('http://localhost:3001/api/health', {
+      method: 'HEAD',
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    analyticsEnabled = response.ok;
+  } catch {
+    // Backend not available - disable analytics
+    analyticsEnabled = false;
   }
+  
+  return analyticsEnabled;
+};
+
+export const trackEvent = async (params: TrackEventParams): Promise<void> => {
+  // Skip if explicitly disabled
+  if (analyticsEnabled === false) return;
+  
+  // Check backend availability on first call
+  if (analyticsEnabled === null) {
+    const available = await checkBackendAvailability();
+    if (!available) return;
+  }
+  
+  // Send analytics event without blocking
+  setTimeout(() => {
+    fetch('http://localhost:3001/api/analytics/track', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }).catch(() => {
+      // Disable on failure to prevent future errors
+      analyticsEnabled = false;
+    });
+  }, 0);
 };
 
 // Common event types

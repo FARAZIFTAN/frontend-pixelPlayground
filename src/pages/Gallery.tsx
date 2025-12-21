@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { safeAnalytics } from "@/lib/analytics";
 import { templateAPI, userFrameAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
-import { safeSessionStorageGet, safeSessionStorageSet, validateTemplateArray } from "@/lib/utils";
+import { safeSessionStorageGet, safeSessionStorageSet } from "@/lib/utils";
 import Fuse from "fuse.js";
 import PremiumModal from "@/components/PremiumModal";
 
@@ -49,6 +49,9 @@ const Gallery = () => {
 
   // Ref for infinite scroll trigger
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // Ref to track if initial load is done
+  const initialLoadDone = useRef(false);
 
   // Virtual scrolling states
   const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 }); // Start with 30 items for better initial load
@@ -83,9 +86,12 @@ const Gallery = () => {
 
   // Load templates from API immediately on mount
   useEffect(() => {
-    loadTemplates();
-    loadCustomFrames();
-  }, [user]);
+    if (!initialLoadDone.current) {
+      initialLoadDone.current = true;
+      loadTemplates();
+      loadCustomFrames();
+    }
+  }, []);
 
   const loadTemplates = async (page = 1, append = false) => {
     if (page === 1 && !append) {
@@ -96,21 +102,32 @@ const Gallery = () => {
     
     // Check cache first for faster loading (only for first page)
     if (page === 1 && !append) {
-      const cacheResult = safeSessionStorageGet<Template[]>('templates_cache', {
+      const cacheResult = safeSessionStorageGet<{ data: Template[]; timestamp: number; version: string }>('templates_cache', {
         maxAge: 5 * 60 * 1000, // 5 minutes cache
-        validateStructure: validateTemplateArray
+        validateStructure: (cached: any) => {
+          // Validate cache structure
+          if (!cached || typeof cached !== 'object') return false;
+          if (!Array.isArray(cached.data)) return false;
+          if (typeof cached.timestamp !== 'number') return false;
+          if (typeof cached.version !== 'string') return false;
+          
+          // Validate each template in the data array
+          return cached.data.every((t: any) =>
+            t && typeof t === 'object' &&
+            typeof t._id === 'string' &&
+            typeof t.name === 'string'
+          );
+        }
       });
 
       if (cacheResult.isValid && cacheResult.data) {
-        console.log('⚡ Using valid cached templates:', cacheResult.data.length);
-        setTemplates(cacheResult.data);
+        setTemplates(cacheResult.data.data);
         setIsLoading(false);
         // Still fetch in background to update cache
         fetchTemplates(page, append);
         return;
       } else if (cacheResult.error) {
-        console.warn('Cache validation failed:', cacheResult.error);
-        // Remove invalid cache
+        // Silently remove invalid cache (old format or corrupted)
         sessionStorage.removeItem('templates_cache');
       }
     }
@@ -129,10 +146,7 @@ const Gallery = () => {
         data?: { templates: Template[]; total?: number };
       };
       
-      console.log('📦 Template response:', response);
-      
       if (response.success && response.data) {
-        console.log('✅ Templates loaded:', response.data.templates.length);
         
         if (append) {
           setTemplates(prev => [...prev, ...response.data!.templates]);
@@ -145,40 +159,24 @@ const Gallery = () => {
         const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
         setHasMore(loadedCount < totalTemplates);
         
-        // Cache only first page with robust error handling
+        // Cache only first page - don't strip base64, just cache normally
+        // The size check in safeSessionStorageSet will handle quota issues
         if (page === 1 && !append) {
-          const lightweightCache = response.data.templates.map(t => ({
-            _id: t._id,
-            name: t.name,
-            category: t.category,
-            thumbnail: t.thumbnail,
-            frameUrl: t.frameUrl,
-            isPremium: t.isPremium,
-            frameCount: t.frameCount,
-          }));
-
           const cacheData = {
-            data: lightweightCache,
+            data: response.data.templates,
             timestamp: Date.now(),
-            version: '1.0' // For future cache invalidation
+            version: '2.0' // Incremented to invalidate old cache
           };
 
-          const cacheSuccess = safeSessionStorageSet('templates_cache', cacheData);
-          if (cacheSuccess) {
-            console.log('💾 Templates cached successfully');
-          } else {
-            console.warn('❌ Failed to cache templates');
-          }
+          safeSessionStorageSet('templates_cache', cacheData);
         }
       } else {
-        console.warn('⚠️ No templates data in response');
         setHasMore(false);
         if (!append) {
           toast.error('No templates found');
         }
       }
     } catch (error) {
-      console.error('❌ Load templates error:', error);
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       if (errorMsg.includes('fetch')) {
         toast.error('Backend server not running. Start backend first!', { duration: 5000 });
@@ -242,6 +240,9 @@ const Gallery = () => {
 
   // Reset pagination when filters change
   useEffect(() => {
+    // Skip initial load (already loaded in mount effect) and if templates are still empty
+    if (!initialLoadDone.current || templates.length === 0) return;
+    
     setCurrentPage(1);
     setHasMore(true);
     loadTemplates(1, false);
@@ -824,7 +825,6 @@ const Gallery = () => {
           {paginatedTemplates.map((template, localIndex) => {
             // Calculate actual index in filteredTemplates for proper data-index
             const actualIndex = filteredTemplates.findIndex(t => t._id === template._id);
-            console.log(`🎨 Rendering template ${actualIndex + 1}:`, template.name, template._id);
             return (
             <motion.div
               key={template._id}

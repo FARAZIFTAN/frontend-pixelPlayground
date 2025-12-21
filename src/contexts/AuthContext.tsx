@@ -102,14 +102,11 @@ function AuthProvider({ children }: AuthProviderProps) {
 
   // Load token from sessionStorage on mount
   useEffect(() => {
-    console.log('[AUTH] Initial mount effect');
     const savedToken = sessionStorage.getItem('token');
     if (savedToken) {
-      console.log('[AUTH] Found saved token, checking auth');
       setToken(savedToken);
       checkAuth();
     } else {
-      console.log('[AUTH] No saved token');
       setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

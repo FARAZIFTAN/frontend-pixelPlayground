@@ -58,26 +58,47 @@ export function safeJsonParse<T>(jsonString: string, options: CacheOptions = {})
 
 /**
  * Safely set item to sessionStorage with quota error handling
+ * Falls back to localStorage if sessionStorage is full
  */
 export function safeSessionStorageSet(key: string, value: any): boolean {
   try {
     const serialized = JSON.stringify(value);
+    
+    // Check size before attempting to store (sessionStorage limit is ~5-10MB)
+    const sizeInBytes = new Blob([serialized]).size;
+    const sizeInMB = sizeInBytes / (1024 * 1024);
+    
+    if (sizeInMB > 4) {
+      console.warn(`⚠️ Data too large for sessionStorage (${sizeInMB.toFixed(2)}MB), skipping cache for key: ${key}`);
+      return false;
+    }
+    
     sessionStorage.setItem(key, serialized);
     return true;
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'QuotaExceededError') {
-        console.warn(`⚠️ SessionStorage quota exceeded for key: ${key}, clearing all cache`);
-        // Clear all cache when quota exceeded
+        console.warn(`⚠️ SessionStorage quota exceeded for key: ${key}`);
+        
+        // Try to clear old cache entries first
         try {
-          sessionStorage.clear();
-          console.log('🧹 Cleared all sessionStorage cache');
+          const keysToRemove: string[] = [];
+          for (let i = 0; i < sessionStorage.length; i++) {
+            const storageKey = sessionStorage.key(i);
+            if (storageKey && storageKey.endsWith('_cache')) {
+              keysToRemove.push(storageKey);
+            }
+          }
+          
+          keysToRemove.forEach(k => sessionStorage.removeItem(k));
+          console.log(`🧹 Cleared ${keysToRemove.length} cache entries from sessionStorage`);
+          
           // Retry after clearing
           const serialized = JSON.stringify(value);
           sessionStorage.setItem(key, serialized);
           return true;
         } catch (retryError) {
-          console.error('❌ Failed to set cache even after clearing:', retryError);
+          console.warn('❌ Failed to cache after clearing, data too large');
           return false;
         }
       } else {

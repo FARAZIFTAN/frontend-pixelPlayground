@@ -67,7 +67,12 @@ const App = () => (
             },
           }}
         />
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Routes>
             {/* Auth Routes (No Navbar/Footer) */}
             <Route path="/login" element={<Login />} />
