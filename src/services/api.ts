@@ -206,7 +206,7 @@ export const compositeAPI = {
     if (templateId) formData.append('templateId', templateId);
     
     // Upload without JSON.stringify (FormData handles its own encoding)
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/composites/upload`, {
       method: 'POST',
       headers: {
@@ -273,7 +273,7 @@ export const userAPI = {
 
   // Upload profile picture — FormData, do not set JSON content-type
   uploadAvatar: async (file: File) => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     
     if (!token) {
       console.error('No token found for upload');
@@ -402,6 +402,14 @@ export const userAPI = {
     return apiCall(`/users/${id}/block`, {
       method: 'POST',
       body: JSON.stringify({ isActive }),
+    });
+  },
+
+  // Toggle premium status (admin)
+  togglePremium: async (id: string, isPremium: boolean, expiresInDays?: number) => {
+    return apiCall(`/users/${id}/premium`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isPremium, expiresInDays }),
     });
   },
 

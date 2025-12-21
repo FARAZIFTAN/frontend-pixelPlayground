@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,29 +26,53 @@ const UserFrameSubmissions = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const submissionsRef = useRef<FrameSubmission[]>([]);
 
-  const loadSubmissions = useCallback(async () => {
-    setLoading(true);
+  // Keep ref in sync with state
+  useEffect(() => {
+    submissionsRef.current = submissions;
+  }, [submissions]);
+
+  const loadSubmissions = async (append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
       const filterValue = filter === "all" ? undefined : filter;
-      const response = await frameSubmissionAPI.getMySubmissions(filterValue);
+      const skip = append ? submissionsRef.current.length : 0;
+      const response = await frameSubmissionAPI.getMySubmissions(filterValue, 20, skip);
 
       if (response.success && Array.isArray(response.data)) {
-        setSubmissions(response.data);
+        if (append) {
+          setSubmissions(prev => [...prev, ...response.data]);
+        } else {
+          setSubmissions(response.data);
+        }
+        setHasMore(response.hasMore || false);
       } else {
-        setSubmissions([]);
+        if (!append) {
+          setSubmissions([]);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error("Load submissions error:", error);
       toast.error("Failed to load submissions");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, [filter]);
+  };
 
   useEffect(() => {
-    loadSubmissions();
-  }, [loadSubmissions]);
+    loadSubmissions(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this submission?")) return;
@@ -263,6 +287,19 @@ const UserFrameSubmissions = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {!loading && hasMore && (
+          <div className="mt-8 text-center">
+            <Button
+              onClick={() => loadSubmissions(true)}
+              disabled={loadingMore}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8"
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </Button>
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiAPI, userFrameAPI } from '@/services/api';
+import { frameSubmissionAPI } from '@/services/frameSubmissionAPI';
 import { useAuth } from '@/contexts/AuthContext';
 import PremiumModal from '@/components/PremiumModal';
 import { toast } from 'react-hot-toast';
@@ -336,34 +337,39 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
         actualDimensions.height
       );
 
-      // Prepare frame data for user-generated frames (private)
-      const userFrameData = {
+      // Prepare frame data for submission to admin
+      const frameSubmissionData = {
         name: frameName.trim(),
         description: description.trim() || `Custom ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
         frameUrl: generatedImage, // base64 SVG data
         thumbnail: generatedImage, // same as frameUrl for now
         frameCount: frameSpec.frameCount,
-        layoutPositions: layoutPositions,
+        layout: frameSpec.layout,
         frameSpec: frameSpec,
+        layoutPositions: layoutPositions,
       };
 
-      console.log('💾 Saving custom frame to user frames:', userFrameData);
+      console.log('📤 Submitting frame to admin for approval:', frameSubmissionData);
 
-      // Save to user-generated frames (always private)
-      const result = await userFrameAPI.create(userFrameData);
+      // Submit to admin for approval
+      const result = await frameSubmissionAPI.submit(frameSubmissionData);
 
-      console.log('✅ Custom frame saved:', result);
+      console.log('✅ Frame submitted to admin:', result);
 
-      toast({
-        title: '✅ Frame Tersimpan!',
-        description: `Frame "${frameName}" berhasil disimpan. Hanya Anda yang bisa melihat frame ini.`,
-      });
+      if (result.success) {
+        toast({
+          title: '✅ Frame Berhasil Disubmit!',
+          description: `Frame "${frameName}" telah dikirim ke admin untuk disetujui. Anda akan mendapat notifikasi setelah frame disetujui.`,
+        });
 
-      // Reset form after successful save
-      setFrameName('');
-      setDescription('');
-      setGeneratedImage(null);
-      setFrameSpec(null);
+        // Reset form after successful submission
+        setFrameName('');
+        setDescription('');
+        setGeneratedImage(null);
+        setFrameSpec(null);
+      } else {
+        throw new Error(result.error || 'Failed to submit frame');
+      }
 
     } catch (error) {
       console.error('Save template error:', error);
@@ -746,10 +752,10 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                       {/* Privacy Info */}
                       <div className="bg-gradient-to-r from-[#1A1A1A] to-[#C62828]/10 border border-[#C62828]/30 rounded-lg p-3">
                         <div className="flex items-start gap-2">
-                          <span className="text-lg">🔒</span>
+                          <span className="text-lg">�</span>
                           <div>
-                            <p className="text-gray-300 text-sm font-medium">Frame Pribadi</p>
-                            <p className="text-gray-500 text-xs">Frame ini hanya bisa dilihat oleh Anda. User lain tidak dapat mengakses atau melihat frame pribadi Anda.</p>
+                            <p className="text-gray-300 text-sm font-medium">Submit untuk Approval</p>
+                            <p className="text-gray-500 text-xs">Frame akan dikirim ke admin untuk disetujui. Setelah disetujui, frame akan tersedia di gallery.</p>
                           </div>
                         </div>
                       </div>
@@ -758,7 +764,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                     {/* Save Frame Button */}
                     <Button
                       onClick={() => {
-                        console.log('Save button clicked!', { 
+                        console.log('Submit button clicked!', { 
                           frameName, 
                           hasImage: !!generatedImage,
                           isSaving 
@@ -771,11 +777,11 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                       {isSaving ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Saving...
+                          Submitting...
                         </>
                       ) : (
                         <>
-                          💾 Save Frame
+                          📤 Submit Frame to Admin
                         </>
                       )}
                     </Button>
@@ -784,9 +790,9 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                     {generatedImage && (
                       <div className="text-xs text-center">
                         {!frameName.trim() ? (
-                          <p className="text-yellow-400">⚠️ Isi nama frame untuk menyimpan</p>
+                          <p className="text-yellow-400">⚠️ Isi nama frame untuk submit</p>
                         ) : (
-                          <p className="text-green-400">✅ Siap disimpan</p>
+                          <p className="text-green-400">✅ Siap disubmit ke admin</p>
                         )}
                       </div>
                     )}

@@ -18,6 +18,7 @@ import {
   Award,
   Clock,
   Camera,
+  RefreshCw,
   Image,
   Activity,
 } from "lucide-react";
@@ -97,20 +98,73 @@ const UserManagement = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "activity">("overview");
+  const [premiumFilter, setPremiumFilter] = useState<"all" | "premium" | "free">("all");
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [previousPremiumCount, setPreviousPremiumCount] = useState<number>(0);
 
   useEffect(() => {
     loadUsers();
   }, []);
 
+  // Auto-refresh every 30 seconds
+  useEffect(() => {
+    if (!autoRefresh) return;
+    
+    const interval = setInterval(() => {
+      console.log('[AUTO-REFRESH] Refreshing user data...');
+      loadUsers();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh]);
+
   const loadUsers = async () => {
     setIsLoading(true);
     try {
+      console.log('[LOAD USERS] Fetching users from backend...');
       const response = await userAPI.getAllUsers() as {
         success: boolean;
         data: { users: User[] };
       };
+      
+      console.log('[LOAD USERS] Response received:', {
+        success: response.success,
+        userCount: response.data?.users?.length || 0,
+        premiumCount: response.data?.users?.filter(u => u.isPremium).length || 0
+      });
+      
       if (response.success && response.data) {
-        setUsers(response.data.users);
+        // Filter out invalid users (missing name or email)
+        const validUsers = response.data.users.filter(u => u && u.name && u.email);
+        const newPremiumCount = validUsers.filter(u => u.isPremium).length;
+        
+        console.log('[LOAD USERS] Setting users state:', {
+          total: validUsers.length,
+          premium: newPremiumCount,
+          free: validUsers.filter(u => !u.isPremium).length,
+          previousPremium: previousPremiumCount
+        });
+        
+        // Notify if premium count changed
+        if (previousPremiumCount > 0 && newPremiumCount !== previousPremiumCount) {
+          const diff = newPremiumCount - previousPremiumCount;
+          if (diff > 0) {
+            toast.success(`🎉 ${diff} new Premium user${diff > 1 ? 's' : ''}!`, {
+              duration: 5000,
+            });
+          } else if (diff < 0) {
+            toast.info(`${Math.abs(diff)} user${Math.abs(diff) > 1 ? 's' : ''} downgraded from Premium`);
+          }
+        }
+        
+        setUsers(validUsers);
+        setPreviousPremiumCount(newPremiumCount);
+        setLastRefresh(new Date());
+        
+        if (validUsers.length < response.data.users.length) {
+          console.warn(`Filtered out ${response.data.users.length - validUsers.length} invalid users`);
+        }
       } else {
         toast.error("Failed to load users");
       }
@@ -188,6 +242,56 @@ const UserManagement = () => {
     }
   };
 
+  const handleTogglePremium = async (user: User) => {
+    try {
+      const newPremiumStatus = !user.isPremium;
+      const expiresInDays = 30; // Default 30 days
+      
+      console.log('Toggle premium for user:', user._id, 'New status:', newPremiumStatus);
+      
+      const response = await userAPI.togglePremium(user._id, newPremiumStatus, expiresInDays) as {
+        success: boolean;
+        data?: { user: User };
+      };
+      
+      console.log('Toggle premium response:', response);
+      
+      if (response.success && response.data && response.data.user) {
+        const updatedUser = response.data.user;
+        
+        // Validate updated user has required fields
+        if (!updatedUser.name || !updatedUser.email) {
+          console.error('Updated user missing required fields:', updatedUser);
+          toast.error("Invalid user data received");
+          return;
+        }
+        
+        // Update local state with new user data from server
+        setUsers(
+          users.map((u) =>
+            u._id === user._id ? updatedUser : u
+          )
+        );
+        
+        // Update selectedUser if detail dialog is open
+        if (selectedUser?._id === user._id) {
+          setSelectedUser(updatedUser);
+        }
+        
+        toast.success(
+          newPremiumStatus 
+            ? `User upgraded to Premium (30 days)` 
+            : `User downgraded to Free`
+        );
+      } else {
+        toast.error(response.message || "Failed to update premium status");
+      }
+    } catch (error) {
+      console.error("Error updating premium status:", error);
+      toast.error("Failed to update premium status");
+    }
+  };
+
   const handleViewUserDetail = async (user: User) => {
     setSelectedUser(user);
     setShowUserDetailDialog(true);
@@ -195,6 +299,18 @@ const UserManagement = () => {
     setActiveTab("overview");
     
     try {
+      // Refresh user data first to get latest info
+      const userResponse = await userAPI.getUser(user._id) as {
+        success: boolean;
+        data?: User;
+      };
+      
+      if (userResponse.success && userResponse.data) {
+        // Update local state with fresh user data
+        setSelectedUser(userResponse.data);
+        setUsers(users.map(u => u._id === user._id ? userResponse.data! : u));
+      }
+      
       // Load user detail with statistics
       const detailResponse = await userAPI.getUserDetail(user._id) as {
         success: boolean;
@@ -203,6 +319,10 @@ const UserManagement = () => {
       
       if (detailResponse.success) {
         setUserDetail(detailResponse.data);
+        // Update selectedUser with latest data from detail response
+        if (detailResponse.data.user) {
+          setSelectedUser(detailResponse.data.user as User);
+        }
       }
 
       // Load user activities
@@ -223,17 +343,26 @@ const UserManagement = () => {
   };
 
   const filteredUsers = users.filter((user) => {
+    // Safety check for undefined fields
+    if (!user || !user.name || !user.email) return false;
+    
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesPremium = 
+      premiumFilter === "all" || 
+      (premiumFilter === "premium" && user.isPremium) ||
+      (premiumFilter === "free" && !user.isPremium);
+    return matchesSearch && matchesRole && matchesPremium;
   });
 
   const userStats = {
     total: users.length,
     admins: users.filter((u) => u.role === "admin").length,
     active: users.filter((u) => u.isActive).length,
+    premium: users.filter((u) => u.isPremium).length,
+    free: users.filter((u) => !u.isPremium).length,
   };
 
   return (
@@ -245,14 +374,45 @@ const UserManagement = () => {
             <Users className="w-8 h-8 text-blue-400" />
             User Management
           </h1>
-          <p className="text-gray-300 mt-1">
-            Manage and monitor all users in the application
-          </p>
+          <div className="text-gray-300 mt-1 flex items-center gap-3">
+            <span>Manage and monitor all users in the application</span>
+            {autoRefresh && (
+              <span className="text-xs px-2 py-1 bg-green-500/20 text-green-400 rounded-full border border-green-500/50 flex items-center gap-1">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block"></span>
+                Auto-refresh ON
+              </span>
+            )}
+            <span className="text-xs text-gray-500">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setAutoRefresh(!autoRefresh)}
+            variant="outline"
+            size="sm"
+            className={`${
+              autoRefresh 
+                ? 'border-green-500/50 text-green-400 hover:bg-green-500/20' 
+                : 'border-gray-500/50 text-gray-400 hover:bg-gray-500/20'
+            }`}
+          >
+            {autoRefresh ? '⏸' : '▶'} Auto-refresh
+          </Button>
+          <Button
+            onClick={() => loadUsers()}
+            disabled={isLoading}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {[
           {
             label: "Total Users",
@@ -271,6 +431,19 @@ const UserManagement = () => {
             value: userStats.active,
             icon: Award,
             color: "from-green-500 to-green-600",
+          },
+          {
+            label: "Premium Users",
+            value: userStats.premium,
+            icon: Award,
+            color: "from-yellow-500 to-orange-600",
+            highlight: true,
+          },
+          {
+            label: "Free Users",
+            value: userStats.free,
+            icon: User,
+            color: "from-gray-500 to-gray-600",
           },
         ].map((stat, idx) => {
           const Icon = stat.icon;
@@ -329,6 +502,17 @@ const UserManagement = () => {
                 <option value="all">All Roles</option>
                 <option value="user">Users</option>
                 <option value="admin">Admins</option>
+              </select>
+              <select
+                value={premiumFilter}
+                onChange={(e) =>
+                  setPremiumFilter(e.target.value as "all" | "premium" | "free")
+                }
+                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-blue-500 transition-colors"
+              >
+                <option value="all">All Subscriptions</option>
+                <option value="premium">Premium Only</option>
+                <option value="free">Free Only</option>
               </select>
             </div>
           </div>
@@ -396,16 +580,25 @@ const UserManagement = () => {
                           animate={{ opacity: 1 }}
                           exit={{ opacity: 0 }}
                           transition={{ delay: idx * 0.05 }}
-                          className="border-b border-white/5 hover:bg-white/5 transition-colors"
+                          className={`border-b border-white/5 hover:bg-white/5 transition-colors ${
+                            user.isPremium ? 'bg-yellow-500/5' : ''
+                          }`}
                         >
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-600 flex items-center justify-center">
+                              <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                                user.isPremium 
+                                  ? 'bg-gradient-to-br from-yellow-400 to-orange-600 ring-2 ring-yellow-500/50' 
+                                  : 'bg-gradient-to-br from-blue-400 to-purple-600'
+                              }`}>
                                 <User className="w-5 h-5 text-white" />
                               </div>
                               <div>
-                                <p className="font-medium text-white">
+                                <p className="font-medium text-white flex items-center gap-2">
                                   {user.name}
+                                  {user.isPremium && (
+                                    <Award className="w-4 h-4 text-yellow-400" />
+                                  )}
                                 </p>
                                 <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
                                   <Mail className="w-3 h-3" />
@@ -490,6 +683,19 @@ const UserManagement = () => {
                                 title={user.isActive ? "Block User" : "Unblock User"}
                               >
                                 {user.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                              </Button>
+                              <Button
+                                onClick={() => handleTogglePremium(user)}
+                                size="sm"
+                                variant="outline"
+                                className={`${
+                                  user.isPremium
+                                    ? "border-orange-500/50 text-orange-400 hover:bg-orange-500/20"
+                                    : "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                                }`}
+                                title={user.isPremium ? "Downgrade to Free" : "Upgrade to Premium"}
+                              >
+                                <Award className="w-4 h-4" />
                               </Button>
                               <Button
                                 onClick={() => handleToggleRole(user)}
@@ -607,6 +813,174 @@ const UserManagement = () => {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Premium Status Section - Enhanced */}
+              <div className={`border rounded-lg p-6 ${
+                selectedUser.isPremium 
+                  ? "bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30" 
+                  : "bg-white/5 border-white/10"
+              }`}>
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                      selectedUser.isPremium 
+                        ? "bg-yellow-500/20" 
+                        : "bg-gray-500/20"
+                    }`}>
+                      <Award className={`w-6 h-6 ${
+                        selectedUser.isPremium 
+                          ? "text-yellow-400" 
+                          : "text-gray-400"
+                      }`} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
+                        Premium Membership
+                        {selectedUser.isPremium && (
+                          <span className="text-xs px-2 py-1 bg-yellow-500/30 text-yellow-300 rounded-full border border-yellow-500/50 animate-pulse">
+                            ACTIVE
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {selectedUser.isPremium 
+                          ? "User has active premium subscription" 
+                          : "Free account - No active subscription"}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => handleTogglePremium(selectedUser)}
+                    size="sm"
+                    variant="outline"
+                    className={`${
+                      selectedUser.isPremium
+                        ? "border-red-500/50 text-red-400 hover:bg-red-500/20"
+                        : "border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/20"
+                    }`}
+                  >
+                    <Award className="w-4 h-4 mr-2" />
+                    {selectedUser.isPremium ? "Remove Premium" : "Grant Premium"}
+                  </Button>
+                </div>
+                
+                {selectedUser.isPremium && selectedUser.premiumExpiresAt && (
+                  <div className="bg-black/20 rounded-lg p-4 space-y-3">
+                    <h5 className="text-sm font-semibold text-yellow-300 flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      Subscription Details
+                    </h5>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Expiry Date */}
+                      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Expiration Date</p>
+                        <p className="text-sm font-semibold text-white">
+                          {new Date(selectedUser.premiumExpiresAt).toLocaleDateString("en-US", {
+                            weekday: "short",
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                          })}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(selectedUser.premiumExpiresAt).toLocaleTimeString("en-US", {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </p>
+                      </div>
+                      
+                      {/* Days Remaining */}
+                      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Time Remaining</p>
+                        <p className={`text-2xl font-bold ${
+                          Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 7
+                            ? "text-red-400"
+                            : Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 15
+                            ? "text-yellow-400"
+                            : "text-green-400"
+                        }`}>
+                          {Math.max(0, Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))}
+                          <span className="text-sm font-normal text-gray-400 ml-1">days</span>
+                        </p>
+                        {Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)) < 7 && (
+                          <p className="text-xs text-red-400 mt-1 flex items-center gap-1">
+                            <span className="inline-block w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse"></span>
+                            Expiring soon
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Start Date */}
+                      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Member Since</p>
+                        <p className="text-sm font-semibold text-white">
+                          {new Date(selectedUser.createdAt).toLocaleDateString("en-US", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric"
+                          })}
+                        </p>
+                      </div>
+                      
+                      {/* Duration */}
+                      <div className="bg-white/5 rounded-lg p-3 border border-white/10">
+                        <p className="text-xs text-gray-400 mb-1">Subscription Period</p>
+                        <p className="text-sm font-semibold text-white">
+                          30 Days
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Standard Premium</p>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
+                        <span>Subscription Progress</span>
+                        <span>
+                          {Math.round(
+                            ((30 - Math.max(0, Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))) / 30) * 100
+                          )}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-yellow-400 to-orange-500 h-full rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${Math.round(
+                              ((30 - Math.max(0, Math.ceil((new Date(selectedUser.premiumExpiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))) / 30) * 100
+                            )}%` 
+                          }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {!selectedUser.isPremium && (
+                  <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <Award className="w-5 h-5 text-blue-400 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-300 mb-1">Free Account</p>
+                        <p className="text-xs text-gray-400">
+                          This user is on a free plan. Premium features are restricted. Admin can grant temporary premium access using the button above.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedUser.isPremium && (
+                  <div className="mt-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <p className="text-xs text-green-300 flex items-center gap-2">
+                      <span className="inline-block w-2 h-2 bg-green-400 rounded-full"></span>
+                      Premium benefits: Unlimited AI frames, priority support, no watermarks, premium templates access
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Tabs */}

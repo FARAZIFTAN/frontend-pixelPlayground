@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import toast from "react-hot-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { frameSubmissionAPI } from "@/services/frameSubmissionAPI";
@@ -29,6 +29,14 @@ const FrameApprovals = () => {
   const [processing, setProcessing] = useState<string | null>(null);
   const [showRejectModal, setShowRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const submissionsRef = useRef<FrameSubmission[]>([]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    submissionsRef.current = submissions;
+  }, [submissions]);
 
   // Check admin access
   useEffect(() => {
@@ -37,23 +45,39 @@ const FrameApprovals = () => {
       return;
     }
     loadSubmissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.role]);
 
-  const loadSubmissions = async () => {
-    setLoading(true);
+  const loadSubmissions = async (append = false) => {
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+    }
+    
     try {
-      const response = await frameSubmissionAPI.getPendingSubmissions("pending");
+      const skip = append ? submissionsRef.current.length : 0;
+      const response = await frameSubmissionAPI.getPendingSubmissions("pending", 50, skip);
 
       if (response.success && Array.isArray(response.data)) {
-        setSubmissions(response.data);
+        if (append) {
+          setSubmissions(prev => [...prev, ...response.data]);
+        } else {
+          setSubmissions(response.data);
+        }
+        setHasMore(response.hasMore || false);
       } else {
-        setSubmissions([]);
+        if (!append) {
+          setSubmissions([]);
+        }
+        setHasMore(false);
       }
     } catch (error) {
       console.error("Load submissions error:", error);
       toast.error("Failed to load submissions");
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -235,6 +259,19 @@ const FrameApprovals = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {!loading && hasMore && (
+          <div className="mt-8 text-center">
+            <Button
+              onClick={() => loadSubmissions(true)}
+              disabled={loadingMore}
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 px-8"
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </Button>
           </div>
         )}
       </div>

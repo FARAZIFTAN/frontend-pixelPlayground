@@ -125,8 +125,8 @@ const Register: React.FC = () => {
       const response = await authAPI.googleAuth(credentialResponse.credential!);
 
       // Store token and user data
-      localStorage.setItem("token", (response as any).token);
-      localStorage.setItem("user", JSON.stringify((response as any).user));
+      sessionStorage.setItem("token", (response as any).token);
+      sessionStorage.setItem("user", JSON.stringify((response as any).user));
 
       // Update auth context
       await checkAuth();

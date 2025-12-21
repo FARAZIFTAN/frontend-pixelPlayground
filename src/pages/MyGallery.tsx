@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image, Camera, Upload, Download, Share2, Heart, Eye, Calendar, Loader2, Search, Filter, ChevronDown, Trash2 } from "lucide-react";
+import { Image, Camera, Upload, Download, Heart, Eye, Calendar, Loader2, Search, Filter, ChevronDown, Trash2, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +66,10 @@ const MyGallery = () => {
         // User adalah premium, tutup modal dan reset flag
         setShowPremiumModal(false);
         setModalClosedManually(false);
+        // Load gallery jika premium
+        if (composites.length === 0) {
+          loadComposites();
+        }
       }
     }
   }, [user, isPremium]);
@@ -290,6 +294,36 @@ const MyGallery = () => {
     }
   };
 
+  // Handle share to WhatsApp
+  const handleShareWhatsApp = async (shareUrl: string) => {
+    try {
+      const message = `Lihat foto keren saya dari KaryaKlik! 📸\n\n${shareUrl}\n\nBuat foto kamu sendiri di KaryaKlik Photo Booth!`;
+      const encodedMessage = encodeURIComponent(message);
+      
+      // Detect if mobile or desktop
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        // Mobile: Use whatsapp:// protocol
+        window.location.href = `whatsapp://send?text=${encodedMessage}`;
+      } else {
+        // Desktop: Use web.whatsapp.com
+        const whatsappUrl = `https://web.whatsapp.com/send?text=${encodedMessage}`;
+        window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
+      }
+      
+      // Track WhatsApp share
+      if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
+        ((analytics as Record<string, unknown>).trackEvent as (action: string, platform: string) => void)('share_whatsapp', isMobile ? 'mobile' : 'desktop');
+      }
+      
+      toast.success('Opening WhatsApp...');
+    } catch (error) {
+      console.error('WhatsApp share error:', error);
+      toast.error('Failed to open WhatsApp');
+    }
+  };
+
   // Load more composites
   const loadMore = () => {
     if (hasMore && !loadingMore) {
@@ -468,25 +502,32 @@ const MyGallery = () => {
                           variant="outline"
                           className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
                         >
-                          <Download className="w-3 h-3 mr-1" />
-                          Download
+                          <Download className="w-4 h-4" />
                         </Button>
                         <Button
-                          onClick={() => handleShare(composite)}
+                          onClick={async () => {
+                            // Generate share link first
+                            const response = await compositeAPI.shareComposite(composite._id) as { success: boolean; data: { shareUrl?: string } };
+                            if (response.success && response.data.shareUrl) {
+                              const imageUrl = getImageUrl(composite.compositeUrl);
+                              handleShareWhatsApp(response.data.shareUrl, imageUrl);
+                            } else {
+                              toast.error('Failed to generate share link');
+                            }
+                          }}
                           size="sm"
                           variant="outline"
-                          className="flex-1 bg-white/5 border-white/20 text-white hover:bg-white/10"
+                          className="flex-1 bg-[#25D366]/10 border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/20"
                         >
-                          <Share2 className="w-3 h-3 mr-1" />
-                          Share
+                          <MessageCircle className="w-4 h-4" />
                         </Button>
                         <Button
                           onClick={() => handleDeleteClick(composite)}
                           size="sm"
                           variant="outline"
-                          className="bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/30"
+                          className="flex-1 bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500/20 hover:border-red-500/30"
                         >
-                          <Trash2 className="w-3 h-3" />
+                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </CardContent>
@@ -580,36 +621,51 @@ const MyGallery = () => {
                 </div>
 
                 {/* Share Buttons */}
-                <div className="flex gap-2">
+                <div className="space-y-2">
+                  {/* WhatsApp Share Button - Primary */}
                   <Button
                     onClick={() => {
-                      navigator.clipboard.writeText(shareData.shareUrl);
-                      toast.success('Link copied to clipboard!');
+                      const imageUrl = getImageUrl(sharingComposite.compositeUrl);
+                      handleShareWhatsApp(shareData.shareUrl, imageUrl);
                     }}
-                    variant="outline"
-                    className="flex-1 border-white/20 text-white hover:bg-white/10"
+                    className="w-full bg-[#25D366] hover:bg-[#20BA5A] text-white font-semibold"
                   >
-                    Copy Link
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Share to WhatsApp
                   </Button>
-                  {navigator.share && (
+                  
+                  <div className="flex gap-2">
                     <Button
-                      onClick={async () => {
-                        try {
-                          await navigator.share({
-                            title: 'Check out my photo from KaryaKlik!',
-                            text: 'I created this awesome photo using KaryaKlik Photo Booth',
-                            url: shareData.shareUrl,
-                          });
-                          setShareDialogOpen(false);
-                        } catch (error) {
-                          // User cancelled share
-                        }
+                      onClick={() => {
+                        navigator.clipboard.writeText(shareData.shareUrl);
+                        toast.success('Link copied to clipboard!');
                       }}
-                      className="flex-1 bg-[#C62828] hover:bg-[#E53935] text-white"
+                      variant="outline"
+                      className="flex-1 border-white/20 text-white hover:bg-white/10"
                     >
-                      Share
+                      Copy Link
                     </Button>
-                  )}
+                    {navigator.share && (
+                      <Button
+                        onClick={async () => {
+                          try {
+                            await navigator.share({
+                              title: 'Check out my photo from KaryaKlik!',
+                              text: 'I created this awesome photo using KaryaKlik Photo Booth',
+                              url: shareData.shareUrl,
+                            });
+                            setShareDialogOpen(false);
+                          } catch (error) {
+                            // User cancelled share
+                          }
+                        }}
+                        className="flex-1 bg-[#C62828] hover:bg-[#E53935] text-white"
+                      >
+                        <Share2 className="w-4 h-4 mr-1" />
+                        More
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

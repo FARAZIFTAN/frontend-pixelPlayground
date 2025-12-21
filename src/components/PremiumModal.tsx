@@ -25,37 +25,46 @@ const PremiumModal = ({ isOpen, onClose, feature = "this feature", requireUpgrad
   const handleDummyPayment = async () => {
     setIsProcessing(true);
     
-    // Simulasi loading payment
-    setTimeout(async () => {
+    try {
+      // Simulasi loading payment
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
       setIsProcessing(false);
       setStep('success');
       
-      // Update user to premium after 1 second
+      // Update user to premium - now calls real API
       setTimeout(async () => {
-        // Update to premium
-        upgradeToPremium();
+        console.log('[PREMIUM] Starting premium upgrade...');
         
-        // Wait sedikit untuk state propagation
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const success = await upgradeToPremium();
         
-        // Force refresh auth state untuk update semua komponen
-        await checkAuth(true);
-        
-        // Wait lagi untuk memastikan semua komponen ter-update
-        await new Promise(resolve => setTimeout(resolve, 200));
-        
-        toast.success("🎉 Welcome to Premium! You now have full access!", {
-          duration: 4000,
-          icon: "👑",
-        });
-        
-        // Close modal after success dengan delay lebih lama untuk state propagation
-        setTimeout(() => {
-          onClose();
-          setStep('plan'); // Reset for next time
-        }, 1500);
+        if (success) {
+          console.log('[PREMIUM] Upgrade successful!');
+          
+          // Force refresh auth state untuk update semua komponen
+          await checkAuth(true);
+          
+          toast.success("🎉 Welcome to Premium! You now have full access!", {
+            duration: 4000,
+            icon: "👑",
+          });
+          
+          // Close modal and DO NOT reload - let parent component handle state
+          setTimeout(() => {
+            onClose();
+            setStep('plan'); // Reset for next time
+          }, 1500);
+        } else {
+          console.error('[PREMIUM] Upgrade failed');
+          toast.error("Failed to upgrade to premium. Please try again.");
+          setStep('payment');
+        }
       }, 1000);
-    }, 2000);
+    } catch (error) {
+      console.error('[PREMIUM] Payment error:', error);
+      setIsProcessing(false);
+      toast.error("Payment failed. Please try again.");
+    }
   };
 
   if (!isOpen) return null;

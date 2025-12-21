@@ -28,7 +28,7 @@ interface ApiResponse<T> {
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token');
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` }),
@@ -108,12 +108,14 @@ export const frameSubmissionAPI = {
   /**
    * Get user's frame submissions
    */
-  async getMySubmissions(status?: string) {
+  async getMySubmissions(status?: string, limit = 20, skip = 0) {
     try {
-      const endpoint = status
-        ? `/user-submissions/frames?status=${status}`
-        : '/user-submissions/frames';
-
+      const params = new URLSearchParams();
+      if (status) params.append('status', status);
+      params.append('limit', limit.toString());
+      params.append('skip', skip.toString());
+      
+      const endpoint = `/user-submissions/frames?${params.toString()}`;
       const response = await apiCall<ApiResponse<unknown>>(endpoint);
       return response;
     } catch (error: unknown) {
@@ -166,10 +168,15 @@ export const frameSubmissionAPI = {
   /**
    * Get pending submissions (admin only)
    */
-  async getPendingSubmissions(status = 'pending') {
+  async getPendingSubmissions(status = 'pending', limit = 50, skip = 0) {
     try {
+      const params = new URLSearchParams();
+      params.append('status', status);
+      params.append('limit', limit.toString());
+      params.append('skip', skip.toString());
+      
       const response = await apiCall<ApiResponse<unknown>>(
-        `/admin/frame-submissions?status=${status}`
+        `/admin/frame-submissions?${params.toString()}`
       );
       return response;
     } catch (error: unknown) {

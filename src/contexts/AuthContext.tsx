@@ -24,7 +24,7 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   checkAuth: (silent?: boolean) => Promise<void>;
-  upgradeToPremium: () => void;
+  upgradeToPremium: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -72,6 +72,7 @@ function AuthProvider({ children }: AuthProviderProps) {
         console.log('[AUTH] Verify successful, setting user:', userData.name, userData.role);
         setUser(userData);
         setToken(savedToken);
+        setIsLoading(false);
       } else {
         // Only logout if not silent mode (i.e., initial load or explicit check)
         if (!silent) {
@@ -211,18 +212,49 @@ function AuthProvider({ children }: AuthProviderProps) {
     setUser(null);
   };
 
-  // Upgrade to Premium (Dummy)
-  const upgradeToPremium = () => {
-    if (user) {
-      const updatedUser = { ...user, isPremium: true };
-      setUser(updatedUser);
-      sessionStorage.setItem('isPremium', 'true');
-      
-      // Force re-render dengan mengupdate user object reference
-      // Ini akan memicu useEffect di komponen yang depend pada isPremium
-      setTimeout(() => {
-        setUser({ ...updatedUser });
-      }, 100);
+  // Upgrade to Premium - Real API call
+  const upgradeToPremium = async () => {
+    if (!user || !token) {
+      console.error('[AUTH] Cannot upgrade: no user or token');
+      return false;
+    }
+
+    try {
+      // Call backend API to upgrade premium (user self-upgrade endpoint)
+      const response = await fetch(`${API_BASE_URL}/users/upgrade-premium`, {
+        method: 'POST',
+        mode: 'cors',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ 
+          expiresInDays: 30 
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success && data.data?.user) {
+        const updatedUser = data.data.user;
+        
+        console.log('[AUTH] Premium upgrade successful:', updatedUser);
+        
+        // Update local state with fresh data from server
+        setUser(updatedUser);
+        sessionStorage.setItem('isPremium', 'true');
+        
+        // Force refresh to sync with backend
+        await checkAuth(true);
+        
+        return true;
+      } else {
+        console.error('[AUTH] Premium upgrade failed:', data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error('[AUTH] Premium upgrade error:', error);
+      return false;
     }
   };
 
