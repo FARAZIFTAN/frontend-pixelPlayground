@@ -880,6 +880,16 @@ const Booth = () => {
     preloadTemplates();
   }, []);
 
+  // Filter templates based on user's premium status
+  const accessibleTemplates = availableTemplates.filter((template) => {
+    // Non-premium users can only access free frames
+    if (!user?.isPremium) {
+      return !template.isPremium;
+    }
+    // Premium users can access all frames
+    return true;
+  });
+
   const handleOpenFrameSelector = async () => {
     setShowFrameSelector(true);
     
@@ -3816,46 +3826,73 @@ const Booth = () => {
                   <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                     <Shapes className="w-5 h-5 text-primary" />
                     Available Templates
+                    {!user?.isPremium && accessibleTemplates.length < availableTemplates.length && (
+                      <Badge className="ml-2 bg-yellow-500/20 text-yellow-300 border-yellow-500/50">
+                        {availableTemplates.length - accessibleTemplates.length} Premium
+                      </Badge>
+                    )}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {availableTemplates.map((template) => (
-                      <motion.button
-                        key={template._id}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => handleChangeFrame(template)}
-                        className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-                          selectedTemplate?._id === template._id
-                            ? 'border-primary ring-2 ring-primary ring-offset-2'
-                            : 'border-border hover:border-primary'
-                        }`}
-                      >
-                        <img
-                          src={template.thumbnail}
-                          alt={template.name}
-                          className="w-full aspect-[3/4] object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
-                          <p className="text-white text-sm font-semibold truncate">
-                            {template.name}
-                          </p>
-                          <p className="text-white/70 text-xs">
-                            {template.frameCount} photos
-                          </p>
-                        </div>
-                        {template.isPremium && (
-                          <Badge className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
-                            PRO
-                          </Badge>
-                        )}
-                        {selectedTemplate?._id === template._id && (
-                          <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full p-1">
-                            <Check className="w-4 h-4" />
+                  {accessibleTemplates.length > 0 ? (
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {accessibleTemplates.map((template) => (
+                        <motion.button
+                          key={template._id}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={() => handleChangeFrame(template)}
+                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${
+                            selectedTemplate?._id === template._id
+                              ? 'border-primary ring-2 ring-primary ring-offset-2'
+                              : 'border-border hover:border-primary'
+                          }`}
+                        >
+                          <img
+                            src={template.thumbnail}
+                            alt={template.name}
+                            className="w-full aspect-[3/4] object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3">
+                            <p className="text-white text-sm font-semibold truncate">
+                              {template.name}
+                            </p>
+                            <p className="text-white/70 text-xs">
+                              {template.frameCount} photos
+                            </p>
                           </div>
+                          {template.isPremium && (
+                            <Badge className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white border-0">
+                              PRO
+                            </Badge>
+                          )}
+                          {selectedTemplate?._id === template._id && (
+                            <div className="absolute top-2 left-2 bg-primary text-primary-foreground rounded-full p-1">
+                              <Check className="w-4 h-4" />
+                            </div>
+                          )}
+                        </motion.button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 bg-white/5 rounded-lg border border-white/10">
+                      <Award className="w-8 h-8 mx-auto mb-2 text-yellow-500" />
+                      <p className="text-sm text-gray-300 mb-2">
+                        {availableTemplates.length > 0 ? (
+                          <>All available templates require a premium account.</>
+                        ) : (
+                          <>Loading templates...</>
                         )}
-                      </motion.button>
-                    ))}
-                  </div>
+                      </p>
+                      {!user?.isPremium && availableTemplates.length > 0 && (
+                        <Button 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => navigate('/settings')}
+                        >
+                          Upgrade to Pro
+                        </Button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {availableTemplates.length === 0 && userCustomFrames.length === 0 && (
