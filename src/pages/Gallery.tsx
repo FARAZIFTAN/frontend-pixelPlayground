@@ -100,38 +100,8 @@ const Gallery = () => {
       setIsLoadingMore(true);
     }
     
-    // Check cache first for faster loading (only for first page)
-    if (page === 1 && !append) {
-      const cacheResult = safeSessionStorageGet<{ data: Template[]; timestamp: number; version: string }>('templates_cache', {
-        maxAge: 5 * 60 * 1000, // 5 minutes cache
-        validateStructure: (cached: any) => {
-          // Validate cache structure
-          if (!cached || typeof cached !== 'object') return false;
-          if (!Array.isArray(cached.data)) return false;
-          if (typeof cached.timestamp !== 'number') return false;
-          if (typeof cached.version !== 'string') return false;
-          
-          // Validate each template in the data array
-          return cached.data.every((t: any) =>
-            t && typeof t === 'object' &&
-            typeof t._id === 'string' &&
-            typeof t.name === 'string'
-          );
-        }
-      });
-
-      if (cacheResult.isValid && cacheResult.data) {
-        setTemplates(cacheResult.data.data);
-        setIsLoading(false);
-        // Still fetch in background to update cache
-        fetchTemplates(page, append);
-        return;
-      } else if (cacheResult.error) {
-        // Silently remove invalid cache (old format or corrupted)
-        sessionStorage.removeItem('templates_cache');
-      }
-    }
-    
+    // Skip cache completely - templates are too large for sessionStorage
+    // Fetch directly from server instead
     await fetchTemplates(page, append);
   };
   
@@ -159,17 +129,8 @@ const Gallery = () => {
         const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
         setHasMore(loadedCount < totalTemplates);
         
-        // Cache only first page - don't strip base64, just cache normally
-        // The size check in safeSessionStorageSet will handle quota issues
-        if (page === 1 && !append) {
-          const cacheData = {
-            data: response.data.templates,
-            timestamp: Date.now(),
-            version: '2.0' // Incremented to invalidate old cache
-          };
-
-          safeSessionStorageSet('templates_cache', cacheData);
-        }
+        // Don't cache - templates with base64 images are too large (7MB+)
+        // SessionStorage has ~5-10MB limit, caching would cause quota errors
       } else {
         setHasMore(false);
         if (!append) {

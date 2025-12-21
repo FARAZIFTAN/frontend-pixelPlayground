@@ -69,7 +69,7 @@ export function safeSessionStorageSet(key: string, value: any): boolean {
     const sizeInMB = sizeInBytes / (1024 * 1024);
     
     if (sizeInMB > 4) {
-      console.warn(`⚠️ Data too large for sessionStorage (${sizeInMB.toFixed(2)}MB), skipping cache for key: ${key}`);
+      // Silently skip - data too large for sessionStorage
       return false;
     }
     
@@ -78,8 +78,6 @@ export function safeSessionStorageSet(key: string, value: any): boolean {
   } catch (error) {
     if (error instanceof Error) {
       if (error.name === 'QuotaExceededError') {
-        console.warn(`⚠️ SessionStorage quota exceeded for key: ${key}`);
-        
         // Try to clear old cache entries first
         try {
           const keysToRemove: string[] = [];
@@ -91,21 +89,16 @@ export function safeSessionStorageSet(key: string, value: any): boolean {
           }
           
           keysToRemove.forEach(k => sessionStorage.removeItem(k));
-          console.log(`🧹 Cleared ${keysToRemove.length} cache entries from sessionStorage`);
           
           // Retry after clearing
           const serialized = JSON.stringify(value);
           sessionStorage.setItem(key, serialized);
           return true;
         } catch (retryError) {
-          console.warn('❌ Failed to cache after clearing, data too large');
+          // Silently fail - data too large even after clearing
           return false;
         }
-      } else {
-        console.error(`❌ SessionStorage error for key ${key}:`, error.message);
       }
-    } else {
-      console.error(`❌ Unknown sessionStorage error for key ${key}:`, error);
     }
     return false;
   }
