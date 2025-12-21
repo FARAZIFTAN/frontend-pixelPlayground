@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/contexts/AuthContext";
-import analytics from "@/lib/analytics";
+import { safeAnalytics } from "@/lib/analytics";
 import { templateAPI, userFrameAPI } from "@/services/api";
 import { toast } from "react-hot-toast";
 import { safeSessionStorageGet, safeSessionStorageSet, validateTemplateArray } from "@/lib/utils";
@@ -333,13 +333,13 @@ const Gallery = () => {
 
   // Track page view
   useEffect(() => {
-    analytics.pageView('Gallery', user?.id);
+    safeAnalytics.pageView('Gallery', user?.id);
   }, [user?.id]);
 
   // Track template preview
   const handlePreview = (template: Template) => {
     setSelectedTemplateForPreview(template);
-    analytics.templateView(template._id, template.name, user?.id);
+    safeAnalytics.templateView(template._id, template.name, user?.id);
   };
 
   // Navigate to Input Method Selection with pre-selected template
@@ -371,7 +371,7 @@ const Gallery = () => {
       return;
     }
 
-    analytics.templateSelect(template._id, template.name, user?.id);
+    safeAnalytics.templateSelect(template._id, template.name, user?.id);
     navigate(`/input-method?template=${template._id}`);
   };
 

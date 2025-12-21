@@ -192,4 +192,66 @@ export const analytics = {
   },
 };
 
+// Safe wrapper for analytics functions to prevent app crashes
+const safeAnalyticsCall = (fn: () => void) => {
+  try {
+    fn();
+  } catch (error) {
+    // Silently fail - analytics errors should never crash the app
+    console.debug('Analytics call failed:', error);
+  }
+};
+
+// Safe analytics wrapper that catches all errors
+export const safeAnalytics = {
+  // Track page view
+  pageView: (pageName: string, userId?: string) => {
+    safeAnalyticsCall(() => analytics.pageView(pageName, userId));
+  },
+
+  // Track user authentication
+  userLogin: (userId: string, method: 'email' | 'google' = 'email') => {
+    safeAnalyticsCall(() => analytics.userLogin(userId, method));
+  },
+
+  userRegister: (userId: string, method: 'email' | 'google' = 'email') => {
+    safeAnalyticsCall(() => analytics.userRegister(userId, method));
+  },
+
+  userLogout: (userId: string) => {
+    safeAnalyticsCall(() => analytics.userLogout(userId));
+  },
+
+  // Track template interactions
+  templateView: (templateId: string, templateName: string, userId?: string) => {
+    safeAnalyticsCall(() => analytics.templateView(templateId, templateName, userId));
+  },
+
+  templateSelect: (templateId: string, templateName: string, userId?: string, sessionId?: string) => {
+    safeAnalyticsCall(() => analytics.templateSelect(templateId, templateName, userId, sessionId));
+  },
+
+  // Track photo booth actions
+  photoCapture: (sessionId: string, photoIndex: number, userId?: string, templateId?: string) => {
+    safeAnalyticsCall(() => analytics.photoCapture(sessionId, photoIndex, userId, templateId));
+  },
+
+  compositeGenerate: (sessionId: string, userId?: string, templateId?: string) => {
+    safeAnalyticsCall(() => analytics.compositeGenerate(sessionId, userId, templateId));
+  },
+
+  compositeDownload: (compositeId: string, userId?: string, templateId?: string) => {
+    safeAnalyticsCall(() => analytics.compositeDownload(compositeId, userId, templateId));
+  },
+
+  compositeDelete: (compositeId: string, userId?: string) => {
+    safeAnalyticsCall(() => analytics.compositeDelete(compositeId, userId));
+  },
+
+  // Track errors
+  error: (errorType: string, errorMessage: string, userId?: string) => {
+    safeAnalyticsCall(() => analytics.error(errorType, errorMessage, userId));
+  },
+};
+
 export default analytics;

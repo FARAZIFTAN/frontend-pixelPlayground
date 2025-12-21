@@ -3,7 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Eye, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
 import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
-import analytics from "@/lib/analytics";
+import { safeAnalytics } from "@/lib/analytics";
 import { authAPI } from "@/services/api";
 
 const Login: React.FC = () => {
@@ -19,7 +19,7 @@ const Login: React.FC = () => {
 
   // Track page view
   useEffect(() => {
-    analytics.pageView('Login', user?.id);
+    safeAnalytics.pageView('Login', user?.id);
   }, [user?.id]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -45,7 +45,7 @@ const Login: React.FC = () => {
       }
 
       // Track successful login
-      analytics.userLogin(userData.id, 'email');
+      safeAnalytics.userLogin(userData.id, 'email');
       
       console.log('[LOGIN PAGE] User role:', userData.role);
       console.log('[LOGIN PAGE] Navigating to appropriate page...');
@@ -89,7 +89,7 @@ const Login: React.FC = () => {
       const userData = response.user;
       
       // Track successful login
-      analytics.userLogin(userData.id, 'google');
+      safeAnalytics.userLogin(userData.id, 'google');
       
       // Redirect based on role
       if (userData.role === 'admin') {

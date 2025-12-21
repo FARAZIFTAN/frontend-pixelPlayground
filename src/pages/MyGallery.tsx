@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useAuth } from "@/contexts/AuthContext";
 import { compositeAPI, API_BASE_URL } from "@/services/api";
 import { toast } from "react-hot-toast";
-import analytics from "@/lib/analytics";
+import { safeAnalytics } from "@/lib/analytics";
 import { downloadFile } from "@/lib/fileUtils";
 import PremiumModal from "@/components/PremiumModal";
 
@@ -114,7 +114,7 @@ const MyGallery = () => {
 
   // Track page view
   useEffect(() => {
-    analytics.pageView('My Gallery', user?.id);
+    safeAnalytics.pageView('My Gallery', user?.id);
   }, [user?.id]);
 
   // Delete composite
@@ -138,7 +138,7 @@ const MyGallery = () => {
       toast.success('Photo deleted successfully!');
       
       // Track deletion in analytics
-      analytics.compositeDelete(deletingComposite._id, user?.id);
+      safeAnalytics.compositeDelete(deletingComposite._id, user?.id);
       
       setDeleteDialogOpen(false);
       setDeletingComposite(null);

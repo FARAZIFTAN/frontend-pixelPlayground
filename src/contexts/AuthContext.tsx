@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import analytics from '@/lib/analytics';
+import { safeAnalytics } from '@/lib/analytics';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
@@ -203,7 +203,7 @@ function AuthProvider({ children }: AuthProviderProps) {
   const logout = () => {
     // Track logout before clearing data
     if (user?.id) {
-      analytics.userLogout(user.id);
+      safeAnalytics.userLogout(user.id);
     }
     
     sessionStorage.removeItem('token');
