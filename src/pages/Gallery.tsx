@@ -48,6 +48,10 @@ const Gallery = () => {
   // Ref for infinite scroll trigger
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  // Virtual scrolling states
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 }); // Start with 30 items for better initial load
+  const containerRef = useRef<HTMLDivElement>(null);
+
   // Gallery tidak perlu proteksi - user bisa lihat semua template
   // Hanya frame premium yang di-lock untuk non-premium user
 
@@ -263,6 +267,60 @@ const Gallery = () => {
 
     return categoryFiltered;
   }, [templates, searchQuery, selectedCategories, fuse]);
+
+  // Paginated templates for current view (performance optimization)
+  const paginatedTemplates = useMemo(() => {
+    // For performance, limit rendering to visible range + small buffer
+    const buffer = 10; // Render 10 extra items above and below visible range
+    const start = Math.max(0, visibleRange.start - buffer);
+    const end = Math.min(filteredTemplates.length, visibleRange.end + buffer);
+    return filteredTemplates.slice(start, end);
+  }, [filteredTemplates, visibleRange]);
+
+  // Intersection Observer for virtual scrolling
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const index = parseInt(entry.target.getAttribute('data-template-index') || '0');
+            // Expand visible range when item comes into view
+            setVisibleRange(prev => ({
+              start: Math.min(prev.start, index - 10),
+              end: Math.max(prev.end, index + 40)
+            }));
+          }
+        });
+      },
+      { rootMargin: '100px' } // Trigger 100px before entering viewport
+    );
+
+    // Observe all rendered template cards
+    const cards = document.querySelectorAll('[data-template-index]');
+    cards.forEach(card => observer.observe(card));
+
+    return () => observer.disconnect();
+  }, [paginatedTemplates.length]);
+
+  // Reset visible range when filters change
+  useEffect(() => {
+    setVisibleRange({ start: 0, end: 30 });
+  }, [searchQuery, selectedCategories]);
+
+  // Expand visible range on scroll for better UX
+  useEffect(() => {
+    const handleScroll = () => {
+      if (filteredTemplates.length > visibleRange.end) {
+        setVisibleRange(prev => ({
+          start: prev.start,
+          end: Math.min(filteredTemplates.length, prev.end + 15) // Expand by 15 items on scroll
+        }));
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [filteredTemplates.length, visibleRange.end]);
 
   // Track page view
   useEffect(() => {
@@ -621,6 +679,11 @@ const Gallery = () => {
                   transition={{ duration: 0.3 }}
                 >
                   Showing {filteredTemplates.length} of {templates.length} templates
+                  {filteredTemplates.length > 50 && (
+                    <span className="text-xs text-muted-foreground block mt-1">
+                      (Virtual scrolling active for better performance)
+                    </span>
+                  )}
                 </motion.span>
               </motion.div>
             </CardContent>
@@ -725,15 +788,18 @@ const Gallery = () => {
             <span className="ml-3 text-white">Loading templates...</span>
           </div>
         ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredTemplates.map((template, index) => {
-            console.log(`🎨 Rendering template ${index + 1}:`, template.name, template._id);
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" ref={containerRef}>
+          {paginatedTemplates.map((template, localIndex) => {
+            // Calculate actual index in filteredTemplates for proper data-index
+            const actualIndex = filteredTemplates.findIndex(t => t._id === template._id);
+            console.log(`🎨 Rendering template ${actualIndex + 1}:`, template.name, template._id);
             return (
             <motion.div
               key={template._id}
+              data-template-index={actualIndex}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4, delay: (index % itemsPerPage) * 0.05 }}
+              transition={{ duration: 0.3, delay: Math.min(localIndex * 0.02, 0.5) }} // Max 0.5s delay, faster stagger
               onHoverStart={() => setHoveredTemplate(template._id)}
               onHoverEnd={() => setHoveredTemplate(null)}
             >
