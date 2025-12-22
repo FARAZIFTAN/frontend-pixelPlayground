@@ -488,12 +488,7 @@ const Navbar = () => {
               <>
                 <Link to="/login">
                   <Button variant="ghost" className="text-white hover:text-[#FF6B6B] hover:bg-white/5 font-medium">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-full px-6 shadow-soft hover:shadow-glow transition-all">
-                    Sign Up
+                    Sign in
                   </Button>
                 </Link>
               </>
@@ -620,12 +615,7 @@ const Navbar = () => {
                 <div className="pt-2 space-y-2">
                   <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
-                      Login
-                    </Button>
-                  </Link>
-                  <Link to="/register" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-full shadow-soft">
-                      Sign Up
+                      Sign in
                     </Button>
                   </Link>
                 </div>
