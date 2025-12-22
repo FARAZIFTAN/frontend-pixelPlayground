@@ -1470,27 +1470,43 @@ const Booth = () => {
                 return;
               }
               
+              // Auto-detect if positions are in percentage (0-100) or pixels
+              // Old AI frames use percentage, new ones use pixels
+              const isPercentage = position.width <= 100 && position.height <= 100;
+              
+              let actualPosition = position;
+              if (isPercentage) {
+                // Convert percentage to pixels
+                actualPosition = {
+                  x: (position.x / 100) * canvas.width,
+                  y: (position.y / 100) * canvas.height,
+                  width: (position.width / 100) * canvas.width,
+                  height: (position.height / 100) * canvas.height,
+                };
+                console.log(`🔄 Converted position ${i + 1} from percentage to pixels:`, actualPosition);
+              }
+              
               const photo = photoImages[i];
-              console.log(`📍 Drawing photo ${i + 1} at position:`, position);
+              console.log(`📍 Drawing photo ${i + 1} at position:`, actualPosition);
 
               // Calculate aspect ratio to fit photo in the frame (cover fit)
               const photoAspect = photo.width / photo.height;
-              const frameAspect = position.width / position.height;
+              const frameAspect = actualPosition.width / actualPosition.height;
 
               let drawWidth, drawHeight, offsetX, offsetY;
 
               if (photoAspect > frameAspect) {
                 // Photo is wider - fit by height
-                drawHeight = position.height;
+                drawHeight = actualPosition.height;
                 drawWidth = drawHeight * photoAspect;
-                offsetX = (drawWidth - position.width) / 2;
+                offsetX = (drawWidth - actualPosition.width) / 2;
                 offsetY = 0;
               } else {
                 // Photo is taller - fit by width
-                drawWidth = position.width;
+                drawWidth = actualPosition.width;
                 drawHeight = drawWidth / photoAspect;
                 offsetX = 0;
-                offsetY = (drawHeight - position.height) / 2;
+                offsetY = (drawHeight - actualPosition.height) / 2;
               }
 
               console.log(`📸 Photo ${i + 1} aspect: ${photoAspect.toFixed(2)}, frame aspect: ${frameAspect.toFixed(2)}, draw: ${drawWidth.toFixed(0)}x${drawHeight.toFixed(0)}, offset: (${offsetX.toFixed(0)}, ${offsetY.toFixed(0)})`);
@@ -1500,14 +1516,14 @@ const Booth = () => {
 
               // Create clipping region for the photo area
               ctx.beginPath();
-              ctx.rect(position.x, position.y, position.width, position.height);
+              ctx.rect(actualPosition.x, actualPosition.y, actualPosition.width, actualPosition.height);
               ctx.clip();
 
               // Draw the photo (centered and covering the area)
               ctx.drawImage(
                 photo,
-                position.x - offsetX,
-                position.y - offsetY,
+                actualPosition.x - offsetX,
+                actualPosition.y - offsetY,
                 drawWidth,
                 drawHeight
               );
@@ -1515,7 +1531,7 @@ const Booth = () => {
               // Restore context state
               ctx.restore();
 
-              console.log(`✅ Photo ${i + 1} drawn at x:${position.x}, y:${position.y}, w:${position.width}, h:${position.height}`);
+              console.log(`✅ Photo ${i + 1} drawn at x:${actualPosition.x.toFixed(0)}, y:${actualPosition.y.toFixed(0)}, w:${actualPosition.width.toFixed(0)}, h:${actualPosition.height.toFixed(0)}`);
             });
 
             // STEP 3: Draw template overlay ON TOP of photos

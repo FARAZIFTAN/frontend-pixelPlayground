@@ -1,13 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Loader2, AlertCircle, Sparkles, ImagePlus, Download, Layout, MessageSquare, Zap, Send, Bot, User } from 'lucide-react';
+import { Loader2, AlertCircle, Sparkles, ImagePlus, Download, Layout, MessageSquare, Zap, Send, Bot, User, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { aiAPI, userFrameAPI } from '@/services/api';
-import { frameSubmissionAPI } from '@/services/frameSubmissionAPI';
+import { aiAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import PremiumModal from '@/components/PremiumModal';
 import { toast } from 'react-hot-toast';
@@ -307,68 +306,36 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
 
     setIsSaving(true);
     try {
-      // Load generated frame to get actual dimensions
-      const frameImg = document.createElement('img');
-      frameImg.crossOrigin = "anonymous";
-      
-      const actualDimensions = await new Promise<{ width: number; height: number }>((resolve, reject) => {
-        frameImg.onload = () => {
-          console.log(`📐 Frame image loaded - naturalWidth: ${frameImg.naturalWidth}, naturalHeight: ${frameImg.naturalHeight}, width: ${frameImg.width}, height: ${frameImg.height}`);
-          const w = frameImg.naturalWidth || frameImg.width;
-          const h = frameImg.naturalHeight || frameImg.height;
-          console.log(`📐 Using dimensions: ${w}x${h}`);
-          resolve({ width: w, height: h });
-        };
-        frameImg.onerror = (err) => {
-          console.error('Failed to load frame image:', err);
-          reject(new Error('Failed to load frame'));
-        };
-        frameImg.src = generatedImage;
-        console.log(`🖼️ Starting to load frame from: ${generatedImage?.substring(0, 50)}...`);
-      });
-
-      console.log(`✅ Frame dimensions resolved: ${actualDimensions.width}x${actualDimensions.height}`);
-
-      // Generate layout positions based on ACTUAL frame dimensions
-      const layoutPositions = generateLayoutPositionsWithActualSize(
-        frameSpec.frameCount,
-        frameSpec.layout,
-        actualDimensions.width,
-        actualDimensions.height
-      );
-
-      // Prepare frame data for submission to admin
-      const frameSubmissionData = {
+      // Prepare frame data to save to user's private collection (My Custom Frames)
+      const frameSaveData = {
         name: frameName.trim(),
-        description: description.trim() || `Custom ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
-        frameUrl: generatedImage, // base64 SVG data
-        thumbnail: generatedImage, // same as frameUrl for now
-        frameCount: frameSpec.frameCount,
-        layout: frameSpec.layout,
         frameSpec: frameSpec,
-        layoutPositions: layoutPositions,
+        frameDataUrl: generatedImage, // base64 SVG data
+        visibility: 'private' as const, // Save as private - only visible to creator
+        description: description.trim() || `AI-generated ${frameSpec.layout} frame with ${frameSpec.frameCount} photos`,
+        tags: ['AI Generated', frameSpec.layout, `${frameSpec.frameCount} Photos`],
       };
 
-      console.log('📤 Submitting frame to admin for approval:', frameSubmissionData);
+      console.log('💾 Saving AI frame to My Custom Frames (private):', frameSaveData);
 
-      // Submit to admin for approval
-      const result = await frameSubmissionAPI.submit(frameSubmissionData);
+      // Save frame to user's private collection (only visible to creator)
+      const result = await aiAPI.saveFrame(frameSaveData);
 
-      console.log('✅ Frame submitted to admin:', result);
+      console.log('✅ Frame saved successfully:', result);
 
       if (result.success) {
         toast({
-          title: '✅ Frame Berhasil Disubmit!',
-          description: `Frame "${frameName}" telah dikirim ke admin untuk disetujui. Anda akan mendapat notifikasi setelah frame disetujui.`,
+          title: '✅ Frame Berhasil Disimpan!',
+          description: `Frame "${frameName}" telah tersimpan dengan badge "Your Frame"!`,
         });
 
-        // Reset form after successful submission
+        // Reset form after successful save
         setFrameName('');
         setDescription('');
         setGeneratedImage(null);
         setFrameSpec(null);
       } else {
-        throw new Error(result.error || 'Failed to submit frame');
+        throw new Error(result.error || 'Failed to save frame');
       }
 
     } catch (error) {
@@ -752,10 +719,10 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                       {/* Privacy Info */}
                       <div className="bg-gradient-to-r from-[#1A1A1A] to-[#C62828]/10 border border-[#C62828]/30 rounded-lg p-3">
                         <div className="flex items-start gap-2">
-                          <span className="text-lg">�</span>
+                          <span className="text-lg">❤️</span>
                           <div>
-                            <p className="text-gray-300 text-sm font-medium">Submit untuk Approval</p>
-                            <p className="text-gray-500 text-xs">Frame akan dikirim ke admin untuk disetujui. Setelah disetujui, frame akan tersedia di gallery.</p>
+                            <p className="text-gray-300 text-sm font-medium">Your Frame</p>
+                            <p className="text-gray-500 text-xs">Frame akan tersimpan dan ditandai dengan badge "Your Frame". Hanya Anda yang bisa melihat frame ini.</p>
                           </div>
                         </div>
                       </div>
@@ -764,7 +731,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                     {/* Save Frame Button */}
                     <Button
                       onClick={() => {
-                        console.log('Submit button clicked!', { 
+                        console.log('Save button clicked!', { 
                           frameName, 
                           hasImage: !!generatedImage,
                           isSaving 
@@ -777,11 +744,11 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                       {isSaving ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Submitting...
+                          Menyimpan...
                         </>
                       ) : (
                         <>
-                          📤 Submit Frame to Admin
+                          💾 Save Frame
                         </>
                       )}
                     </Button>
@@ -790,9 +757,9 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                     {generatedImage && (
                       <div className="text-xs text-center">
                         {!frameName.trim() ? (
-                          <p className="text-yellow-400">⚠️ Isi nama frame untuk submit</p>
+                          <p className="text-yellow-400">⚠️ Isi nama frame untuk menyimpan</p>
                         ) : (
-                          <p className="text-green-400">✅ Siap disubmit ke admin</p>
+                          <p className="text-green-400">✅ Siap disimpan</p>
                         )}
                       </div>
                     )}

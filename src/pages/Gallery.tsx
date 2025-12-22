@@ -24,6 +24,8 @@ interface Template {
   isPremium: boolean;
   frameCount: number;
   layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+  isAIGenerated?: boolean;
+  createdBy?: string;
 }
 
 const Gallery = () => {
@@ -818,6 +820,14 @@ const Gallery = () => {
                         <Badge className="absolute top-3 left-3 bg-amber-500 text-white border-0 shadow-lg">
                           <Award className="w-3 h-3 mr-1" />
                           PRO
+                        </Badge>
+                      )}
+                      
+                      {/* AI Generated Badge - Only show for user's own AI frames */}
+                      {template.isAIGenerated && template.createdBy === user?.id && (
+                        <Badge className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 shadow-lg">
+                          <Heart className="w-3 h-3 mr-1 fill-current" />
+                          Your Frame
                         </Badge>
                       )}
 

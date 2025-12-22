@@ -543,7 +543,8 @@ import type {
   ChatAIResponse,
   GenerateImageRequest,
   GenerateImageResponse,
-  FrameLayout
+  FrameLayout,
+  AIFrameSpecification
 } from '@/types/ai-frame.types';
 
 export const aiAPI = {
