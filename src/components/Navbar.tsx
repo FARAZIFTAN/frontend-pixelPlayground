@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload, Crown } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload, Crown, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -140,7 +140,9 @@ const Navbar = () => {
           }
         }
       } else if (showUserMenu) {
-        const userItems = ['my-account', 'logout'];
+        const userItems = user?.isPremium 
+          ? ['my-gallery', 'my-ai-frames', 'my-account', 'my-submissions', 'logout']
+          : ['my-gallery', 'my-ai-frames', 'my-account', 'logout'];
         
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -151,10 +153,22 @@ const Navbar = () => {
         } else if (e.key === 'Enter') {
           e.preventDefault();
           const item = userItems[userFocusIndex];
-          if (item === 'my-account') {
+          if (item === 'my-gallery') {
+            setShowUserMenu(false);
+            setUserFocusIndex(-1);
+            navigate('/my-gallery');
+          } else if (item === 'my-ai-frames') {
+            setShowUserMenu(false);
+            setUserFocusIndex(-1);
+            navigate('/my-ai-frames');
+          } else if (item === 'my-account') {
             setShowUserMenu(false);
             setUserFocusIndex(-1);
             navigate('/my-account');
+          } else if (item === 'my-submissions') {
+            setShowUserMenu(false);
+            setUserFocusIndex(-1);
+            navigate('/user/my-submissions');
           } else if (item === 'logout') {
             setShowUserMenu(false);
             setUserFocusIndex(-1);
@@ -203,11 +217,11 @@ const Navbar = () => {
       }`}
     >
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-20">
+        <div className="flex items-center justify-between h-14 lg:h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group" aria-label="KaryaKlik homepage">
-            <Camera className="w-6 h-6 lg:w-8 lg:h-8 text-[#C62828] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.6)]" aria-hidden="true" />
-            <span className="text-xl lg:text-2xl font-heading font-bold text-white transition-all duration-300 group-hover:text-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
+            <Camera className="w-5 h-5 lg:w-7 lg:h-7 text-[#C62828] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.6)]" aria-hidden="true" />
+            <span className="text-lg lg:text-xl font-heading font-bold text-white transition-all duration-300 group-hover:text-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
               KaryaKlik
             </span>
           </Link>
@@ -217,30 +231,31 @@ const Navbar = () => {
             {/* Home Link */}
             <Link
               to="/"
-              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
+              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
                 isActive("/")
                   ? "bg-[#C62828] text-white shadow-lg"
                   : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
               }`}
+              title="Back to homepage"
             >
               Home
             </Link>
 
             {/* Separator */}
-            <div className="text-white/20 text-lg" aria-hidden="true">•</div>
+            <div className="text-white/20 text-lg mx-0.5" aria-hidden="true">•</div>
 
-            {/* Explore - Direct link to Gallery */}
+            {/* Discover Frames - Direct link to Gallery */}
             <Link
               to="/gallery"
-              className={`group flex items-center gap-1.5 px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
+              className={`text-sm group flex items-center gap-1.5 px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
                 isActive("/gallery")
                   ? "bg-[#C62828] text-white shadow-lg"
                   : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
               }`}
-              title="Browse creative frames from our community"
+              title="Browse ready-to-use AI photo frames from our creative community"
             >
-              <ImageIcon className="w-4 h-4 transition-all duration-200 group-hover:drop-shadow-[0_0_6px_rgba(198,40,40,0.5)]" aria-hidden="true" />
-              <span className="transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.3)]">Explore</span>
+              <ImageIcon className="w-3.5 h-3.5 transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.6)]" aria-hidden="true" />
+              <span className="transition-all duration-200 group-hover:drop-shadow-[0_0_10px_rgba(198,40,40,0.4)]">Discover Frames</span>
             </Link>
 
             {/* Old Explore Dropdown - REMOVED */}
@@ -355,18 +370,19 @@ const Navbar = () => {
             )}
 
             {/* Separator */}
-            <div className="text-white/20 text-lg" aria-hidden="true">•</div>
+            <div className="text-white/20 text-lg mx-0.5" aria-hidden="true">•</div>
 
-            {/* Contact Link */}
+            {/* Contact / Support Link */}
             <Link
               to="/contact"
-              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
+              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
                 isActive("/contact")
                   ? "bg-[#C62828] text-white shadow-lg"
                   : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
               }`}
+              title="Need help? Contact our support team"
             >
-              Contact
+              Contact / Support
             </Link>
           </div>
 
@@ -374,11 +390,14 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated && user ? (
               <>
-                {/* PRIMARY CTA - Create Frame */}
+                {/* PRIMARY CTA - Create AI Photo Frame */}
                 <Link to="/ai-template-creator" className="mr-2.5">
-                  <Button className="bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]">
-                    <Sparkles className="w-4 h-4" />
-                    Create Frame
+                  <Button 
+                    className="text-sm lg:text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2 rounded-full shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
+                    title="Generate beautiful frames in seconds with AI"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Create AI Photo Frame
                   </Button>
                 </Link>
 
@@ -396,11 +415,12 @@ const Navbar = () => {
                         setUserFocusIndex(-1);
                       }
                     }}
-                    className="flex items-center space-x-3 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
+                    className="flex items-center space-x-3 px-3.5 py-2 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
                     aria-expanded={showUserMenu}
                     aria-haspopup="menu"
                     aria-label="User menu"
                     aria-activedescendant={showUserMenu && userFocusIndex >= 0 ? `user-item-${userFocusIndex}` : undefined}
+                    title={user.isPremium ? "Pro Creator Account · Unlimited creation · Premium access" : "My Account"}
                   >
                     {user.profilePicture ? (
                       <div className="relative">
@@ -410,7 +430,7 @@ const Navbar = () => {
                             : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
                           }
                           alt={user.name}
-                          className="w-9 h-9 rounded-full object-cover border-2 border-white/20"
+                          className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
                           loading="lazy"
                           onLoad={() => setIsProfileLoading(false)}
                           onError={(e) => {
@@ -424,19 +444,22 @@ const Navbar = () => {
                         )}
                       </div>
                     ) : (
-                      <User className="w-5 h-5 text-white" />
+                      <User className="w-4 h-4 text-white" />
                     )}
                     <div className="flex flex-col items-start">
                       <span className="text-white font-medium text-sm leading-tight">
                         {user.name.length > 15 ? `${user.name.substring(0, 15)}...` : user.name}
                       </span>
                       {user.isPremium && (
-                        <span className="px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold rounded-full mt-0.5">
-                          PRO
+                        <span 
+                          className="px-1.5 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[11px] font-bold rounded-full mt-0.5"
+                          title="Unlimited creation · Premium access"
+                        >
+                          PRO CREATOR
                         </span>
                       )}
                     </div>
-                    <ChevronDown className={`w-4 h-4 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={`w-3.5 h-3.5 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                   </button>
                   
                   <AnimatePresence>
@@ -445,75 +468,95 @@ const Navbar = () => {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute right-4 md:right-0 mt-2 w-72 md:w-48 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-[9999]"
+                        transition={{ duration: 0.18, ease: "easeOut" }}
+                        className="absolute right-4 md:right-0 mt-2 w-72 md:w-48 bg-[#0F0F0F]/98 backdrop-blur-md border border-[#C62828]/30 rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.4)] overflow-hidden z-[9999]"
                         role="menu"
                         aria-labelledby="user-button"
                       >
-                      <div className="px-4 py-3 border-b border-white/10">
-                        <p className="text-sm text-gray-400">Signed in as</p>
-                        <p className="text-white font-medium truncate">{user.email}</p>
+                      <div className="px-3.5 py-2.5 border-b border-white/10">
+                        <p className="text-[11px] text-gray-400 mb-1">Signed in as</p>
+                        <p className="text-white font-medium truncate text-[13px]">{user.email}</p>
                         {user.isPremium && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full">
-                            <Crown className="w-3 h-3" />
-                            Pro Member
+                          <span 
+                            className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold rounded-full"
+                            title="Unlimited creation · Premium access"
+                          >
+                            <Crown className="w-2.5 h-2.5" />
+                            PRO CREATOR
                           </span>
                         )}
                       </div>
-                      <div className="py-2">
+                      <div className="py-1.5">
                         <Link
                           to="/my-gallery"
                           onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 ${
+                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
                             userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                           role="menuitem"
                           id="user-item-0"
+                          title="View and manage your created frames"
                         >
-                          <ImageIcon className="w-4 h-4" />
-                          <span>My Gallery</span>
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>My Creations</span>
                         </Link>
                         <Link
-                          to="/my-account"
+                          to="/my-ai-frames"
                           onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 ${
+                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
                             userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                           role="menuitem"
                           id="user-item-1"
+                          title="View your AI-generated frames workspace"
                         >
-                          <User className="w-4 h-4" />
-                          <span>My Account</span>
+                          <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                          <span>My AI Frames</span>
+                        </Link>
+                        <Link
+                          to="/my-account"
+                          onClick={() => setShowUserMenu(false)}
+                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
+                            userFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                          }`}
+                          role="menuitem"
+                          id="user-item-2"
+                          title="Manage your profile and preferences"
+                        >
+                          <User className="w-3.5 h-3.5" />
+                          <span>Account Settings</span>
                         </Link>
                         {user.isPremium && (
                           <Link
                             to="/user/my-submissions"
                             onClick={() => setShowUserMenu(false)}
-                            className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-between ${
-                              userFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center justify-between ${
+                              userFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                             }`}
                             role="menuitem"
-                            id="user-item-2"
+                            id="user-item-3"
+                            title="Submit your frames to the community gallery (Pro only)"
                           >
-                            <div className="flex items-center space-x-2">
-                              <Upload className="w-4 h-4" />
-                              <span>My Submissions</span>
+                            <div className="flex items-center space-x-2.5">
+                              <Upload className="w-3.5 h-3.5" />
+                              <span>Submit Frames</span>
                             </div>
-                            <Crown className="w-3 h-3 text-amber-400" />
+                            <Crown className="w-3.5 h-3.5 text-amber-400" />
                           </Link>
                         )}
                       </div>
                       {!user.isPremium && (
-                        <div className="px-2 py-2 border-t border-white/10">
+                        <div className="px-1.5 py-1.5 border-t border-white/10">
                           <Link
                             to="/upgrade-pro"
                             onClick={() => setShowUserMenu(false)}
-                            className="w-full px-4 py-3 text-left bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 rounded-lg transition-colors flex items-center gap-2"
+                            className="w-full px-3.5 py-2.5 text-left bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:shadow-lg hover:border-amber-500/50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                            title="Upgrade to Pro Creator for unlimited features"
                           >
                             <Crown className="w-4 h-4 text-amber-400" />
                             <div className="flex-1">
-                              <div className="font-semibold text-amber-400 text-sm">Upgrade to Pro</div>
-                              <div className="text-xs text-gray-400">Unlock unlimited AI frames</div>
+                              <div className="font-semibold text-amber-400 text-sm leading-relaxed">Unlock Pro Features</div>
+                              <div className="text-[11px] text-gray-400 leading-relaxed">Unlimited frames · Premium access</div>
                             </div>
                           </Link>
                         </div>
@@ -521,14 +564,15 @@ const Navbar = () => {
                       <div className="border-t border-white/10">
                         <button
                           onClick={handleLogout}
-                          className={`w-full px-4 py-3 text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-colors flex items-center space-x-2 ${
-                            userFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-all duration-200 flex items-center space-x-2.5 ${
+                            userFocusIndex === 4 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                           role="menuitem"
-                          id="user-item-3"
+                          id="user-item-4"
+                          title="Sign out from your account"
                         >
-                          <LogOut className="w-4 h-4" />
-                          <span>Logout</span>
+                          <LogOut className="w-3.5 h-3.5" />
+                          <span>Sign Out</span>
                         </button>
                       </div>
                     </motion.div>
@@ -539,13 +583,16 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/login" state={{ returnUrl: '/ai-template-creator' }} className="mr-2.5">
-                  <Button className="bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]" title="Sign in to start creating">
-                    <Sparkles className="w-4 h-4" />
-                    Create Frame
+                  <Button 
+                    className="text-sm lg:text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2 rounded-full shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]" 
+                    title="Sign in to create beautiful photo frames in seconds"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Create AI Photo Frame
                   </Button>
                 </Link>
                 <Link to="/login">
-                  <Button variant="ghost" className="text-white hover:text-[#FF6B6B] hover:bg-white/5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]">
+                  <Button variant="ghost" className="text-sm text-white hover:text-[#FF6B6B] hover:bg-white/5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]">
                     Sign in
                   </Button>
                 </Link>
@@ -570,15 +617,16 @@ const Navbar = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="md:hidden py-4 bg-[#0F0F0F]/95 backdrop-blur-md rounded-2xl mt-2 mb-4 border border-[#C62828]/20"
+            transition={{ duration: 0.18, ease: "easeOut" }}
+            className="md:hidden py-3 bg-[#0F0F0F]/98 backdrop-blur-md rounded-2xl mt-2 mb-4 border border-[#C62828]/20 shadow-[0_8px_30px_rgba(0,0,0,0.4)]"
           >
-            <div className="flex flex-col space-y-2 px-4">
+            <div className="flex flex-col space-y-1.5 px-4">
               {navLinks.map((link) => (
                 <Link
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`px-4 py-3 rounded-lg font-medium transition-all ${
+                  className={`px-3.5 py-2.5 rounded-lg font-medium text-sm transition-all ${
                     isActive(link.path)
                       ? "bg-[#C62828] text-white"
                       : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
@@ -590,8 +638,8 @@ const Navbar = () => {
               
               {isAuthenticated && user ? (
                 <>
-                  <div className="pt-3 pb-3 px-4 border-t border-white/10">
-                    <div className="flex items-center space-x-3 mb-2">
+                  <div className="pt-2 pb-2 px-3 border-t border-white/10">
+                    <div className="flex items-center space-x-2.5 mb-1.5">
                       {user.profilePicture ? (
                         <div className="relative">
                           <img 
@@ -600,7 +648,7 @@ const Navbar = () => {
                               : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
                             } 
                             alt={user.name}
-                            className="w-10 h-10 rounded-full object-cover border-2 border-white/20"
+                            className="w-9 h-9 rounded-full object-cover border-2 border-white/20"
                             loading="lazy"
                             onLoad={() => setIsProfileLoading(false)}
                             onError={(e) => {
@@ -614,101 +662,117 @@ const Navbar = () => {
                           )}
                         </div>
                       ) : (
-                        <User className="w-10 h-10 text-white/70" />
+                        <User className="w-9 h-9 text-white/70" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium text-sm truncate">
+                        <p className="text-white font-medium text-[13px] truncate">
                           {user.name.length > 20 ? `${user.name.substring(0, 20)}...` : user.name}
                         </p>
-                        <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                        <p className="text-[11px] text-gray-400 truncate">{user.email}</p>
                         {user.isPremium && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs font-bold rounded-full">
-                            PRO
+                          <span className="inline-flex items-center gap-0.5 mt-1 px-1.5 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[10px] font-bold rounded-full">
+                            PRO CREATOR
                           </span>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* Quick Actions - Prioritized */}
-                  <div className="px-4 space-y-2">
+                  {/* Quick Actions - Prioritized dengan wording baru */}
+                  <div className="px-3 space-y-2">
                     <Link to="/ai-template-creator" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-lg flex items-center justify-center space-x-2 shadow-lg">
-                        <Sparkles className="w-5 h-5" />
-                        <span>CREATE FRAME</span>
+                      <div className="relative">
+                        <Button className="w-full min-h-[48px] text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-xl flex flex-col items-center justify-center py-2 shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.5)] active:scale-[0.98] transition-all duration-200">
+                          <div className="flex items-center space-x-1.5">
+                            <Sparkles className="w-4 h-4" />
+                            <span>CREATE AI PHOTO FRAME</span>
+                          </div>
+                          <span className="text-[9px] text-white/70 mt-0.5 font-normal">Generate in seconds</span>
+                        </Button>
+                      </div>
+                    </Link>
+                    <Link to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all duration-200">
+                        <ImageIcon className="w-3.5 h-3.5 text-[#C62828]" />
+                        <span>Discover Frames</span>
+                      </Button>
+                    </Link>
+                    <Link to="/my-ai-frames" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all duration-200">
+                        <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                        <span>My AI Frames</span>
                       </Button>
                     </Link>
                     <Link to="/my-gallery" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
-                        <ImageIcon className="w-5 h-5" />
-                        <span>My Gallery</span>
-                      </Button>
-                    </Link>
-                    <Link to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
-                        <ImageIcon className="w-5 h-5 text-[#C62828]" />
-                        <span>Explore</span>
+                      <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all duration-200">
+                        <ImageIcon className="w-3.5 h-3.5" />
+                        <span>My Creations</span>
                       </Button>
                     </Link>
                   </div>
 
-                  {/* Account Section */}
-                  <div className="px-4 pt-3 border-t border-white/10 space-y-2">
+                  {/* Account Section dengan wording baru */}
+                  <div className="px-3 pt-2 border-t border-white/10 space-y-2">
                     <Link to="/my-account" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
-                        <User className="w-5 h-5" />
-                        <span>My Account</span>
+                      <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all duration-200">
+                        <User className="w-3.5 h-3.5" />
+                        <span>Account Settings</span>
                       </Button>
                     </Link>
                     {user.isPremium && (
                       <Link to="/user/my-submissions" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-between px-4">
+                        <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-between px-3.5 transition-all duration-200">
                           <div className="flex items-center space-x-2">
-                            <Upload className="w-5 h-5" />
-                            <span>My Submissions</span>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Submit Frames</span>
                           </div>
-                          <Crown className="w-4 h-4 text-amber-400" />
+                          <Crown className="w-3.5 h-3.5 text-amber-400" />
                         </Button>
                       </Link>
                     )}
                     {!user.isPremium && (
                       <Link to="/upgrade-pro" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button className="w-full min-h-[48px] bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-white font-medium rounded-lg flex items-center gap-2 px-4">
-                          <Crown className="w-5 h-5 text-amber-400" />
+                        <Button className="w-full min-h-[48px] bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:shadow-lg hover:border-amber-500/50 active:scale-[0.98] text-white font-medium rounded-xl flex items-center gap-2 px-3.5 transition-all duration-200">
+                          <Crown className="w-4 h-4 text-amber-400" />
                           <div className="flex-1 text-left">
-                            <div className="font-semibold text-amber-400">Upgrade to Pro</div>
-                            <div className="text-xs text-gray-400">Unlock premium features</div>
+                            <div className="font-semibold text-amber-400 text-[13px] leading-tight">Unlock Pro Features</div>
+                            <div className="text-[10px] text-gray-400 leading-tight mt-0.5">Unlimited frames · Premium access</div>
                           </div>
                         </Button>
                       </Link>
                     )}
                     <button
                       onClick={handleLogout}
-                      className="w-full min-h-[48px] px-4 py-3 rounded-lg text-white hover:bg-[#C62828] transition-all flex items-center justify-center space-x-2"
+                      className="w-full min-h-[44px] text-sm px-3.5 py-2.5 rounded-xl text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-all duration-200 flex items-center justify-center space-x-2"
                     >
-                      <LogOut className="w-5 h-5" />
-                      <span>Logout</span>
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 </>
               ) : (
-                <div className="pt-2 px-4 space-y-2">
+                <div className="pt-1.5 px-3 space-y-2">
                   <Link to="/login" state={{ returnUrl: '/ai-template-creator' }} onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full min-h-[48px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-lg flex items-center justify-center space-x-2 shadow-lg">
-                      <Sparkles className="w-5 h-5" />
-                      <span>CREATE FRAME</span>
-                    </Button>
+                    <div className="relative">
+                      <Button className="w-full min-h-[48px] text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-xl flex flex-col items-center justify-center py-2 shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.5)] active:scale-[0.98] transition-all duration-200">
+                        <div className="flex items-center space-x-1.5">
+                          <Sparkles className="w-4 h-4" />
+                          <span>CREATE AI PHOTO FRAME</span>
+                        </div>
+                        <span className="text-[9px] text-white/70 mt-0.5 font-normal">Generate in seconds</span>
+                      </Button>
+                    </div>
                   </Link>
-                  <p className="text-xs text-center text-gray-400 py-1">Sign in to start creating</p>
+                  <p className="text-[10px] text-center text-gray-400 py-0.5">Sign in to create beautiful frames instantly</p>
                   <Link to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
-                      <ImageIcon className="w-5 h-5 text-[#C62828]" />
-                      <span>Explore</span>
+                    <Button className="w-full min-h-[44px] text-sm bg-white/5 hover:bg-white/10 active:bg-white/15 text-white font-medium rounded-xl flex items-center justify-center space-x-2 transition-all duration-200">
+                      <ImageIcon className="w-3.5 h-3.5 text-[#C62828]" />
+                      <span>Discover Frames</span>
                     </Button>
                   </Link>
                   <div className="pt-2 border-t border-white/10">
                     <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
+                      <Button variant="outline" className="w-full min-h-[44px] text-sm border-white/20 text-white hover:bg-white/10 active:bg-white/15 rounded-xl transition-all duration-200">
                         Sign in
                       </Button>
                     </Link>

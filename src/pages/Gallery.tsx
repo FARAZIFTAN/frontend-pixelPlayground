@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart } from "lucide-react";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -26,6 +26,8 @@ interface Template {
   layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
   isAIGenerated?: boolean;
   createdBy?: string;
+  creatorName?: string;
+  visibility?: string;
 }
 
 const Gallery = () => {
@@ -123,15 +125,20 @@ const Gallery = () => {
       if (response.success && response.data) {
         console.log('✅ Templates loaded:', response.data.templates.length, 'items');
         
+        // Filter out AI-generated frames (they should only appear in My AI Frames)
+        const publicTemplates = response.data.templates.filter(
+          template => !template.isAIGenerated
+        );
+        
         if (append) {
-          setTemplates(prev => [...prev, ...response.data!.templates]);
+          setTemplates(prev => [...prev, ...publicTemplates]);
         } else {
-          setTemplates(response.data.templates);
+          setTemplates(publicTemplates);
         }
         
         // Check if there are more pages
         const totalTemplates = response.data.total || 0;
-        const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
+        const loadedCount = append ? templates.length + publicTemplates.length : publicTemplates.length;
         setHasMore(loadedCount < totalTemplates);
       } else {
         setHasMore(false);
@@ -741,7 +748,7 @@ const Gallery = () => {
                           <img
                             src={frame.thumbnail}
                             alt={frame.name}
-                            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                             loading="lazy"
                             onError={() => handleImageError(frame.thumbnail)}
                           />
@@ -844,7 +851,7 @@ const Gallery = () => {
                         <img
                           src={template.thumbnail}
                           alt={template.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
                           loading="lazy"
                           onError={() => handleImageError(template.thumbnail)}
                         />
@@ -917,7 +924,7 @@ const Gallery = () => {
                     <h3 className="font-heading font-semibold text-base mb-1 text-white line-clamp-1">
                       {template.name}
                     </h3>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <p className="text-sm text-muted-foreground">{template.category}</p>
                       {!template.isPremium && (
                         <Badge variant="outline" className="text-xs border-green-500/50 text-green-500">
@@ -925,6 +932,15 @@ const Gallery = () => {
                         </Badge>
                       )}
                     </div>
+                    {/* Creator Info - Show for user-submitted frames */}
+                    {template.createdBy && template.visibility === 'public' && template.createdBy !== user?.id && (
+                      <div className="flex items-center gap-1.5 mt-2">
+                        <User className="w-3.5 h-3.5 text-purple-400" />
+                        <p className="text-xs text-purple-300">
+                          By {template.creatorName || 'Community Creator'}
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <Button 
                     onClick={(e) => {
@@ -1030,7 +1046,7 @@ const Gallery = () => {
                     <img
                       src={selectedTemplateForPreview?.thumbnail || selectedTemplateForPreview?.frameUrl}
                       alt={selectedTemplateForPreview?.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       onError={() => selectedTemplateForPreview && handleImageError(selectedTemplateForPreview.thumbnail)}
                     />
                   )}

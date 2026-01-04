@@ -20,6 +20,7 @@ const UpgradePro = () => {
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
   const [userPayments, setUserPayments] = useState<any[]>([]);
+  const [hasRefreshed, setHasRefreshed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load user's payments on mount
@@ -28,14 +29,6 @@ const UpgradePro = () => {
       loadUserPayments();
     }
   }, [user]);
-
-  // Auto-refresh user data when payment is approved
-  useEffect(() => {
-    if (currentPayment?.status === 'approved' && !user?.isPremium) {
-      console.log('[UpgradePro] Payment approved but user not premium, refreshing auth...');
-      checkAuth(true);
-    }
-  }, [currentPayment?.status, user?.isPremium, checkAuth]);
 
   const loadUserPayments = async () => {
     try {
@@ -51,12 +44,13 @@ const UpgradePro = () => {
         setSelectedPackage(pending.packageType);
       }
       
-      // If we have an approved payment and user is not premium yet, refresh auth
+      // If we have an approved payment and user is not premium yet, refresh auth ONCE
       const approved = data.payments.find((p: any) => p.status === 'approved');
-      if (approved && !user?.isPremium) {
-        console.log('[UpgradePro] Found approved payment, refreshing user auth...');
+      if (approved && !user?.isPremium && !hasRefreshed) {
+        console.log('[UpgradePro] Found approved payment, refreshing user auth once...');
+        setHasRefreshed(true);
         await checkAuth(false);
-        window.location.reload(); // Force page reload to ensure UI updates
+        // Don't force reload, let React state update naturally
       }
     } catch (error) {
       console.error('Failed to load payments:', error);
@@ -220,8 +214,8 @@ const UpgradePro = () => {
         description: "Bukti pembayaran berhasil diupload. Menunggu verifikasi admin.",
       });
 
-      // Reload payments
-      await loadUserPayments();
+      // Don't reload payments to avoid showing loading screen
+      // Payment status will be updated by admin, user can refresh manually
       
       // Reset file selection
       setSelectedFile(null);
@@ -622,10 +616,10 @@ const UpgradePro = () => {
                           <h5 className="text-sm font-semibold text-gray-300 mb-3 text-center">Bukti Pembayaran Anda:</h5>
                           <div className="bg-black/30 rounded-lg p-4">
                             <img 
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl}`}
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl.replace('/api', '')}`}
                               alt="Payment proof"
                               className="max-h-64 w-full object-contain mx-auto rounded-lg border border-white/20 cursor-pointer hover:border-white/40 transition-colors"
-                              onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl}`, '_blank')}
+                              onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl.replace('/api', '')}`, '_blank')}
                             />
                             <p className="text-xs text-gray-400 text-center mt-2">Klik gambar untuk melihat ukuran penuh</p>
                           </div>

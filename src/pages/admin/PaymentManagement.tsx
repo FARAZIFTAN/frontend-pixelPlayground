@@ -364,7 +364,7 @@ const PaymentManagement = () => {
           {selectedPayment?.paymentProofUrl && (
             <div className="flex justify-center">
               <img
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedPayment.paymentProofUrl}`}
+                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedPayment.paymentProofUrl.replace('/api', '')}`}
                 alt="Payment Proof"
                 className="max-h-[70vh] rounded-lg border border-white/10"
               />

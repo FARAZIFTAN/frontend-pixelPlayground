@@ -19,6 +19,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import MyGallery from "./pages/MyGallery";
 import MyAccount from "./pages/MyAccount";
+import MyAIFrames from "./pages/MyAIFrames";
 import PhotoSessions from "./pages/PhotoSessions";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
@@ -114,6 +115,11 @@ const App = () => (
                     <Route path="/my-gallery" element={
                       <ProtectedRoute>
                         <MyGallery />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/my-ai-frames" element={
+                      <ProtectedRoute>
+                        <MyAIFrames />
                       </ProtectedRoute>
                     } />
                     <Route path="/my-account" element={
