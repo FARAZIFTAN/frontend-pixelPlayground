@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { aiAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import PremiumModal from '@/components/PremiumModal';
 import { toast } from 'react-hot-toast';
 
 interface Message {
@@ -41,7 +40,6 @@ const colorNameToHex = (colorName: string): string => {
     'hitam': '#000000',
     'pink': '#FF69B4',
     'ungu': '#800080',
-    'orange': '#FFA500',
     'oranye': '#FFA500',
     'coklat': '#8B4513',
     'abu': '#808080',
@@ -106,36 +104,14 @@ interface ChatAIResponse {
 const AITemplateCreator = () => {
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [modalClosedManually, setModalClosedManually] = useState(false);
 
-  // Check premium status on mount
+  // Check premium status - Redirect ke upgrade page jika bukan premium
   useEffect(() => {
-    if (user) {
-      // Hanya tampilkan modal jika user TIDAK premium
-      if (!isPremium) {
-        setShowPremiumModal(true);
-      } else {
-        // User adalah premium, tutup modal dan reset flag
-        setShowPremiumModal(false);
-        setModalClosedManually(false);
-      }
+    if (user && !isPremium) {
+      // Redirect langsung ke halaman upgrade
+      navigate("/upgrade-pro");
     }
-  }, [user, isPremium]);
-
-  // Redirect logic terpisah - hanya redirect jika modal ditutup manual tanpa upgrade
-  useEffect(() => {
-    if (modalClosedManually && !showPremiumModal && user && !isPremium) {
-      // Modal ditutup manual tapi user belum premium, redirect
-      navigate("/");
-    }
-  }, [modalClosedManually, showPremiumModal, user, isPremium, navigate]);
-
-  // Handler untuk close modal - hanya set flag, redirect dihandle useEffect
-  const handleCloseModal = () => {
-    setModalClosedManually(true);
-    setShowPremiumModal(false);
-  };
+  }, [user, isPremium, navigate]);
 
   // Form states - 1x process
   const [description, setDescription] = useState('');
@@ -818,14 +794,6 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
           </motion.div>
         </div>
       </div>
-
-      {/* Premium Modal - REQUIRED upgrade */}
-      <PremiumModal 
-        isOpen={showPremiumModal} 
-        onClose={handleCloseModal}
-        feature="AI Template Creator"
-        requireUpgrade={true}
-      />
     </div>
   );
 };

@@ -27,6 +27,7 @@ import ChangePassword from "./pages/ChangePassword";
 import Share from "./pages/Share";
 import AITemplateCreator from "./pages/AITemplateCreator";
 import InputMethodSelection from "./pages/InputMethodSelection";
+import UpgradePro from "./pages/UpgradePro";
 
 // Admin Pages
 import AdminLayout from "./components/admin/AdminLayout";
@@ -39,6 +40,7 @@ import Settings from "./pages/admin/Settings";
 import UserManagement from "./pages/admin/UserManagement";
 import FeedbackManagement from "./pages/admin/Feedback";
 import FrameApprovals from "./pages/admin/FrameApprovals";
+import PaymentManagement from "./pages/admin/PaymentManagement";
 
 // User Pages
 import UserFrameSubmission from "./pages/user/UserFrameSubmission";
@@ -93,6 +95,7 @@ const App = () => (
               <Route path="templates" element={<Templates />} />
               <Route path="template-creator" element={<TemplateCreator />} />
               <Route path="frame-approvals" element={<FrameApprovals />} />
+              <Route path="payments" element={<PaymentManagement />} />
               <Route path="analytics" element={<Analytics />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="feedback" element={<FeedbackManagement />} />
@@ -141,6 +144,7 @@ const App = () => (
                       </ProtectedRoute>
                     } />
                     <Route path="/contact" element={<Contact />} />
+                    <Route path="/upgrade-pro" element={<UpgradePro />} />
                     <Route path="/ai-template-creator" element={
                       <ProtectedRoute>
                         <AITemplateCreator />

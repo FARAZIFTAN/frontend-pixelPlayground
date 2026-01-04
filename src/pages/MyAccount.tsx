@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, Camera, History, Shield, Trash2 } from "lucide-react";
+import { User, Camera, History, Shield, Trash2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -239,11 +239,43 @@ const MyAccount = () => {
         >
           <div className="inline-flex items-center gap-3 mb-3">
             <User className="w-8 h-8 text-[#C62828]" />
-            <h1 className="text-3xl lg:text-4xl font-heading font-bold text-white">My Account</h1>
+            <h1 className="text-3xl lg:text-4xl font-heading font-bold text-white inline-flex items-center gap-2">
+              My Account
+              {profile?.isPremium && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-sm">
+                  <Crown className="w-4 h-4 text-amber-400 animate-pulse" />
+                  <span className="text-amber-400 font-semibold">Pro</span>
+                </span>
+              )}
+            </h1>
           </div>
           <p className="text-sm text-muted-foreground max-w-2xl">
             Manage your account settings and profile information.
           </p>
+          
+          {/* Pro Status Card */}
+          {profile?.isPremium && profile?.premiumExpiresAt && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, delay: 0.1 }}
+              className="mt-4 p-4 rounded-lg bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-pink-500/10 border border-amber-500/20"
+            >
+              <div className="flex items-center gap-3">
+                <Crown className="w-5 h-5 text-amber-400" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-400">Status Akun Pro Aktif</p>
+                  <p className="text-xs text-gray-400">
+                    Berlaku hingga: {new Date(profile.premiumExpiresAt).toLocaleDateString('id-ID', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

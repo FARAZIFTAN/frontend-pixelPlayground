@@ -13,7 +13,6 @@ import { compositeAPI, API_BASE_URL } from "@/services/api";
 import { toast } from "react-hot-toast";
 import { safeAnalytics } from "@/lib/analytics";
 import { downloadFile } from "@/lib/fileUtils";
-import PremiumModal from "@/components/PremiumModal";
 
 // Helper function to get full image URL
 const getImageUrl = (url: string) => {
@@ -52,35 +51,19 @@ interface Composite {
 const MyGallery = () => {
   const navigate = useNavigate();
   const { user, isPremium } = useAuth();
-  // Initialize modal state based on premium status
-  const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [modalClosedManually, setModalClosedManually] = useState(false);
 
-  // Check premium status - LOCK My Gallery untuk non-premium
+  // Check premium status - Redirect ke upgrade page jika bukan premium
   useEffect(() => {
-    if (user) {
-      // Hanya tampilkan modal jika user TIDAK premium
-      if (!isPremium) {
-        setShowPremiumModal(true);
-      } else {
-        // User adalah premium, tutup modal dan reset flag
-        setShowPremiumModal(false);
-        setModalClosedManually(false);
-        // Load gallery jika premium
-        if (composites.length === 0) {
-          loadComposites();
-        }
+    if (user && !isPremium) {
+      // Redirect langsung ke halaman upgrade
+      navigate("/upgrade-pro");
+    } else if (user && isPremium) {
+      // User adalah premium, load gallery
+      if (composites.length === 0) {
+        loadComposites();
       }
     }
-  }, [user, isPremium]);
-
-  // Redirect logic terpisah - hanya redirect jika modal ditutup manual tanpa upgrade
-  useEffect(() => {
-    if (modalClosedManually && !showPremiumModal && user && !isPremium) {
-      // Modal ditutup manual tapi user belum premium, redirect
-      navigate("/");
-    }
-  }, [modalClosedManually, showPremiumModal, user, isPremium, navigate]);
+  }, [user, isPremium, navigate]);
 
   // State management
   const [composites, setComposites] = useState<Composite[]>([]);
@@ -739,14 +722,6 @@ const MyGallery = () => {
             )}
           </DialogContent>
         </Dialog>
-
-        {/* Premium Modal - REQUIRED upgrade */}
-        <PremiumModal 
-          isOpen={showPremiumModal} 
-          onClose={handleCloseModal}
-          feature="My Gallery"
-          requireUpgrade={true}
-        />
       </div>
     </div>
   );

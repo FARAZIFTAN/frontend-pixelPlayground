@@ -20,7 +20,7 @@ interface Template {
   name: string;
   category: string;
   thumbnail: string;
-  frameUrl: string;
+  frameUrl?: string; // Made optional - only loaded when needed
   isPremium: boolean;
   frameCount: number;
   layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
@@ -47,7 +47,7 @@ const Gallery = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const itemsPerPage = 20;
+  const itemsPerPage = 12; // Reduced from 20 for faster initial load
 
   // Ref for infinite scroll trigger
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -56,7 +56,7 @@ const Gallery = () => {
   const initialLoadDone = useRef(false);
 
   // Virtual scrolling states
-  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 30 }); // Start with 30 items for better initial load
+  const [visibleRange, setVisibleRange] = useState({ start: 0, end: 12 }); // Optimized for faster initial render
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Gallery tidak perlu proteksi - user bisa lihat semua template
@@ -109,6 +109,7 @@ const Gallery = () => {
   
   const fetchTemplates = async (page = 1, append = false) => {
     try {
+      console.time('⏱️ Template fetch time');
       const response = await templateAPI.getTemplates({ 
         limit: itemsPerPage, 
         page,
@@ -117,8 +118,10 @@ const Gallery = () => {
         success: boolean;
         data?: { templates: Template[]; total?: number };
       };
+      console.timeEnd('⏱️ Template fetch time');
       
       if (response.success && response.data) {
+        console.log('✅ Templates loaded:', response.data.templates.length, 'items');
         
         if (append) {
           setTemplates(prev => [...prev, ...response.data!.templates]);
@@ -130,9 +133,6 @@ const Gallery = () => {
         const totalTemplates = response.data.total || 0;
         const loadedCount = append ? templates.length + response.data.templates.length : response.data.templates.length;
         setHasMore(loadedCount < totalTemplates);
-        
-        // Don't cache - templates with base64 images are too large (7MB+)
-        // SessionStorage has ~5-10MB limit, caching would cause quota errors
       } else {
         setHasMore(false);
         if (!append) {
@@ -182,23 +182,35 @@ const Gallery = () => {
     }
   };
 
-  // Infinite scroll effect
+  // Infinite scroll effect (optimized with debouncing)
   useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
-          setCurrentPage(prev => prev + 1);
-          loadTemplates(currentPage + 1, true);
+          // Debounce to prevent multiple rapid calls
+          clearTimeout(timeoutId);
+          timeoutId = setTimeout(() => {
+            setCurrentPage(prev => prev + 1);
+            loadTemplates(currentPage + 1, true);
+          }, 100);
         }
       },
-      { threshold: 0.1 }
+      { 
+        threshold: 0.1,
+        rootMargin: '100px' // Load before reaching bottom
+      }
     );
 
     if (loadMoreRef.current) {
       observer.observe(loadMoreRef.current);
     }
 
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
   }, [hasMore, isLoadingMore, isLoading, currentPage]);
 
   // Reset pagination when filters change
@@ -247,13 +259,13 @@ const Gallery = () => {
   // Paginated templates for current view (performance optimization)
   const paginatedTemplates = useMemo(() => {
     // For performance, limit rendering to visible range + small buffer
-    const buffer = 10; // Render 10 extra items above and below visible range
+    const buffer = 6; // Reduced buffer for better performance
     const start = Math.max(0, visibleRange.start - buffer);
     const end = Math.min(filteredTemplates.length, visibleRange.end + buffer);
     return filteredTemplates.slice(start, end);
   }, [filteredTemplates, visibleRange]);
 
-  // Intersection Observer for virtual scrolling
+  // Intersection Observer for virtual scrolling (optimized with larger rootMargin)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -262,13 +274,16 @@ const Gallery = () => {
             const index = parseInt(entry.target.getAttribute('data-template-index') || '0');
             // Expand visible range when item comes into view
             setVisibleRange(prev => ({
-              start: Math.min(prev.start, index - 10),
-              end: Math.max(prev.end, index + 40)
+              start: Math.min(prev.start, index - 6),
+              end: Math.max(prev.end, index + 24) // Reduced from 40 to 24
             }));
           }
         });
       },
-      { rootMargin: '100px' } // Trigger 100px before entering viewport
+      { 
+        rootMargin: '200px', // Increased from 100px for earlier loading
+        threshold: 0.01 // Lower threshold for earlier trigger
+      }
     );
 
     // Observe all rendered template cards
@@ -280,18 +295,25 @@ const Gallery = () => {
 
   // Reset visible range when filters change
   useEffect(() => {
-    setVisibleRange({ start: 0, end: 30 });
+    setVisibleRange({ start: 0, end: 12 });
   }, [searchQuery, selectedCategories]);
 
-  // Expand visible range on scroll for better UX
-  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
+  // Expand visible range on scroll for better UX (optimized with throttling)
   useEffect(() => {
+    let ticking = false;
+    
     const handleScroll = () => {
-      if (filteredTemplates.length > visibleRange.end) {
-        setVisibleRange(prev => ({
-          start: prev.start,
-          end: Math.min(filteredTemplates.length, prev.end + 15) // Expand by 15 items on scroll
-        }));
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (filteredTemplates.length > visibleRange.end) {
+            setVisibleRange(prev => ({
+              start: prev.start,
+              end: Math.min(filteredTemplates.length, prev.end + 8)
+            }));
+          }
+          ticking = false;
+        });
+        ticking = true;
       }
     };
 
@@ -779,9 +801,22 @@ const Gallery = () => {
 
         {/* Template Grid */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="w-8 h-8 animate-spin text-[#C62828]" />
-            <span className="ml-3 text-white">Loading templates...</span>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {/* Skeleton Loading */}
+            {Array.from({ length: 12 }).map((_, index) => (
+              <Card key={index} className="gradient-card border-0 shadow-soft overflow-hidden h-full animate-pulse">
+                <CardContent className="p-0">
+                  <div className="aspect-[3/4] bg-gray-800/50"></div>
+                </CardContent>
+                <CardFooter className="flex flex-col items-start p-4 gap-3">
+                  <div className="w-full space-y-2">
+                    <div className="h-4 bg-gray-800/50 rounded w-3/4"></div>
+                    <div className="h-3 bg-gray-800/50 rounded w-1/2"></div>
+                  </div>
+                  <div className="h-10 bg-gray-800/50 rounded-full w-full"></div>
+                </CardFooter>
+              </Card>
+            ))}
           </div>
         ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" ref={containerRef}>
@@ -989,14 +1024,14 @@ const Gallery = () => {
               <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
                 {/* Template Preview Image */}
                 <div className="aspect-video rounded-lg overflow-hidden bg-secondary relative group">
-                  {selectedTemplateForPreview && failedImages.has(selectedTemplateForPreview.frameUrl) ? (
+                  {selectedTemplateForPreview && failedImages.has(selectedTemplateForPreview.thumbnail) ? (
                     <ImagePlaceholder className="w-full h-full" iconSize="w-16 h-16" />
                   ) : (
                     <img
-                      src={selectedTemplateForPreview?.frameUrl}
+                      src={selectedTemplateForPreview?.thumbnail || selectedTemplateForPreview?.frameUrl}
                       alt={selectedTemplateForPreview?.name}
                       className="w-full h-full object-cover"
-                      onError={() => selectedTemplateForPreview && handleImageError(selectedTemplateForPreview.frameUrl)}
+                      onError={() => selectedTemplateForPreview && handleImageError(selectedTemplateForPreview.thumbnail)}
                     />
                   )}
                   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">

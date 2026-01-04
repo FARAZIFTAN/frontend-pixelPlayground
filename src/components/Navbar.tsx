@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload } from "lucide-react";
+import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -206,8 +206,8 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16 lg:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group" aria-label="KaryaKlik homepage">
-            <Camera className="w-6 h-6 lg:w-8 lg:h-8 text-[#C62828] transition-transform group-hover:scale-110" aria-hidden="true" />
-            <span className="text-xl lg:text-2xl font-heading font-bold text-white">
+            <Camera className="w-6 h-6 lg:w-8 lg:h-8 text-[#C62828] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.6)]" aria-hidden="true" />
+            <span className="text-xl lg:text-2xl font-heading font-bold text-white transition-all duration-300 group-hover:text-shadow-[0_0_12px_rgba(255,255,255,0.4)]">
               KaryaKlik
             </span>
           </Link>
@@ -217,7 +217,7 @@ const Navbar = () => {
             {/* Home Link */}
             <Link
               to="/"
-              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
+              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
                 isActive("/")
                   ? "bg-[#C62828] text-white shadow-lg"
                   : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
@@ -227,10 +227,24 @@ const Navbar = () => {
             </Link>
 
             {/* Separator */}
-            <div className="text-white/30 text-lg">•</div>
+            <div className="text-white/20 text-lg" aria-hidden="true">•</div>
 
-            {/* Explore with Dropdown - Only for Authenticated Users */}
-            {isAuthenticated && user && (
+            {/* Explore - Direct link to Gallery */}
+            <Link
+              to="/gallery"
+              className={`group flex items-center gap-1.5 px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
+                isActive("/gallery")
+                  ? "bg-[#C62828] text-white shadow-lg"
+                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+              }`}
+              title="Browse creative frames from our community"
+            >
+              <ImageIcon className="w-4 h-4 transition-all duration-200 group-hover:drop-shadow-[0_0_6px_rgba(198,40,40,0.5)]" aria-hidden="true" />
+              <span className="transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.3)]">Explore</span>
+            </Link>
+
+            {/* Old Explore Dropdown - REMOVED */}
+            {false && isAuthenticated && user && (
               <div className="relative" ref={exploreMenuRef}>
                 <button
                   ref={exploreButtonRef}
@@ -341,29 +355,12 @@ const Navbar = () => {
             )}
 
             {/* Separator */}
-            <div className="text-white/30 text-lg">•</div>
-
-            {/* Explore Link for Guest Users */}
-            {!isAuthenticated && (
-              <Link
-                to="/gallery"
-                className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                  isActive("/gallery")
-                    ? "bg-[#C62828] text-white shadow-lg"
-                    : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-                }`}
-              >
-                Explore
-              </Link>
-            )}
-
-            {/* Separator */}
-            {!isAuthenticated && <div className="text-white/30 text-lg">•</div>}
+            <div className="text-white/20 text-lg" aria-hidden="true">•</div>
 
             {/* Contact Link */}
             <Link
               to="/contact"
-              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
+              className={`px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
                 isActive("/contact")
                   ? "bg-[#C62828] text-white shadow-lg"
                   : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
@@ -377,6 +374,14 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-3">
             {isAuthenticated && user ? (
               <>
+                {/* PRIMARY CTA - Create Frame */}
+                <Link to="/ai-template-creator" className="mr-2.5">
+                  <Button className="bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]">
+                    <Sparkles className="w-4 h-4" />
+                    Create Frame
+                  </Button>
+                </Link>
+
                 <div className="relative" ref={userMenuRef}>
                   <button
                     ref={userButtonRef}
@@ -391,7 +396,7 @@ const Navbar = () => {
                         setUserFocusIndex(-1);
                       }
                     }}
-                    className="flex items-center space-x-3 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200"
+                    className="flex items-center space-x-3 px-4 py-2.5 rounded-full bg-white/10 hover:bg-white/20 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
                     aria-expanded={showUserMenu}
                     aria-haspopup="menu"
                     aria-label="User menu"
@@ -449,31 +454,78 @@ const Navbar = () => {
                         <p className="text-sm text-gray-400">Signed in as</p>
                         <p className="text-white font-medium truncate">{user.email}</p>
                         {user.isPremium && (
-                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-primary to-purple-600 text-white text-xs font-bold rounded-full">
-                            👑 Premium Member
+                          <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full">
+                            <Crown className="w-3 h-3" />
+                            Pro Member
                           </span>
                         )}
                       </div>
-                      <div className="border-t border-white/10">
+                      <div className="py-2">
                         <Link
-                          to="/my-account"
+                          to="/my-gallery"
                           onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 min-h-[48px] ${
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 ${
                             userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                           role="menuitem"
                           id="user-item-0"
                         >
-                          <User className="w-4 h-4" />
-                          <span>My Account</span>
+                          <ImageIcon className="w-4 h-4" />
+                          <span>My Gallery</span>
                         </Link>
-                        <button
-                          onClick={handleLogout}
-                          className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-colors flex items-center space-x-2 min-h-[48px] ${
+                        <Link
+                          to="/my-account"
+                          onClick={() => setShowUserMenu(false)}
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-2 ${
                             userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
                           }`}
                           role="menuitem"
                           id="user-item-1"
+                        >
+                          <User className="w-4 h-4" />
+                          <span>My Account</span>
+                        </Link>
+                        {user.isPremium && (
+                          <Link
+                            to="/user/my-submissions"
+                            onClick={() => setShowUserMenu(false)}
+                            className={`w-full px-4 py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center justify-between ${
+                              userFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                            }`}
+                            role="menuitem"
+                            id="user-item-2"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <Upload className="w-4 h-4" />
+                              <span>My Submissions</span>
+                            </div>
+                            <Crown className="w-3 h-3 text-amber-400" />
+                          </Link>
+                        )}
+                      </div>
+                      {!user.isPremium && (
+                        <div className="px-2 py-2 border-t border-white/10">
+                          <Link
+                            to="/upgrade-pro"
+                            onClick={() => setShowUserMenu(false)}
+                            className="w-full px-4 py-3 text-left bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <Crown className="w-4 h-4 text-amber-400" />
+                            <div className="flex-1">
+                              <div className="font-semibold text-amber-400 text-sm">Upgrade to Pro</div>
+                              <div className="text-xs text-gray-400">Unlock unlimited AI frames</div>
+                            </div>
+                          </Link>
+                        </div>
+                      )}
+                      <div className="border-t border-white/10">
+                        <button
+                          onClick={handleLogout}
+                          className={`w-full px-4 py-3 text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-colors flex items-center space-x-2 ${
+                            userFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                          }`}
+                          role="menuitem"
+                          id="user-item-3"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
@@ -486,8 +538,14 @@ const Navbar = () => {
               </>
             ) : (
               <>
+                <Link to="/login" state={{ returnUrl: '/ai-template-creator' }} className="mr-2.5">
+                  <Button className="bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2.5 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]" title="Sign in to start creating">
+                    <Sparkles className="w-4 h-4" />
+                    Create Frame
+                  </Button>
+                </Link>
                 <Link to="/login">
-                  <Button variant="ghost" className="text-white hover:text-[#FF6B6B] hover:bg-white/5 font-medium">
+                  <Button variant="ghost" className="text-white hover:text-[#FF6B6B] hover:bg-white/5 font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]">
                     Sign in
                   </Button>
                 </Link>
@@ -498,7 +556,7 @@ const Navbar = () => {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="md:hidden p-3 text-white hover:text-[#FF6B6B] transition-colors rounded-lg hover:bg-white/5"
+            className="md:hidden p-3 text-white hover:text-[#FF6B6B] transition-all duration-200 rounded-lg hover:bg-white/5 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
             aria-expanded={isMobileMenuOpen}
             aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
           >
@@ -572,22 +630,22 @@ const Navbar = () => {
                     </div>
                   </div>
 
-                  {/* Quick Actions */}
+                  {/* Quick Actions - Prioritized */}
                   <div className="px-4 space-y-2">
                     <Link to="/ai-template-creator" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-gradient-to-r from-[#C62828] to-[#E53935] hover:from-[#E53935] hover:to-[#FF6B6B] text-white font-semibold rounded-lg flex items-center justify-center space-x-3 shadow-lg">
+                      <Button className="w-full min-h-[48px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-lg flex items-center justify-center space-x-2 shadow-lg">
                         <Sparkles className="w-5 h-5" />
-                        <span>Create New</span>
+                        <span>CREATE FRAME</span>
                       </Button>
                     </Link>
                     <Link to="/my-gallery" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-3">
+                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
                         <ImageIcon className="w-5 h-5" />
                         <span>My Gallery</span>
                       </Button>
                     </Link>
                     <Link to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-3">
+                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
                         <ImageIcon className="w-5 h-5 text-[#C62828]" />
                         <span>Explore</span>
                       </Button>
@@ -595,16 +653,38 @@ const Navbar = () => {
                   </div>
 
                   {/* Account Section */}
-                  <div className="px-4 pt-3 border-t border-white/10">
+                  <div className="px-4 pt-3 border-t border-white/10 space-y-2">
                     <Link to="/my-account" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-3 mb-2">
+                      <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
                         <User className="w-5 h-5" />
                         <span>My Account</span>
                       </Button>
                     </Link>
+                    {user.isPremium && (
+                      <Link to="/user/my-submissions" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-between px-4">
+                          <div className="flex items-center space-x-2">
+                            <Upload className="w-5 h-5" />
+                            <span>My Submissions</span>
+                          </div>
+                          <Crown className="w-4 h-4 text-amber-400" />
+                        </Button>
+                      </Link>
+                    )}
+                    {!user.isPremium && (
+                      <Link to="/upgrade-pro" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button className="w-full min-h-[48px] bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-white font-medium rounded-lg flex items-center gap-2 px-4">
+                          <Crown className="w-5 h-5 text-amber-400" />
+                          <div className="flex-1 text-left">
+                            <div className="font-semibold text-amber-400">Upgrade to Pro</div>
+                            <div className="text-xs text-gray-400">Unlock premium features</div>
+                          </div>
+                        </Button>
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
-                      className="w-full min-h-[48px] px-4 py-3 rounded-lg text-white hover:bg-[#C62828] transition-all flex items-center justify-center space-x-3"
+                      className="w-full min-h-[48px] px-4 py-3 rounded-lg text-white hover:bg-[#C62828] transition-all flex items-center justify-center space-x-2"
                     >
                       <LogOut className="w-5 h-5" />
                       <span>Logout</span>
@@ -612,12 +692,27 @@ const Navbar = () => {
                   </div>
                 </>
               ) : (
-                <div className="pt-2 space-y-2">
-                  <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
-                      Sign in
+                <div className="pt-2 px-4 space-y-2">
+                  <Link to="/login" state={{ returnUrl: '/ai-template-creator' }} onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full min-h-[48px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold rounded-lg flex items-center justify-center space-x-2 shadow-lg">
+                      <Sparkles className="w-5 h-5" />
+                      <span>CREATE FRAME</span>
                     </Button>
                   </Link>
+                  <p className="text-xs text-center text-gray-400 py-1">Sign in to start creating</p>
+                  <Link to="/gallery" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button className="w-full min-h-[48px] bg-white/5 hover:bg-white/10 text-white font-medium rounded-lg flex items-center justify-center space-x-2">
+                      <ImageIcon className="w-5 h-5 text-[#C62828]" />
+                      <span>Explore</span>
+                    </Button>
+                  </Link>
+                  <div className="pt-2 border-t border-white/10">
+                    <Link to="/login" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full border-white/20 text-white hover:bg-white/10">
+                        Sign in
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </div>

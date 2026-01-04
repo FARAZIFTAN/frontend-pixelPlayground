@@ -8,7 +8,8 @@ import {
   Camera,
   ChevronDown,
   MessageSquare,
-  CheckCircle
+  CheckCircle,
+  CreditCard
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -41,6 +42,11 @@ const Sidebar = () => {
         { path: "/admin/template-creator", label: "Download Template" },
         { path: "/admin/frame-approvals", icon: CheckCircle, label: "Frame Approvals" }
       ]
+    },
+    { 
+      path: "/admin/payments", 
+      icon: CreditCard, 
+      label: "Payments" 
     },
     { 
       path: "/admin/analytics", 

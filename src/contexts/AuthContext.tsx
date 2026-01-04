@@ -4,6 +4,7 @@ import { safeAnalytics } from '@/lib/analytics';
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface User {
+  [x: string]: any;
   id: string;
   name: string;
   email: string;
@@ -66,10 +67,9 @@ function AuthProvider({ children }: AuthProviderProps) {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Load premium status from sessionStorage and merge with user data
-        const isPremiumFromStorage = sessionStorage.getItem('isPremium') === 'true';
-        const userData = { ...data.data.user, isPremium: isPremiumFromStorage || data.data.user.isPremium };
-        console.log('[AUTH] Verify successful, setting user:', userData.name, userData.role);
+        // Use premium status directly from backend
+        const userData = data.data.user;
+        console.log('[AUTH] Verify successful, setting user:', userData.name, userData.role, 'isPremium:', userData.isPremium);
         setUser(userData);
         setToken(savedToken);
         setIsLoading(false);
@@ -139,14 +139,10 @@ function AuthProvider({ children }: AuthProviderProps) {
         sessionStorage.setItem('token', newToken);
         console.log('[AUTH] Token saved to sessionStorage');
         
-        // Load premium status from sessionStorage and merge
-        const isPremiumFromStorage = sessionStorage.getItem('isPremium') === 'true';
-        const userWithPremium = { ...userData, isPremium: isPremiumFromStorage || userData.isPremium };
-        
-        // Update state
+        // Update state with user data from backend (including isPremium)
         setToken(newToken);
-        setUser(userWithPremium);
-        console.log('[AUTH] State updated, isAuthenticated:', !!(userWithPremium && newToken));
+        setUser(userData);
+        console.log('[AUTH] State updated, isAuthenticated:', !!(userData && newToken), 'isPremium:', userData.isPremium);
         setIsLoading(false);
         
         // Return user data (including role)

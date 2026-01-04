@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
+import HowToGuide from "@/components/HowToGuide";
+import ProAccountGuide from "@/components/ProAccountGuide";
 
 const Home = () => {
   const features = [
@@ -138,6 +140,12 @@ const Home = () => {
         </div>
       </section>
 
+      {/* How To Guide Section */}
+      <HowToGuide />
+
+      {/* Pro Account Guide Section */}
+      <ProAccountGuide />
+
       {/* Stats Section */}
       <section className="py-16 bg-[#1A1A1A]">
         <div className="container mx-auto px-4 lg:px-8">
@@ -163,221 +171,6 @@ const Home = () => {
               </motion.div>
             ))}
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 lg:py-32">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
-              Why Choose KaryaKlik?
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Everything you need to create stunning photo booth experiences
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-              >
-                <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all h-full group cursor-pointer">
-                  <CardContent className="p-6 text-center">
-                    <div className="w-16 h-16 rounded-2xl bg-[#E53935] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-all">
-                      <feature.icon className="w-8 h-8 text-white transition-colors" />
-                    </div>
-                    <h3 className="font-heading font-semibold text-xl mb-3 text-white">{feature.title}</h3>
-                    <p className="text-gray-200">{feature.description}</p>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
-      <section className="py-20 lg:py-32 bg-[#1A1A1A]">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
-              How It Works
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Create stunning photos in just 3 simple steps
-            </p>
-          </motion.div>
-
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {[
-              {
-                step: "1",
-                title: "Choose Template",
-                description: "Browse and select from our collection of beautiful templates",
-                icon: Image,
-              },
-              {
-                step: "2",
-                title: "Take Photo",
-                description: "Use your camera to capture the perfect moment",
-                icon: Camera,
-              },
-              {
-                step: "3",
-                title: "Share & Download",
-                description: "Instantly share via QR code or download your photos",
-                icon: Share2,
-              },
-            ].map((item, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.15 }}
-                className="relative"
-              >
-                <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all h-full">
-                  <CardContent className="p-8 text-center">
-                    <div className="relative mb-6">
-                      <div className="w-20 h-20 rounded-full bg-[#E53935] flex items-center justify-center mx-auto">
-                        <item.icon className="w-10 h-10 text-white" />
-                      </div>
-                      <div className="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-[#E53935] text-lg shadow-lg">
-                        {item.step}
-                      </div>
-                    </div>
-                    <h3 className="font-heading font-semibold text-2xl mb-3 text-white">
-                      {item.title}
-                    </h3>
-                    <p className="text-gray-200 text-lg">{item.description}</p>
-                  </CardContent>
-                </Card>
-                {index < 2 && (
-                  <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10">
-                    <ArrowRight className="w-8 h-8 text-[#E53935]" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Photo Showcase Section - See It In Action */}
-      <section className="py-20 lg:py-32">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="text-center mb-16"
-          >
-            <motion.div
-              initial={{ scale: 0 }}
-              whileInView={{ scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, type: "spring" }}
-              className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 mb-6"
-            >
-              <Star className="w-4 h-4 text-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary">
-                Real Photos From Our Community
-              </span>
-            </motion.div>
-            
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
-              See KaryaKlik In Action
-            </h2>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
-              Discover amazing photos created by our users with professional templates
-            </p>
-          </motion.div>
-
-          {/* Photo Grid - Instagram-style Masonry */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-            {showcasePhotos.map((photo, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, scale: 0.8 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: index * 0.08 }}
-                className="relative group overflow-hidden rounded-xl aspect-square cursor-pointer"
-              >
-                {/* Image */}
-                <img
-                  src={photo.url}
-                  alt={`${photo.template} - ${photo.event}`}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                
-                {/* Content on Hover */}
-                <div className="absolute inset-0 flex flex-col justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                  <div className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                    <Badge className="mb-2 bg-primary/90 text-white border-0 text-xs">
-                      {photo.category}
-                    </Badge>
-                    <p className="font-semibold text-white text-sm mb-1">
-                      {photo.template}
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      {photo.event}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Corner Badge - Template Indicator */}
-                <div className="absolute top-3 right-3 w-8 h-8 bg-primary rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-lg">
-                  <Image className="w-4 h-4 text-white" />
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          {/* CTA Button */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="text-center"
-          >
-            <Link to="/gallery">
-              <Button 
-                size="lg" 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-10 py-6 rounded-full shadow-soft hover:shadow-hover transition-all group"
-              >
-                Browse All Templates
-                <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <p className="text-sm text-gray-400 mt-4">
-              Join 10,000+ users creating amazing photos
-            </p>
-          </motion.div>
         </div>
       </section>
 
