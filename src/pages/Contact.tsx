@@ -44,6 +44,10 @@ const Contact = () => {
       });
 
       if (response.success) {
+        toast.success("Message sent successfully! We'll get back to you soon.", {
+          duration: 5000,
+          icon: "✅"
+        });
         reset();
       } else {
         throw new Error(response.message || "Failed to send message");

@@ -25,9 +25,21 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { toast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { getAdminPayments, approvePayment, rejectPayment, Payment } from '@/services/paymentAPI';
 import { format } from 'date-fns';
+
+// Helper function to get the correct image URL (cloud or local)
+const getImageUrl = (url: string | undefined): string | null => {
+  if (!url) return null;
+  // If it's already a full URL (Cloudinary), use it directly
+  if (url.startsWith('http')) {
+    return url;
+  }
+  // For local paths, prepend the API base URL
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  return `${baseUrl}${url.replace('/api', '')}`;
+};
 
 const PaymentManagement = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -53,11 +65,7 @@ const PaymentManagement = () => {
       const data = await getAdminPayments(statusFilter);
       setPayments(data.payments);
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.error || 'Failed to load payments',
-        variant: 'destructive',
-      });
+      toast.error(error.error || 'Failed to load payments');
     } finally {
       setIsLoading(false);
     }
@@ -70,20 +78,13 @@ const PaymentManagement = () => {
     setIsProcessing(true);
     try {
       await approvePayment(selectedPayment._id, adminNotes);
-      toast({
-        title: 'Success',
-        description: 'Payment approved successfully',
-      });
+      toast.success('Payment approved successfully');
       setIsApproveDialogOpen(false);
       setAdminNotes('');
       setSelectedPayment(null);
       loadPayments();
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.error || 'Failed to approve payment',
-        variant: 'destructive',
-      });
+      toast.error(error.error || 'Failed to approve payment');
     } finally {
       setIsProcessing(false);
     }
@@ -92,32 +93,21 @@ const PaymentManagement = () => {
   // Handle reject
   const handleReject = async () => {
     if (!selectedPayment || !rejectionReason.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Rejection reason is required',
-        variant: 'destructive',
-      });
+      toast.error('Rejection reason is required');
       return;
     }
 
     setIsProcessing(true);
     try {
       await rejectPayment(selectedPayment._id, rejectionReason, adminNotes);
-      toast({
-        title: 'Success',
-        description: 'Payment rejected successfully',
-      });
+      toast.success('Payment rejected successfully');
       setIsRejectDialogOpen(false);
       setRejectionReason('');
       setAdminNotes('');
       setSelectedPayment(null);
       loadPayments();
     } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.error || 'Failed to reject payment',
-        variant: 'destructive',
-      });
+      toast.error(error.error || 'Failed to reject payment');
     } finally {
       setIsProcessing(false);
     }
@@ -361,10 +351,10 @@ const PaymentManagement = () => {
               {selectedPayment?.packageName} - Rp {selectedPayment?.amount.toLocaleString('id-ID')}
             </DialogDescription>
           </DialogHeader>
-          {selectedPayment?.paymentProofUrl && (
+          {selectedPayment?.paymentProofUrl && getImageUrl(selectedPayment.paymentProofUrl) && (
             <div className="flex justify-center">
               <img
-                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${selectedPayment.paymentProofUrl.replace('/api', '')}`}
+                src={getImageUrl(selectedPayment.paymentProofUrl)!}
                 alt="Payment Proof"
                 className="max-h-[70vh] rounded-lg border border-white/10"
               />

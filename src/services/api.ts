@@ -1,19 +1,65 @@
 // API Base URL from environment variable
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = sessionStorage.getItem('token');
+// Configuration constants
+const DEFAULT_TIMEOUT = 30000; // 30 seconds
+const TOKEN_STORAGE_KEY = 'token';
+
+/**
+ * Get authentication token from storage
+ */
+const getAuthToken = (): string | null => {
+  return sessionStorage.getItem(TOKEN_STORAGE_KEY);
+};
+
+/**
+ * Get authentication headers
+ */
+const getAuthHeaders = (): Record<string, string> => {
+  const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` }),
   };
 };
 
-// Generic API call function
+/**
+ * Create timeout promise for fetch requests
+ */
+const createTimeoutPromise = (ms: number): Promise<never> => {
+  return new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Request timeout')), ms);
+  });
+};
+
+/**
+ * Handle API error responses
+ */
+const handleApiError = async (response: Response, endpoint: string): Promise<never> => {
+  let errorData: any;
+  try {
+    errorData = await response.json();
+  } catch {
+    errorData = { message: `HTTP error! status: ${response.status}` };
+  }
+
+  let errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+  
+  if (errorData.details) {
+    errorMessage += ` - ${errorData.details}`;
+  }
+
+  console.error(`API Error [${endpoint}]:`, errorMessage, errorData);
+  throw new Error(errorMessage);
+};
+
+/**
+ * Generic API call function with timeout
+ */
 async function apiCall<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
   
@@ -27,31 +73,18 @@ async function apiCall<T>(
   };
 
   try {
-    const response = await fetch(url, config);
+    const response = await Promise.race([
+      fetch(url, config),
+      createTimeoutPromise(timeout),
+    ]);
     
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { message: `HTTP error! status: ${response.status}` };
-      }
-      
-      // More specific error messages
-      let errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
-      
-      // Add details if available (for validation errors)
-      if (errorData.details) {
-        errorMessage += ` - ${errorData.details}`;
-      }
-      
-      console.error(`API Error [${endpoint}]:`, errorMessage, errorData);
-      throw new Error(errorMessage);
+      return handleApiError(response, endpoint);
     }
     
     const data = await response.json();
     return data;
-  } catch (error: unknown) {
+  } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error(`API Error [${endpoint}]:`, err);
 
@@ -60,8 +93,54 @@ async function apiCall<T>(
       throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
     }
 
+    if (err.message === 'Request timeout') {
+      throw new Error('Request timed out. The server is taking longer than expected. Please try again or contact support.');
+    }
+
     throw err;
   }
+}
+
+/**
+ * API call with retry logic for resilience
+ */
+async function apiCallWithRetry<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  timeout: number = DEFAULT_TIMEOUT,
+  maxRetries: number = 2
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      if (attempt > 0) {
+        // Exponential backoff: 1s, 2s
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 3000);
+        console.log(`⏳ Retrying request to ${endpoint} (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms delay...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      return await apiCall<T>(endpoint, options, timeout);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      
+      // Don't retry on auth errors or client errors
+      if (lastError.message.includes('401') || 
+          lastError.message.includes('403') || 
+          lastError.message.includes('400')) {
+        throw lastError;
+      }
+      
+      // Continue to next retry
+      if (attempt < maxRetries) {
+        console.warn(`⚠️ Request failed (attempt ${attempt + 1}/${maxRetries + 1}):`, lastError.message);
+      }
+    }
+  }
+  
+  // All retries exhausted
+  throw lastError || new Error('Request failed after all retries');
 }
 
 // Auth API
@@ -470,8 +549,9 @@ export const templateAPI = {
       return templatesPromise;
     }
     
-    // Make the actual request
-    templatesPromise = apiCall(`/templates?${query.toString()}`, { method: 'GET' })
+    // Make the actual request with extended timeout for template queries (90s)
+    // Retry once if timeout occurs
+    templatesPromise = apiCallWithRetry(`/templates?${query.toString()}`, { method: 'GET' }, 90000, 1)
       .then(data => {
         templatesCache = { data, timestamp: Date.now() };
         templatesPromise = null;

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X, Upload, Check, Smile, Shapes, RefreshCw, Palette, ZoomIn, ZoomOut, Search, Undo2, Redo2, Sliders, Heart, Star } from "lucide-react";
+import { Camera, Download, Share2, RotateCcw, Loader2, Sparkles, ArrowRight, ImageIcon, Save, X, Upload, Check, Smile, Shapes, RefreshCw, Palette, ZoomIn, ZoomOut, Search, Undo2, Redo2, Sliders, Heart, Star, Award } from "lucide-react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -256,6 +256,7 @@ const Booth = () => {
   const retakeIndexRef = useRef<number | null>(null); // Track which index to retake
   const isMountedRef = useRef(true); // Track component mounted state
   const isStartingCameraRef = useRef(false); // Prevent multiple camera starts
+  const cameraInitializedRef = useRef(false); // Track if camera has been initialized
 
   // Warn if using premium template without logging in (but don't block)
   useEffect(() => {
@@ -270,26 +271,42 @@ const Booth = () => {
   }, [user]);
 
   // Define handleCapture as regular function (not useCallback to avoid dependency issues)
+  // First photo: immediate capture on click (no countdown)
+  // Subsequent photos: auto-capture with timer (handled in capturePhoto)
   const handleCapture = () => {
     // Clear any existing countdown first
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
     
-    setCountdown(3);
-    countdownIntervalRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev === 1) {
-          if (countdownIntervalRef.current) {
-            clearInterval(countdownIntervalRef.current);
-            countdownIntervalRef.current = null;
+    // Check if this is the first photo (no photos captured yet)
+    const actualPhotos = capturedImages.filter(img => img !== '').length;
+    const isFirstPhoto = actualPhotos === 0 && currentPhotoIndex === 0;
+    
+    if (isFirstPhoto) {
+      // First photo: capture immediately without countdown
+      capturePhoto();
+    } else {
+      // Subsequent photos or retake: use countdown
+      setCountdown(3);
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdown((prev) => {
+          // Guard against null or invalid values
+          if (prev === null || prev === undefined || prev <= 1) {
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
+            if (prev === 1) {
+              capturePhoto();
+            }
+            return null;
           }
-          capturePhoto();
-          return null;
-        }
-        return prev! - 1;
-      });
-    }, 1000);
+          return prev - 1;
+        });
+      }, 1000);
+    }
   };
 
   // Define callback functions before useEffects
@@ -300,23 +317,27 @@ const Booth = () => {
       return;
     }
     
+    // Prevent re-initialization if already initialized
+    if (cameraInitializedRef.current && hasPermission) {
+      console.log('📹 Camera already initialized, skipping...');
+      return;
+    }
+    
     console.log('🎥 Starting camera...');
     isStartingCameraRef.current = true;
     
     try {
-      // Cleanup existing stream first
-      if (stream) {
-        console.log('🧹 Cleaning up existing stream...');
-        stream.getTracks().forEach((track) => {
-          track.stop();
-          console.log(`🛑 Stopped track: ${track.kind}`);
-        });
-        setStream(null);
-      }
-      
-      // Clear video element
+      // Clear video element first
       if (videoRef.current) {
-        videoRef.current.srcObject = null;
+        const existingStream = videoRef.current.srcObject as MediaStream | null;
+        if (existingStream) {
+          console.log('🧹 Cleaning up existing stream...');
+          existingStream.getTracks().forEach((track) => {
+            track.stop();
+            console.log(`🛑 Stopped track: ${track.kind}`);
+          });
+          videoRef.current.srcObject = null;
+        }
       }
     } catch (cleanupError) {
       console.warn('Cleanup error (non-critical):', cleanupError);
@@ -366,7 +387,7 @@ const Booth = () => {
             console.log('📊 Video already ready');
           } else {
             // Wait for loadedmetadata event with shorter timeout
-            await new Promise<void>((resolve, reject) => {
+            await new Promise<void>((resolve) => {
               const timeoutId = setTimeout(() => {
                 // Don't reject on timeout, just proceed
                 console.warn('⚠️ Video load timeout, proceeding anyway');
@@ -388,11 +409,12 @@ const Booth = () => {
           }
           
           // Play the video
-          if (isMountedRef.current) {
+          if (isMountedRef.current && videoRef.current) {
             await video.play();
             console.log('▶️ Video playing successfully');
             
             if (isMountedRef.current) {
+              cameraInitializedRef.current = true;
               setIsLoading(false);
               setHasPermission(true);
               
@@ -427,7 +449,7 @@ const Booth = () => {
     } finally {
       isStartingCameraRef.current = false;
     }
-  }, [stream]);
+  }, [hasPermission]); // Remove stream from dependencies to prevent re-creation loop
 
   const createPhotoSession = useCallback(async () => {
     if (!selectedTemplate) {
@@ -687,7 +709,7 @@ const Booth = () => {
   // Camera initialization effect - START IMMEDIATELY, don't wait for template
   useEffect(() => {
     // Start camera as soon as inputMethod is 'camera' - parallel with template loading
-    if (inputMethod === 'camera') {
+    if (inputMethod === 'camera' && !cameraInitializedRef.current) {
       console.log('🚀 Camera mode detected - starting camera IMMEDIATELY (parallel with template load)...');
       startCamera();
     }
@@ -702,8 +724,11 @@ const Booth = () => {
       if (countdownIntervalRef.current) {
         clearInterval(countdownIntervalRef.current);
       }
+      // Reset camera initialized flag on cleanup
+      cameraInitializedRef.current = false;
     };
-  }, [inputMethod, startCamera]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputMethod]); // Only depend on inputMethod, not startCamera to prevent re-trigger loops
   
   // Mount/unmount tracking
   useEffect(() => {
@@ -712,6 +737,8 @@ const Booth = () => {
     
     return () => {
       isMountedRef.current = false;
+      cameraInitializedRef.current = false;
+      isStartingCameraRef.current = false;
       console.log('❌ Booth component unmounting...');
     };
   }, []);
@@ -869,7 +896,8 @@ const Booth = () => {
     const preloadTemplates = async () => {
       if (availableTemplates.length === 0) {
         try {
-          const response = await templateAPI.getTemplates({ limit: 50 }) as {
+          // Reduced limit from 50 to 20 to match backend optimization
+          const response = await templateAPI.getTemplates({ limit: 20 }) as {
             success: boolean;
             data?: { templates: Template[] };
           };
@@ -948,7 +976,8 @@ const Booth = () => {
   };
 
   const handleChangeFrame = async (newTemplate: Template) => {
-    if (!canvasRef.current || capturedImages.length === 0) {
+    const actualPhotos = capturedImages.filter(img => img !== '');
+    if (!canvasRef.current || actualPhotos.length === 0) {
       toast.error('Tidak ada foto untuk diganti framenya');
       return;
     }
@@ -1089,8 +1118,17 @@ const Booth = () => {
               ctx.fillStyle = "white";
               ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-              // Apply filter to each photo
-              const filterString = `brightness(${filter.brightness}%) contrast(${filter.contrast}%) saturate(${filter.saturate}%) sepia(${filter.sepia}%) grayscale(${filter.grayscale}%) hue-rotate(${filter.hueRotate}deg)`;
+              // Apply filter to each photo with intensity scaling
+              // Scale filter values based on intensity (0-100%)
+              const intensity = filterIntensity / 100;
+              const scaledBrightness = 100 + (filter.brightness - 100) * intensity;
+              const scaledContrast = 100 + (filter.contrast - 100) * intensity;
+              const scaledSaturate = 100 + (filter.saturate - 100) * intensity;
+              const scaledSepia = filter.sepia * intensity;
+              const scaledGrayscale = filter.grayscale * intensity;
+              const scaledHueRotate = filter.hueRotate * intensity;
+              
+              const filterString = `brightness(${scaledBrightness}%) contrast(${scaledContrast}%) saturate(${scaledSaturate}%) sepia(${scaledSepia}%) grayscale(${scaledGrayscale}%) hue-rotate(${scaledHueRotate}deg)`;
 
               // Draw each photo in its position with filter
               capturedImages.forEach((_, i) => {
@@ -1273,16 +1311,27 @@ const Booth = () => {
 
           // Auto trigger next capture countdown after 1.5 seconds
           setTimeout(() => {
+            // Clear any existing countdown first
+            if (countdownIntervalRef.current) {
+              clearInterval(countdownIntervalRef.current);
+              countdownIntervalRef.current = null;
+            }
+            
             setCountdown(3);
-            const interval = setInterval(() => {
+            countdownIntervalRef.current = setInterval(() => {
               setCountdown((prev) => {
-                if (prev === 1) {
-                  clearInterval(interval);
-                  // capturePhoto akan dipanggil recursively
-                  capturePhotoAuto();
+                // Guard against null or invalid values
+                if (prev === null || prev === undefined || prev <= 1) {
+                  if (countdownIntervalRef.current) {
+                    clearInterval(countdownIntervalRef.current);
+                    countdownIntervalRef.current = null;
+                  }
+                  if (prev === 1) {
+                    capturePhotoAuto();
+                  }
                   return null;
                 }
-                return prev! - 1;
+                return prev - 1;
               });
             }, 1000);
           }, 1500);
@@ -1350,15 +1399,27 @@ const Booth = () => {
 
             
             setTimeout(() => {
+              // Clear any existing countdown first
+              if (countdownIntervalRef.current) {
+                clearInterval(countdownIntervalRef.current);
+                countdownIntervalRef.current = null;
+              }
+              
               setCountdown(3);
-              const interval = setInterval(() => {
+              countdownIntervalRef.current = setInterval(() => {
                 setCountdown((prev) => {
-                  if (prev === 1) {
-                    clearInterval(interval);
-                    capturePhotoAuto();
+                  // Guard against null or invalid values
+                  if (prev === null || prev === undefined || prev <= 1) {
+                    if (countdownIntervalRef.current) {
+                      clearInterval(countdownIntervalRef.current);
+                      countdownIntervalRef.current = null;
+                    }
+                    if (prev === 1) {
+                      capturePhotoAuto();
+                    }
                     return null;
                   }
-                  return prev! - 1;
+                  return prev - 1;
                 });
               }, 1000);
             }, 1500);
@@ -2592,11 +2653,13 @@ const Booth = () => {
                       ))}
                     </div>
                     
-                    {/* Auto-saved indicator */}
-                    <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
-                      <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                      Auto-saved to Gallery
-                    </div>
+                    {/* Auto-saved indicator - only show when user is logged in */}
+                    {user && sessionId && (
+                      <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        Auto-saved to Gallery
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="relative w-full h-full bg-black">
@@ -3668,7 +3731,7 @@ const Booth = () => {
                       </motion.div>
                     )}
                   </div>
-                ) : capturedImages.length === 0 ? (
+                ) : capturedImages.filter(img => img !== '').length === 0 ? (
                   <div className="flex flex-col gap-3">
                     {inputMethod === 'camera' ? (
                       <Button
@@ -3745,9 +3808,9 @@ const Booth = () => {
           >
             <p className="text-muted-foreground">
               {selectedTemplate 
-                ? capturedImages.length === 0
+                ? capturedImages.filter(img => img !== '').length === 0
                   ? `📸 Ready! You'll take ${photoCount} photos. Click "Start Photo Session" to begin.`
-                  : `� Photo ${currentPhotoIndex + 1} of ${photoCount} - Get ready for the next shot!`
+                  : `📸 Photo ${currentPhotoIndex + 1} of ${photoCount} - Get ready for the next shot!`
                 : `⚠️ Please select a template first to start your photo session`
               }
             </p>

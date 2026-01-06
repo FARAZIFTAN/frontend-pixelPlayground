@@ -39,7 +39,7 @@ const UserFrameSubmission = () => {
             Only PRO users can submit custom frames for approval. Upgrade your account to unlock this feature.
           </p>
           <Button
-            onClick={() => navigate("/pricing")}
+            onClick={() => navigate("/upgrade-pro")}
             className="bg-[#C62828] hover:bg-[#E53935] text-white font-semibold rounded-lg"
           >
             Upgrade to PRO

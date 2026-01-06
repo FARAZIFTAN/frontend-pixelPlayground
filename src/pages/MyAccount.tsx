@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { User, Camera, History, Shield, Trash2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import { userAPI } from "@/services/api";
 
@@ -20,7 +20,6 @@ const MyAccount = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [password, setPassword] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
 
   // Load profile
@@ -40,19 +39,22 @@ const MyAccount = () => {
         setPhone(p.phone || "");
         // Add cache-busting timestamp to profile picture URL
         if (p.profilePicture) {
-          const profilePicUrl = `${p.profilePicture}?t=${Date.now()}`;
-          console.log('Setting avatar preview to:', profilePicUrl);
-          setAvatarPreview(profilePicUrl);
+          // Only use profile picture if it's a valid cloud URL (starts with http)
+          // Local paths (/uploads/...) are no longer valid since we migrated to Cloudinary
+          if (p.profilePicture.startsWith('http')) {
+            const profilePicUrl = `${p.profilePicture}?t=${Date.now()}`;
+            console.log('Setting avatar preview to:', profilePicUrl);
+            setAvatarPreview(profilePicUrl);
+          } else {
+            console.log('Profile picture is local path (deprecated), skipping:', p.profilePicture);
+            setAvatarPreview(null);
+          }
         } else {
           console.log('No profile picture found');
           setAvatarPreview(null);
         }
       } catch (err: any) {
-        toast({
-          title: "Error",
-          description: "Failed to load profile data.",
-          variant: "destructive"
-        });
+        toast.error("Failed to load profile data.");
       } finally {
         setLoading(false);
       }
@@ -95,7 +97,7 @@ const MyAccount = () => {
           }));
         }
         
-        toast({ title: "Success", description: "Profile picture updated successfully." });
+        toast.success("Profile picture updated successfully.");
         setAvatarFile(null); // Clear the file after successful upload
       }
 
@@ -117,26 +119,18 @@ const MyAccount = () => {
         setAvatarPreview(`${freshProfile.profilePicture}?t=${Date.now()}`);
       }
 
-      toast({ title: "Success", description: "Profile updated successfully." });
+      toast.success("Profile updated successfully.");
     } catch (err: any) {
       // Check if it's an authentication error
       if (err.message?.includes('Unauthorized') || err.message?.includes('401')) {
-        toast({
-          title: "Session Expired",
-          description: "Your session has expired. Please login again.",
-          variant: "destructive"
-        });
+        toast.error("Your session has expired. Please login again.");
         // Don't navigate immediately, let user see the message
         setTimeout(() => {
           logout();
           navigate('/login');
         }, 2000);
       } else {
-        toast({
-          title: "Error",
-          description: err.message || "Failed to update profile.",
-          variant: "destructive"
-        });
+        toast.error(err.message || "Failed to update profile.");
       }
     } finally {
       setLoading(false);
@@ -151,13 +145,9 @@ const MyAccount = () => {
       setAvatarFile(null);
       setProfile({ ...profile, profilePicture: null });
       await checkAuth(true);
-      toast({ title: "Success", description: "Profile picture removed successfully." });
+      toast.success("Profile picture removed successfully.");
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to remove profile picture.",
-        variant: "destructive"
-      });
+      toast.error(err.message || "Failed to remove profile picture.");
     } finally {
       setLoading(false);
     }
@@ -165,30 +155,19 @@ const MyAccount = () => {
 
   const handleDeactivateAccount = async () => {
     if (!password) {
-      toast({
-        title: "Error",
-        description: "Please enter your password to confirm.",
-        variant: "destructive"
-      });
+      toast.error("Please enter your password to confirm.");
       return;
     }
 
     setLoading(true);
     try {
       await userAPI.deactivateAccount(password);
-      toast({
-        title: "Account Deactivated",
-        description: "Your account has been deactivated. You can contact support to reactivate."
-      });
+      toast.success("Your account has been deactivated. You can contact support to reactivate.");
       logout();
       navigate("/");
     } catch (err: any) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to deactivate account.",
-        variant: "destructive"
-      });
+      toast.error(err.message || "Failed to deactivate account.");
     } finally {
       setLoading(false);
       setShowDeactivateModal(false);
@@ -198,29 +177,18 @@ const MyAccount = () => {
 
   const handleDeleteAccount = async () => {
     if (!password) {
-      toast({
-        title: "Error",
-        description: "Please enter your password to confirm.",
-        variant: "destructive"
-      });
+      toast.error("Please enter your password to confirm.");
       return;
     }
 
     setLoading(true);
     try {
       await userAPI.deleteAccount(password);
-      toast({
-        title: "Account Deleted",
-        description: "Your account has been permanently deleted."
-      });
+      toast.success("Your account has been permanently deleted.");
       logout();
       navigate("/");
     } catch (err: any) {
-      toast({
-        title: "Error",
-        description: err.message || "Failed to delete account.",
-        variant: "destructive"
-      });
+      toast.error(err.message || "Failed to delete account.");
     } finally {
       setLoading(false);
       setShowDeleteModal(false);
@@ -285,15 +253,12 @@ const MyAccount = () => {
               <div className="w-32 h-32 rounded-full bg-white/5 flex items-center justify-center mb-4 overflow-hidden">
                 {avatarPreview ? (
                   <img 
-                    src={avatarPreview.startsWith('blob:') || avatarPreview.startsWith('http') 
-                      ? avatarPreview 
-                      : `http://localhost:3001${avatarPreview}`
-                    } 
+                    src={avatarPreview} 
                     alt="avatar" 
                     className="w-full h-full object-cover"
                     onError={(e) => {
                       console.error('Image load error:', avatarPreview);
-                      e.currentTarget.style.display = 'none';
+                      setAvatarPreview(null);
                     }}
                   />
                 ) : (

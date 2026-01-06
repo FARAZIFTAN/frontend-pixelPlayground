@@ -5,8 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 interface AIFrame {
   _id: string;
@@ -32,7 +34,6 @@ const MyAIFrames = () => {
   const [frames, setFrames] = useState<AIFrame[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -52,7 +53,7 @@ const MyAIFrames = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:3001/api/ai/my-frames', {
+      const response = await fetch(`${API_BASE_URL}/ai/my-frames`, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
@@ -84,17 +85,13 @@ const MyAIFrames = () => {
       const token = sessionStorage.getItem('token');
       
       if (!token) {
-        toast({
-          title: 'Authentication Required',
-          description: 'Please log in to delete frames.',
-          variant: 'destructive',
-        });
+        toast.error('Please log in to delete frames.');
         navigate('/login');
         return;
       }
 
       // Use AI-specific delete endpoint that checks ownership
-      const response = await fetch(`http://localhost:3001/api/ai/delete-frame/${frameId}`, {
+      const response = await fetch(`${API_BASE_URL}/ai/delete-frame/${frameId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -107,20 +104,13 @@ const MyAIFrames = () => {
         throw new Error(errorData.message || errorData.error || `Failed to delete frame (${response.status})`);
       }
 
-      toast({
-        title: 'Frame deleted',
-        description: `"${frameName}" has been deleted successfully.`,
-      });
+      toast.success(`"${frameName}" has been deleted successfully.`);
 
       // Refresh the list
       fetchAIFrames();
     } catch (err) {
       console.error('Delete error:', err);
-      toast({
-        title: 'Error',
-        description: err instanceof Error ? err.message : 'Failed to delete frame',
-        variant: 'destructive',
-      });
+      toast.error(err instanceof Error ? err.message : 'Failed to delete frame');
     }
   };
 

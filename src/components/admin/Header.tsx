@@ -4,6 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 interface Notification {
   _id: string;
   title: string;
@@ -53,7 +55,7 @@ const Header = () => {
 
       setIsLoadingNotifications(true);
       const response = await fetch(
-        `http://localhost:3001/api/notifications?limit=10`,
+        `${API_BASE_URL}/notifications?limit=10`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -78,7 +80,7 @@ const Header = () => {
   const handleMarkAsRead = async (notificationId: string) => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/notifications/mark-read`,
+        `${API_BASE_URL}/notifications/mark-read`,
         {
           method: 'PATCH',
           headers: {
@@ -104,7 +106,7 @@ const Header = () => {
   const handleMarkAllAsRead = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3001/api/notifications/mark-read`,
+        `${API_BASE_URL}/notifications/mark-read`,
         {
           method: 'PATCH',
           headers: {

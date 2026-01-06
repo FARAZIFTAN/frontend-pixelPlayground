@@ -8,7 +8,19 @@ import ProPaymentGuide from "@/components/ProPaymentGuide";
 import { createPayment, uploadPaymentProof, getUserPayments, cancelPayment } from "@/services/paymentAPI";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect, useRef } from "react";
-import { toast } from "@/hooks/use-toast";
+import toast from "react-hot-toast";
+
+// Helper function to get the correct image URL (cloud or local)
+const getImageUrl = (url: string | undefined): string | null => {
+  if (!url) return null;
+  // If it's already a full URL (Cloudinary), use it directly
+  if (url.startsWith('http')) {
+    return url;
+  }
+  // For local paths, prepend the API base URL
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+  return `${baseUrl}${url.replace('/api', '')}`;
+};
 
 const UpgradePro = () => {
   const { user, checkAuth } = useAuth();
@@ -86,11 +98,7 @@ const UpgradePro = () => {
   // Handle package selection
   const handleSelectPackage = async (pkg: any) => {
     if (!user) {
-      toast({
-        title: "Login Required",
-        description: "Please login to upgrade your account",
-        variant: "destructive",
-      });
+      toast.error("Login Required: Please login to upgrade your account");
       return;
     }
 
@@ -107,10 +115,7 @@ const UpgradePro = () => {
       setCurrentPayment(data.payment);
       setSelectedPackage(pkg.packageType);
       
-      toast({
-        title: "Payment Created",
-        description: "Silakan lakukan transfer dan upload bukti pembayaran",
-      });
+      toast.success("Payment Created: Silakan lakukan transfer dan upload bukti pembayaran");
 
       // Scroll to payment section
       setTimeout(() => {
@@ -129,10 +134,7 @@ const UpgradePro = () => {
             try {
               await cancelPayment(existingPayment._id);
               
-              toast({
-                title: "Old Payment Removed",
-                description: "Payment lama telah dihapus. Silakan klik Upgrade lagi.",
-              });
+              toast.success("Old Payment Removed: Payment lama telah dihapus. Silakan klik Upgrade lagi.");
               
               await loadUserPayments();
               return;
@@ -144,10 +146,7 @@ const UpgradePro = () => {
           setCurrentPayment(existingPayment);
           setSelectedPackage(existingPayment.packageType);
           
-          toast({
-            title: "Pending Payment Found",
-            description: "Anda sudah memiliki pembayaran yang menunggu. Silakan selesaikan atau batalkan pembayaran tersebut.",
-          });
+          toast("Anda sudah memiliki pembayaran yang menunggu. Silakan selesaikan atau batalkan pembayaran tersebut.");
 
           // Scroll to payment section
           setTimeout(() => {
@@ -155,11 +154,7 @@ const UpgradePro = () => {
           }, 500);
         }
       } else {
-        toast({
-          title: "Error",
-          description: error.error || error.details || "Failed to create payment",
-          variant: "destructive",
-        });
+        toast.error(error.error || error.details || "Failed to create payment");
       }
     } finally {
       setIsCreatingPayment(false);
@@ -173,21 +168,13 @@ const UpgradePro = () => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid File",
-        description: "Please select an image file (JPG/PNG)",
-        variant: "destructive",
-      });
+      toast.error("Invalid File: Please select an image file (JPG/PNG)");
       return;
     }
 
     // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File Too Large",
-        description: "Maximum file size is 5MB",
-        variant: "destructive",
-      });
+      toast.error("File Too Large: Maximum file size is 5MB");
       return;
     }
 
@@ -209,10 +196,7 @@ const UpgradePro = () => {
     try {
       await uploadPaymentProof(currentPayment._id, selectedFile);
       
-      toast({
-        title: "Success",
-        description: "Bukti pembayaran berhasil diupload. Menunggu verifikasi admin.",
-      });
+      toast.success("Bukti pembayaran berhasil diupload. Menunggu verifikasi admin.");
 
       // Don't reload payments to avoid showing loading screen
       // Payment status will be updated by admin, user can refresh manually
@@ -221,11 +205,7 @@ const UpgradePro = () => {
       setSelectedFile(null);
       setPreviewUrl(null);
     } catch (error: any) {
-      toast({
-        title: "Upload Failed",
-        description: error.response?.data?.error || "Failed to upload payment proof",
-        variant: "destructive",
-      });
+      toast.error(error.response?.data?.error || "Failed to upload payment proof");
     } finally {
       setIsUploading(false);
     }
@@ -252,21 +232,14 @@ const UpgradePro = () => {
     try {
       await cancelPayment(currentPayment._id);
       
-      toast({
-        title: "Payment Canceled",
-        description: "Pembayaran berhasil dibatalkan. Anda bisa membuat pembayaran baru.",
-      });
+      toast.success("Pembayaran berhasil dibatalkan. Anda bisa membuat pembayaran baru.");
 
       // Clear current payment and reload
       setCurrentPayment(null);
       setSelectedPackage(null);
       await loadUserPayments();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.error || "Failed to cancel payment",
-        variant: "destructive",
-      });
+      toast.error(error.error || "Failed to cancel payment");
     } finally {
       setIsCanceling(false);
     }
@@ -611,15 +584,15 @@ const UpgradePro = () => {
                           Proses ini biasanya memakan waktu maksimal 1x24 jam.
                         </p>
                       </div>
-                      {currentPayment.paymentProofUrl && (
+                      {currentPayment.paymentProofUrl && getImageUrl(currentPayment.paymentProofUrl) && (
                         <div className="mt-6">
                           <h5 className="text-sm font-semibold text-gray-300 mb-3 text-center">Bukti Pembayaran Anda:</h5>
                           <div className="bg-black/30 rounded-lg p-4">
                             <img 
-                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl.replace('/api', '')}`}
+                              src={getImageUrl(currentPayment.paymentProofUrl)!}
                               alt="Payment proof"
                               className="max-h-64 w-full object-contain mx-auto rounded-lg border border-white/20 cursor-pointer hover:border-white/40 transition-colors"
-                              onClick={() => window.open(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl.replace('/api', '')}`, '_blank')}
+                              onClick={() => window.open(getImageUrl(currentPayment.paymentProofUrl)!, '_blank')}
                             />
                             <p className="text-xs text-gray-400 text-center mt-2">Klik gambar untuk melihat ukuran penuh</p>
                           </div>
@@ -657,11 +630,11 @@ const UpgradePro = () => {
                           </div>
                         )}
                       </div>
-                      {currentPayment.paymentProofUrl && (
+                      {currentPayment.paymentProofUrl && getImageUrl(currentPayment.paymentProofUrl) && (
                         <div className="mt-4">
                           <p className="text-xs text-gray-400 text-center mb-2">Bukti Pembayaran:</p>
                           <img 
-                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl}`}
+                            src={getImageUrl(currentPayment.paymentProofUrl)!}
                             alt="Payment proof"
                             className="max-h-32 mx-auto rounded-lg border border-white/10 opacity-50"
                           />
@@ -691,11 +664,11 @@ const UpgradePro = () => {
                       </div>
 
                       {/* Show rejected payment proof */}
-                      {currentPayment.paymentProofUrl && (
+                      {currentPayment.paymentProofUrl && getImageUrl(currentPayment.paymentProofUrl) && (
                         <div className="mb-4 bg-black/30 rounded-lg p-3">
                           <p className="text-xs text-gray-400 mb-2">Bukti Pembayaran yang Ditolak:</p>
                           <img 
-                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'}${currentPayment.paymentProofUrl}`}
+                            src={getImageUrl(currentPayment.paymentProofUrl)!}
                             alt="Rejected payment proof"
                             className="max-h-32 mx-auto rounded-lg border border-red-500/20 opacity-60"
                           />

@@ -1,16 +1,26 @@
 // Payment API Service - Using native fetch
 import { API_BASE_URL } from './api';
 
-const getAuthToken = () => {
-  return sessionStorage.getItem('token');
+const TOKEN_STORAGE_KEY = 'token';
+
+const getAuthToken = (): string | null => {
+  return sessionStorage.getItem(TOKEN_STORAGE_KEY);
 };
 
-const getAuthHeaders = () => {
+const getAuthHeaders = (): Record<string, string> => {
   const token = getAuthToken();
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` }),
   };
+};
+
+/**
+ * Handle API error responses
+ */
+const handlePaymentError = async (response: Response): Promise<never> => {
+  const error = await response.json();
+  throw error;
 };
 
 export interface CreatePaymentData {
@@ -45,13 +55,11 @@ export const createPayment = async (data: CreatePaymentData) => {
     body: JSON.stringify(data),
   });
 
-  const jsonData = await response.json();
-
   if (!response.ok) {
-    throw jsonData;
+    return handlePaymentError(response);
   }
 
-  return jsonData;
+  return response.json();
 };
 
 // Upload payment proof
@@ -65,14 +73,12 @@ export const uploadPaymentProof = async (paymentId: string, file: File) => {
     method: 'POST',
     headers: {
       ...(token && { Authorization: `Bearer ${token}` }),
-      // Don't set Content-Type for FormData - browser will auto-set with boundary
     },
     body: formData,
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw error;
+    return handlePaymentError(response);
   }
 
   return response.json();
@@ -80,22 +86,16 @@ export const uploadPaymentProof = async (paymentId: string, file: File) => {
 
 // Cancel pending payment
 export const cancelPayment = async (paymentId: string) => {
-  const token = getAuthToken();
   const response = await fetch(`${API_BASE_URL}/payments/${paymentId}/cancel`, {
     method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
-    },
+    headers: getAuthHeaders(),
   });
 
-  const jsonData = await response.json();
-
   if (!response.ok) {
-    throw jsonData;
+    return handlePaymentError(response);
   }
 
-  return jsonData;
+  return response.json();
 };
 
 // Get user's payments

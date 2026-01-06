@@ -1,5 +1,7 @@
 // Analytics tracking utility
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 interface TrackEventParams {
   eventType: string;
   eventCategory: string;
@@ -21,7 +23,7 @@ const checkBackendAvailability = async (): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 500); // 500ms timeout
     
-    const response = await fetch('http://localhost:3001/api/health', {
+    const response = await fetch(`${API_BASE_URL}/health`, {
       method: 'HEAD',
       signal: controller.signal,
     });
@@ -48,7 +50,7 @@ export const trackEvent = async (params: TrackEventParams): Promise<void> => {
   
   // Send analytics event without blocking
   setTimeout(() => {
-    fetch('http://localhost:3001/api/analytics/track', {
+    fetch(`${API_BASE_URL}/analytics/track`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(params),

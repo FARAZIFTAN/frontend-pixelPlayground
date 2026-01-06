@@ -5,10 +5,9 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { aiAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'react-hot-toast';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -120,18 +119,13 @@ const AITemplateCreator = () => {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [frameName, setFrameName] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
-  const { toast } = useToast();
 
 
 
   // Generate template dari deskripsi user
   const handleGenerateTemplate = async () => {
     if (!description.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Mohon masukkan deskripsi template Anda',
-        variant: 'destructive',
-      });
+      toast.error('Mohon masukkan deskripsi template Anda');
       return;
     }
 
@@ -227,20 +221,13 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
         
         setGeneratedImage(base64Image);
         
-        toast({
-          title: '✨ Template Berhasil Dibuat!',
-          description: 'Template frame Anda sudah siap digunakan',
-        });
+        toast.success('✨ Template Berhasil Dibuat! Template frame Anda sudah siap digunakan');
       } else {
         throw new Error(imageResponse.error || 'Gagal generate gambar frame');
       }
     } catch (error) {
       console.error('Generate template error:', error);
-      toast({
-        title: 'Error',
-        description: 'Gagal membuat template. Silakan coba lagi.',
-        variant: 'destructive',
-      });
+      toast.error('Gagal membuat template. Silakan coba lagi.');
     } finally {
       setIsGenerating(false);
     }
@@ -249,11 +236,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
   // Handle generate click from button
   const handleGenerateClick = () => {
     if (!description.trim()) {
-      toast({
-        title: 'Deskripsi Kosong',
-        description: 'Mohon tulis deskripsi frame terlebih dahulu',
-        variant: 'destructive'
-      });
+      toast.error('Mohon tulis deskripsi frame terlebih dahulu');
       return;
     }
     
@@ -263,20 +246,12 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
   // Handle save template to database
   const handleSaveTemplate = async () => {
     if (!frameSpec || !generatedImage) {
-      toast({
-        title: 'Error',
-        description: 'Frame belum dibuat. Generate frame terlebih dahulu.',
-        variant: 'destructive',
-      });
+      toast.error('Frame belum dibuat. Generate frame terlebih dahulu.');
       return;
     }
 
     if (!frameName.trim()) {
-      toast({
-        title: 'Nama Frame Kosong',
-        description: 'Mohon isi nama frame terlebih dahulu',
-        variant: 'destructive',
-      });
+      toast.error('Mohon isi nama frame terlebih dahulu');
       return;
     }
 
@@ -300,10 +275,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
       console.log('✅ Frame saved successfully:', result);
 
       if (result.success) {
-        toast({
-          title: '✅ Frame Berhasil Disimpan!',
-          description: `Frame "${frameName}" telah tersimpan dengan badge "Your Frame"!`,
-        });
+        toast.success(`✅ Frame "${frameName}" berhasil disimpan dengan badge "Your Frame"!`);
 
         // Reset form after successful save
         setFrameName('');
@@ -316,11 +288,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
 
     } catch (error) {
       console.error('Save template error:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Gagal menyimpan template',
-        variant: 'destructive',
-      });
+      toast.error(error instanceof Error ? error.message : 'Gagal menyimpan template');
     } finally {
       setIsSaving(false);
     }
@@ -631,20 +599,13 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                                     link.click();
                                     URL.revokeObjectURL(url);
                                     
-                                    toast({
-                                      title: 'Success',
-                                      description: 'Frame downloaded as PNG!',
-                                    });
+                                    toast.success('Frame downloaded as PNG!');
                                   }
                                 }, 'image/png', 0.95);
                               }
                             };
                             img.onerror = () => {
-                              toast({
-                                title: 'Error',
-                                description: 'Failed to load image for download',
-                                variant: 'destructive',
-                              });
+                              toast.error('Failed to load image for download');
                             };
                             img.src = generatedImage;
                           } else {
@@ -653,18 +614,11 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                             link.download = `frame-${frameSpec?.layout}-${frameSpec?.frameCount}foto-${Date.now()}.png`;
                             link.click();
                             
-                            toast({
-                              title: 'Success',
-                              description: 'Frame downloaded!',
-                            });
+                            toast.success('Frame downloaded!');
                           }
                         } catch (error) {
                           console.error('Download error:', error);
-                          toast({
-                            title: 'Error',
-                            description: 'Failed to download frame.',
-                            variant: 'destructive',
-                          });
+                          toast.error('Failed to download frame.');
                         }
                       }}
                       className="w-full bg-gradient-to-r from-[#27AE60] to-[#229954] hover:from-[#229954] hover:to-[#27AE60] text-white font-semibold shadow-lg transition-all"
@@ -763,10 +717,7 @@ Buatkan desain yang menarik dan modern sesuai deskripsi user.`;
                         setFrameSpec(null);
                         setDescription('');
                         setFrameName('');
-                        toast({
-                          title: '🔄 Reset Berhasil',
-                          description: 'Siap membuat frame baru!',
-                        });
+                        toast.success('🔄 Reset Berhasil! Siap membuat frame baru!');
                       }}
                       className="w-full bg-[#7F8C8D] hover:bg-[#95A5A6] text-white font-semibold"
                     >

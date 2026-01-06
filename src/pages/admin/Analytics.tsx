@@ -5,6 +5,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/contexts/AuthContext";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+
 interface AnalyticsData {
   overview: {
     totalEvents: number;
@@ -42,7 +44,7 @@ const Analytics = () => {
         endDate: endDate.toISOString(),
       });
 
-      const response = await fetch(`http://localhost:3001/api/analytics?${params}`, {
+      const response = await fetch(`${API_BASE_URL}/analytics?${params}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },

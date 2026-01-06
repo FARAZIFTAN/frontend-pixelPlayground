@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Camera, Menu, X, User, LogOut, Image as ImageIcon, Sparkles, ChevronDown, Upload, Crown, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
+import NotificationBell from "@/components/NotificationBell";
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -401,6 +402,9 @@ const Navbar = () => {
                   </Button>
                 </Link>
 
+                {/* Notification Bell */}
+                <NotificationBell />
+
                 <div className="relative" ref={userMenuRef}>
                   <button
                     ref={userButtonRef}
@@ -422,13 +426,10 @@ const Navbar = () => {
                     aria-activedescendant={showUserMenu && userFocusIndex >= 0 ? `user-item-${userFocusIndex}` : undefined}
                     title={user.isPremium ? "Pro Creator Account · Unlimited creation · Premium access" : "My Account"}
                   >
-                    {user.profilePicture ? (
+                    {user.profilePicture && user.profilePicture.startsWith('http') ? (
                       <div className="relative">
                         <img
-                          src={user.profilePicture.startsWith('http')
-                            ? `${user.profilePicture}?t=${profilePicVersion}`
-                            : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
-                          }
+                          src={`${user.profilePicture}?t=${profilePicVersion}`}
                           alt={user.name}
                           className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
                           loading="lazy"
@@ -640,13 +641,10 @@ const Navbar = () => {
                 <>
                   <div className="pt-2 pb-2 px-3 border-t border-white/10">
                     <div className="flex items-center space-x-2.5 mb-1.5">
-                      {user.profilePicture ? (
+                      {user.profilePicture && user.profilePicture.startsWith('http') ? (
                         <div className="relative">
                           <img 
-                            src={user.profilePicture.startsWith('http') 
-                              ? `${user.profilePicture}?t=${profilePicVersion}` 
-                              : `http://localhost:3001${user.profilePicture}?t=${profilePicVersion}`
-                            } 
+                            src={`${user.profilePicture}?t=${profilePicVersion}`}
                             alt={user.name}
                             className="w-9 h-9 rounded-full object-cover border-2 border-white/20"
                             loading="lazy"

@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Heart, Eye, Download, Share2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import toast from 'react-hot-toast';
 import { apiCall } from '@/services/api';
 import { downloadFile } from '@/lib/fileUtils';
 
@@ -28,7 +28,6 @@ interface ShareData {
 }
 
 const SharePage = () => {
-  const { toast } = useToast();
   const { id } = useParams<{ id: string }>();
   const [shareData, setShareData] = useState<ShareData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +40,13 @@ const SharePage = () => {
       if (!id) return;
 
       try {
-        const response = await apiCall(`/api/share/public/${id}`, { method: 'GET' }) as ShareData;
-        setShareData(response);
+        // Use correct endpoint without /api prefix (apiCall adds it from API_BASE_URL)
+        const response = await apiCall<{ success: boolean; data: ShareData }>(`/share/public/${id}`, { method: 'GET' });
+        if (response.success && response.data) {
+          setShareData(response.data);
+        } else {
+          setError('Failed to load shared composite');
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to load shared composite');
       } finally {
@@ -64,16 +68,9 @@ const SharePage = () => {
         `karyaKlik-composite-${shareData.composite._id}`
       );
 
-      toast({
-        title: 'Download Started',
-        description: 'Your composite image is being downloaded.',
-      });
+      toast.success('Your composite image is being downloaded.');
     } catch (error) {
-      toast({
-        title: 'Download Failed',
-        description: 'Failed to download the composite image.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to download the composite image.');
     } finally {
       setIsDownloading(false);
     }
@@ -106,16 +103,9 @@ const SharePage = () => {
     if (!shareData) return;
 
     navigator.clipboard.writeText(shareData.shareUrl).then(() => {
-      toast({
-        title: 'Link Copied',
-        description: 'Share link has been copied to clipboard.',
-      });
+      toast.success('Share link has been copied to clipboard.');
     }).catch(() => {
-      toast({
-        title: 'Copy Failed',
-        description: 'Failed to copy link to clipboard.',
-        variant: 'destructive',
-      });
+      toast.error('Failed to copy link to clipboard.');
     });
   };
 

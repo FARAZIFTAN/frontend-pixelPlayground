@@ -112,10 +112,10 @@ const Gallery = () => {
   const fetchTemplates = async (page = 1, append = false) => {
     try {
       console.time('⏱️ Template fetch time');
+      // Remove redundant skip parameter - backend calculates it from page
       const response = await templateAPI.getTemplates({ 
         limit: itemsPerPage, 
-        page,
-        skip: (page - 1) * itemsPerPage 
+        page
       }) as {
         success: boolean;
         data?: { templates: Template[]; total?: number };

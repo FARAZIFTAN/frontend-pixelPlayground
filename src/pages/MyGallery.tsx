@@ -230,9 +230,8 @@ const MyGallery = () => {
   const handleView = (composite: Composite) => {
     setSelectedComposite(composite);
     setIsViewDialogOpen(true);
-    if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
-      ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_view', 'composite', composite._id);
-    }
+    // Track view event using safeAnalytics
+    safeAnalytics.templateView(composite._id, 'gallery_view', user?.id);
   };
 
   // Handle download
@@ -248,9 +247,8 @@ const MyGallery = () => {
       );
 
       toast.success('Composite downloaded!');
-      if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
-        ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_download', 'composite', composite._id);
-      }
+      // Track download event using safeAnalytics
+      safeAnalytics.compositeDownload(composite._id, user?.id);
     } catch (error) {
       console.error('Download error:', error);
       toast.error('Failed to download composite');
@@ -265,9 +263,8 @@ const MyGallery = () => {
       if (response.success) {
         setShareData(response.data);
         setShareDialogOpen(true);
-        if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
-          ((analytics as Record<string, unknown>).trackEvent as (action: string, type: string, id: string) => void)('gallery_share', 'composite', composite._id);
-        }
+        // Track share event using safeAnalytics
+        safeAnalytics.templateView(composite._id, 'gallery_share', user?.id);
       } else {
         toast.error('Failed to generate share link');
       }
@@ -295,10 +292,8 @@ const MyGallery = () => {
         window.open(whatsappUrl, '_blank', 'noopener,noreferrer');
       }
       
-      // Track WhatsApp share
-      if (typeof (analytics as Record<string, unknown>).trackEvent === 'function') {
-        ((analytics as Record<string, unknown>).trackEvent as (action: string, platform: string) => void)('share_whatsapp', isMobile ? 'mobile' : 'desktop');
-      }
+      // Track WhatsApp share using safeAnalytics
+      safeAnalytics.templateView('whatsapp_share', isMobile ? 'mobile' : 'desktop', user?.id);
       
       toast.success('Opening WhatsApp...');
     } catch (error) {

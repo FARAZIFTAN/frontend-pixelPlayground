@@ -1,26 +1,61 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Sparkles, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Sparkles, Mail, Lock, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import toast from "react-hot-toast";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
-    // TODO: Implement real authentication
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Login failed');
+      }
+
+      // Check if user is admin
+      if (data.user.role !== 'admin') {
+        throw new Error('Access denied. Admin privileges required.');
+      }
+
+      // Use the auth context to login
+      await login(email, password);
+      
+      toast.success(`Welcome Admin! Logged in as ${data.user.name}`);
+
       navigate("/admin/dashboard");
-    }, 1000);
+    } catch (err) {
+      console.error('Admin login error:', err);
+      setError(err instanceof Error ? err.message : 'Login failed');
+      toast.error(err instanceof Error ? err.message : 'Invalid credentials');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -50,6 +85,14 @@ const Login = () => {
 
             {/* Login Form */}
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Error Message */}
+              {error && (
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
+              )}
+
               {/* Email */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -5,8 +5,19 @@ import { Camera, Upload, ArrowRight, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { templateAPI, userFrameAPI } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import toast from 'react-hot-toast';
 import { safeSessionStorageGet, validateTemplateArray } from '@/lib/utils';
+
+interface Template {
+  _id: string;
+  name: string;
+  category: string;
+  thumbnail: string;
+  frameUrl: string;
+  isPremium: boolean;
+  frameCount: number;
+  layoutPositions: Array<{ x: number; y: number; width: number; height: number }>;
+}
 
 const InputMethodSelection = () => {
   const navigate = useNavigate();

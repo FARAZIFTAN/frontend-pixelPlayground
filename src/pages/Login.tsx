@@ -14,7 +14,7 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isAccordionOpen, setIsAccordionOpen] = useState(false);
   
-  const { login, user } = useAuth();
+  const { login, user, checkAuth } = useAuth();
   const navigate = useNavigate();
 
   // Track page view
@@ -98,8 +98,8 @@ const Login: React.FC = () => {
         navigate("/", { replace: true });
       }
       
-      // Reload to update auth context
-      window.location.reload();
+      // Update auth context without page reload
+      await checkAuth(true);
     } catch (err: any) {
       setError(err.message || "Google login failed. Please try again.");
       setIsLoading(false);
