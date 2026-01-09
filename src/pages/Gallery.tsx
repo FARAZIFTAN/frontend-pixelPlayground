@@ -343,7 +343,7 @@ const Gallery = () => {
   const handleUseTemplate = (template: Template) => {
     // Jika autentikasi masih loading, tunggu sebentar
     if (authLoading) {
-      toast.info("Memverifikasi status akun...", { duration: 2000 });
+      toast("Memverifikasi status akun...", { duration: 2000 });
       return;
     }
 
