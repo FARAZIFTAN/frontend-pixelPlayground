@@ -1219,7 +1219,7 @@ const Booth = () => {
         ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         
         // Save the captured photo (no filter yet)
-        const imageData = canvas.toDataURL("image/png");
+        const imageData = canvas.toDataURL("image/jpeg", 0.6);
         
         // USE RETAKE INDEX FROM REF IF RETAKING, OTHERWISE USE CURRENT INDEX
         const targetIndex = retakeIndexRef.current !== null ? retakeIndexRef.current : currentPhotoIndex;
@@ -1357,7 +1357,7 @@ const Booth = () => {
         ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
         
         // Save the captured photo
-        const imageData = canvas.toDataURL("image/png");
+        const imageData = canvas.toDataURL("image/jpeg", 0.6);
         
         // Update state with callback to handle next step
         setCapturedImages((prevImages) => {
@@ -1661,109 +1661,118 @@ const Booth = () => {
   };
 
   // Handle file upload
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (!files || files.length === 0) return;
+  // GANTI SELURUH FUNGSI handleFileUpload DENGAN INI:
 
-    try {
-      setIsLoading(true);
-      const uploadedImages: string[] = [];
+const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const files = event.target.files;
+  if (!files || files.length === 0) return;
 
-      // Calculate how many more photos we can accept
-      const remainingSlots = photoCount - capturedImages.length;
-      const filesToProcess = Math.min(files.length, remainingSlots);
+  // Helper untuk kompresi file
+  const compressFile = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const elem = document.createElement('canvas');
+          // Resize jika terlalu besar (opsional, max lebar 1280px)
+          const scaleFactor = Math.min(1, 1280 / img.width);
+          elem.width = img.width * scaleFactor;
+          elem.height = img.height * scaleFactor;
+          
+          const ctx = elem.getContext('2d');
+          ctx?.drawImage(img, 0, 0, elem.width, elem.height);
+          
+          // KOMPRESI DISINI: JPEG kualitas 0.6 (60%)
+          resolve(elem.toDataURL('image/jpeg', 0.6) || '');
+        };
+        img.onerror = (error) => reject(error);
+      };
+      reader.onerror = (error) => reject(error);
+    });
+  };
 
-      console.log(`📸 Uploading ${filesToProcess} files (${remainingSlots} slots remaining out of ${photoCount})`);
-      console.log(`Current photos: ${capturedImages.length}, Will upload: ${filesToProcess}`);
+  try {
+    setIsLoading(true);
+    const uploadedImages: string[] = [];
 
-      // Convert files to base64 for preview
-      for (let i = 0; i < filesToProcess; i++) {
-        const file = files[i];
-        
-        // Validate file type
-        if (!file.type.startsWith('image/')) {
-          toast.error(`File ${file.name} is not an image`);
-          continue;
-        }
+    // Calculate how many more photos we can accept
+    const remainingSlots = photoCount - capturedImages.length;
+    const filesToProcess = Math.min(files.length, remainingSlots);
 
-        // Validate file size (max 10MB)
-        if (file.size > 10 * 1024 * 1024) {
-          toast.error(`File ${file.name} is too large (max 10MB)`);
-          continue;
-        }
+    console.log(`📸 Uploading ${filesToProcess} files...`);
 
-        // Read file as base64
-        const reader = new FileReader();
-        const imageData = await new Promise<string>((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = (e) => reject(new Error('Failed to read file'));
-          reader.readAsDataURL(file);
-        });
-
-        uploadedImages.push(imageData);
-        console.log(`✅ Processed image ${i + 1}/${filesToProcess}: ${file.name}`);
-      }
-
-      if (uploadedImages.length === 0) {
-        toast.error('No valid images selected');
-        setIsLoading(false);
-        return;
-      }
-
-      console.log(`✅ Successfully processed ${uploadedImages.length} images`);
-
-      // Append to captured images (not replace)
-      const newCapturedImages = [...capturedImages, ...uploadedImages];
-      setCapturedImages(newCapturedImages);
-      setCurrentPhotoIndex(newCapturedImages.length);
+    for (let i = 0; i < filesToProcess; i++) {
+      const file = files[i];
       
-      // Upload to backend
-      if (sessionId) {
-        const uploadPromises = uploadedImages.map(async (imageData, index) => {
-          const response = await photoAPI.uploadPhoto({
-            sessionId,
-            photoUrl: imageData, // base64 string
-            order: capturedImages.length + index + 1,
-            metadata: {
-              source: 'upload',
-              uploadedAt: new Date().toISOString()
-            }
-          });
-          // Type assertion for response
-          const data = response as { data?: { _id?: string } };
-          return data.data?._id || '';
-        });
-
-        const photoIds = await Promise.all(uploadPromises);
-        setUploadedPhotoIds([...uploadedPhotoIds, ...photoIds]);
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(`File ${file.name} is not an image`);
+        continue;
       }
 
-      // Check if all photos are uploaded
-      if (newCapturedImages.length >= photoCount) {
-        setAllPhotosCaptured(true);
-      } else {
-        const remaining = photoCount - newCapturedImages.length;
-      }
-
-      // Warn if user selected more files than available slots
-      if (files.length > remainingSlots) {
-        toast(`⚠️ Only ${remainingSlots} slots available. ${files.length - remainingSlots} file(s) skipped.`, {
-          duration: 4000,
-          icon: '⚠️'
-        });
-      }
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload photos. Please try again.');
-    } finally {
-      setIsLoading(false);
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+      // Proses kompresi
+      try {
+        const compressedData = await compressFile(file);
+        uploadedImages.push(compressedData);
+        console.log(`✅ Processed & Compressed image ${i + 1}/${filesToProcess}`);
+      } catch (err) {
+        console.error("Compression failed", err);
+        toast.error(`Failed to process ${file.name}`);
       }
     }
-  };
+
+    if (uploadedImages.length === 0) {
+      toast.error('No valid images selected');
+      setIsLoading(false);
+      return;
+    }
+
+    // ... (SISA KODE KE BAWAH TETAP SAMA SEPERTI ASLINYA) ...
+    // ... Append to captured images ...
+    const newCapturedImages = [...capturedImages, ...uploadedImages];
+    setCapturedImages(newCapturedImages);
+    setCurrentPhotoIndex(newCapturedImages.length);
+    
+    // Upload to backend
+    if (sessionId) {
+      const uploadPromises = uploadedImages.map(async (imageData, index) => {
+        const response = await photoAPI.uploadPhoto({
+          sessionId,
+          photoUrl: imageData, // INI SEKARANG SUDAH KECIL (JPEG)
+          order: capturedImages.length + index + 1,
+          metadata: {
+            source: 'upload',
+            uploadedAt: new Date().toISOString()
+          }
+        });
+        const data = response as { data?: { _id?: string } };
+        return data.data?._id || '';
+      });
+
+      const photoIds = await Promise.all(uploadPromises);
+      setUploadedPhotoIds([...uploadedPhotoIds, ...photoIds]);
+    }
+
+    // Check completion
+    if (newCapturedImages.length >= photoCount) {
+      setAllPhotosCaptured(true);
+    }
+
+    if (files.length > remainingSlots) {
+      toast(`⚠️ Only ${remainingSlots} slots available.`, { icon: '⚠️' });
+    }
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    toast.error('Failed to upload photos.');
+  } finally {
+    setIsLoading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+};
 
   const handleRetake = () => {
     // Stop existing camera stream first
