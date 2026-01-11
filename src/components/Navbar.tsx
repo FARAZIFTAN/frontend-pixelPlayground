@@ -13,6 +13,7 @@ const Navbar = () => {
   const [showExploreMenu, setShowExploreMenu] = useState(false);
   const [profilePicVersion, setProfilePicVersion] = useState(Date.now());
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [profileLoadError, setProfileLoadError] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
@@ -426,17 +427,21 @@ const Navbar = () => {
                     aria-activedescendant={showUserMenu && userFocusIndex >= 0 ? `user-item-${userFocusIndex}` : undefined}
                     title={user.isPremium ? "Pro Creator Account · Unlimited creation · Premium access" : "My Account"}
                   >
-                    {user.profilePicture && user.profilePicture.startsWith('http') ? (
+                    {user.profilePicture && user.profilePicture.startsWith('http') && !profileLoadError ? (
                       <div className="relative">
                         <img
                           src={`${user.profilePicture}?t=${profilePicVersion}`}
                           alt={user.name}
                           className="w-8 h-8 rounded-full object-cover border-2 border-white/20"
                           loading="lazy"
-                          onLoad={() => setIsProfileLoading(false)}
+                          onLoad={() => {
+                            setIsProfileLoading(false);
+                            setProfileLoadError(false);
+                          }}
                           onError={(e) => {
                             console.error('Navbar profile pic load error');
                             setIsProfileLoading(false);
+                            setProfileLoadError(true);
                             e.currentTarget.style.display = 'none';
                           }}
                         />
@@ -445,7 +450,9 @@ const Navbar = () => {
                         )}
                       </div>
                     ) : (
-                      <User className="w-4 h-4 text-white" />
+                      <div className="w-8 h-8 rounded-full bg-white/6 flex items-center justify-center">
+                        <User className="w-4 h-4 text-white" />
+                      </div>
                     )}
                     <div className="flex flex-col items-start">
                       <span className="text-white font-medium text-sm leading-tight">
@@ -641,17 +648,21 @@ const Navbar = () => {
                 <>
                   <div className="pt-2 pb-2 px-3 border-t border-white/10">
                     <div className="flex items-center space-x-2.5 mb-1.5">
-                      {user.profilePicture && user.profilePicture.startsWith('http') ? (
+                      {user.profilePicture && user.profilePicture.startsWith('http') && !profileLoadError ? (
                         <div className="relative">
                           <img 
                             src={`${user.profilePicture}?t=${profilePicVersion}`}
                             alt={user.name}
                             className="w-9 h-9 rounded-full object-cover border-2 border-white/20"
                             loading="lazy"
-                            onLoad={() => setIsProfileLoading(false)}
+                            onLoad={() => {
+                              setIsProfileLoading(false);
+                              setProfileLoadError(false);
+                            }}
                             onError={(e) => {
                               console.error('Mobile menu profile pic load error');
                               setIsProfileLoading(false);
+                              setProfileLoadError(true);
                               e.currentTarget.style.display = 'none';
                             }}
                           />
@@ -660,7 +671,9 @@ const Navbar = () => {
                           )}
                         </div>
                       ) : (
-                        <User className="w-9 h-9 text-white/70" />
+                        <div className="w-9 h-9 rounded-full bg-white/6 flex items-center justify-center">
+                          <User className="w-5 h-5 text-white/70" />
+                        </div>
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-medium text-[13px] truncate">

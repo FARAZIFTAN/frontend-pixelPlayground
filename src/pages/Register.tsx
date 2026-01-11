@@ -408,7 +408,6 @@ const Register: React.FC = () => {
                           theme="filled_black"
                           size="large"
                           text="signup_with"
-                          width="100%"
                           logo_alignment="left"
                         />
                       </div>
