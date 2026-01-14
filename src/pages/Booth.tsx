@@ -2259,7 +2259,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       <img
                         src={selectedTemplate.thumbnail}
                         alt={selectedTemplate.name}
-                        className="w-16 h-16 rounded-lg object-cover border-2 border-primary/20"
+                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover border-2 border-primary/20"
                       />
                       {selectedTemplate.isPremium && (
                         <Badge className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0 shadow-lg">
@@ -2400,7 +2400,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                     <h3 className="font-heading font-bold text-sm text-muted-foreground uppercase tracking-wider mb-4">
                       Final Result
                     </h3>
-                    <div className="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-primary/50 shadow-lg">
+                    <div className="relative aspect-[3/4] sm:aspect-[2/3] rounded-xl overflow-hidden border-2 border-primary/50 shadow-lg">
                       <img
                         src={finalCompositeImage}
                         alt="Final Photo Strip"
@@ -2425,7 +2425,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         <img
                           src={selectedTemplate.thumbnail}
                           alt={selectedTemplate.name}
-                          className="w-12 h-12 rounded-lg object-cover border border-border"
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover border border-border"
                         />
                         <div className="flex-1">
                           <p className="font-semibold text-sm">{selectedTemplate.name}</p>
@@ -2485,8 +2485,8 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
           <Card className="gradient-card border-0 shadow-hover overflow-hidden">
             <CardContent className="p-6 lg:p-8">
               <div className={`relative bg-secondary rounded-2xl overflow-hidden ${
-                finalCompositeImage ? 'aspect-[3/4] lg:aspect-[2/3]' : 'aspect-video'
-              }`}>
+                finalCompositeImage ? 'aspect-[3/4] sm:aspect-[2/3] lg:aspect-[2/3]' : 'aspect-video'
+              }`}>>
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
                     <div className="text-center">
@@ -2717,7 +2717,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       Uploaded Photos ({capturedImages.length}/{photoCount})
                     </h3>
                   </div>
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                     {capturedImages.map((image, index) => (
                       <div key={index} className="relative aspect-square rounded-lg overflow-hidden border-2 border-border bg-secondary">
                         <img
@@ -2725,7 +2725,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           alt={`Photo ${index + 1}`}
                           className="w-full h-full object-cover"
                         />
-                        <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-2 py-0.5 rounded">
+                        <div className="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 sm:px-2 py-0.5 rounded">
                           {index + 1}
                         </div>
                       </div>
@@ -2734,7 +2734,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                     {Array.from({ length: photoCount - capturedImages.length }).map((_, index) => (
                       <div key={`empty-${index}`} className="relative aspect-square rounded-lg border-2 border-dashed border-border bg-secondary/50 flex items-center justify-center">
                         <div className="text-center">
-                          <Upload className="w-6 h-6 text-muted-foreground/50 mx-auto mb-1" />
+                          <Upload className="w-4 h-4 sm:w-6 sm:h-6 text-muted-foreground/50 mx-auto mb-1" />
                           <span className="text-xs text-muted-foreground/50">{capturedImages.length + index + 1}</span>
                         </div>
                       </div>
