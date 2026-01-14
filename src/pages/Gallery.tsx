@@ -410,20 +410,20 @@ const Gallery = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className="mb-12"
+          className="mb-8"
         >
           <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <motion.div 
-                className="flex flex-col md:flex-row gap-4"
+                className="flex flex-col gap-4"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
               >
                 {/* Search Input */}
                 <motion.div 
-                  className="flex-1 relative"
-                  whileHover={{ scale: 1.02 }}
+                  className="relative w-full"
+                  whileHover={{ scale: 1.01 }}
                   transition={{ duration: 0.2 }}
                 >
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -432,10 +432,10 @@ const Gallery = () => {
                     placeholder="Search templates..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400 transition-all duration-300"
+                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 text-base sm:text-lg"
                     whileFocus={{ 
                       boxShadow: "0 0 0 3px rgba(198, 40, 40, 0.1)",
-                      scale: 1.01
+                      scale: 1.005
                     }}
                     transition={{ duration: 0.2 }}
                   />
@@ -444,16 +444,16 @@ const Gallery = () => {
                 {/* Category Filter with Multi-Select */}
                 <motion.div 
                   className="flex items-start gap-2"
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.01 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <Filter className="w-5 h-5 text-gray-400 mt-3" />
-                  <div className="flex-1">
+                  <Filter className="w-5 h-5 text-gray-400 mt-2.5 sm:mt-3 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
                     {/* Selected Categories Chips */}
                     <AnimatePresence mode="popLayout">
                       {selectedCategories.length > 0 && (
                         <motion.div 
-                          className="flex flex-wrap gap-2 mb-2"
+                          className="flex flex-wrap gap-1.5 sm:gap-2 mb-2"
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -10 }}
@@ -473,20 +473,19 @@ const Gallery = () => {
                                   damping: 30,
                                   opacity: { duration: 0.2 }
                                 }}
-                                className="inline-flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full text-sm border border-primary/30"
+                                className="inline-flex items-center gap-1 px-2 sm:px-3 py-1 bg-primary/20 text-primary rounded-full text-xs sm:text-sm border border-primary/30"
                               >
-                                {category}
+                                <span className="truncate max-w-20 sm:max-w-none">{category}</span>
                                 <motion.button
                                   whileHover={{ scale: 1.1 }}
                                   whileTap={{ scale: 0.9 }}
                                   onClick={() => {
                                     setSelectedCategories(prev => {
                                       const newCategories = prev.filter(c => c !== category);
-                                      // If no categories selected after removal, default to "All"
                                       return newCategories.length === 0 ? ["All"] : newCategories;
                                     });
                                   }}
-                                  className="hover:bg-primary/30 rounded-full p-0.5 transition-colors"
+                                  className="hover:bg-primary/30 rounded-full p-0.5 transition-colors flex-shrink-0"
                                 >
                                   <X className="w-3 h-3" />
                                 </motion.button>
@@ -501,21 +500,24 @@ const Gallery = () => {
                     <Popover>
                       <PopoverTrigger asChild>
                         <motion.div
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
                         >
                           <Button
                             variant="outline"
-                            className="w-full justify-between px-4 py-3 bg-white/10 border border-white/20 rounded-lg hover:border-white/30 text-white transition-all duration-300"
+                            className="w-full justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg hover:border-white/30 text-white transition-all duration-300 text-base sm:text-lg"
                           >
-                            {selectedCategories.length === 0 
-                              ? "Select categories..." 
-                              : `${selectedCategories.length} selected`
-                            }
+                            <span className="truncate">
+                              {selectedCategories.length === 0 
+                                ? "Select categories..." 
+                                : `${selectedCategories.length} selected`
+                              }
+                            </span>
                             <motion.div
                               animate={{ rotate: 0 }}
                               whileHover={{ rotate: 180 }}
                               transition={{ duration: 0.3 }}
+                              className="flex-shrink-0"
                             >
                               <ChevronDown className="w-4 h-4 opacity-50" />
                             </motion.div>
@@ -523,8 +525,10 @@ const Gallery = () => {
                         </motion.div>
                       </PopoverTrigger>
                       <PopoverContent 
-                        className="w-80 p-0 bg-gray-900 border border-white/20 text-white shadow-2xl"
+                        className="w-72 sm:w-80 p-0 bg-gray-900 border border-white/20 text-white shadow-2xl"
                         align="start"
+                        side="bottom"
+                        sideOffset={4}
                         asChild
                       >
                         <motion.div
@@ -673,11 +677,11 @@ const Gallery = () => {
 
               {/* Results Count */}
               <motion.div 
-                className="mt-4 text-sm text-gray-400"
+                className="mt-3 text-xs sm:text-sm text-gray-400"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.4, delay: 0.6 }}
-                key={`${filteredTemplates.length}-${templates.length}`} // Re-animate when counts change
+                key={`${filteredTemplates.length}-${templates.length}`}
               >
                 <motion.span
                   initial={{ scale: 0.8 }}
@@ -726,7 +730,7 @@ const Gallery = () => {
                   </Button>
                 </div>
               ) : (
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
                   {userCustomFrames.map((frame, index) => (
                 <motion.div
                   key={`custom-${frame._id}`}
@@ -808,25 +812,25 @@ const Gallery = () => {
 
         {/* Template Grid */}
         {isLoading ? (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {/* Skeleton Loading */}
             {Array.from({ length: 12 }).map((_, index) => (
               <Card key={index} className="gradient-card border-0 shadow-soft overflow-hidden h-full animate-pulse">
                 <CardContent className="p-0">
                   <div className="aspect-[3/4] bg-gray-800/50"></div>
                 </CardContent>
-                <CardFooter className="flex flex-col items-start p-4 gap-3">
-                  <div className="w-full space-y-2">
-                    <div className="h-4 bg-gray-800/50 rounded w-3/4"></div>
-                    <div className="h-3 bg-gray-800/50 rounded w-1/2"></div>
+                <CardFooter className="flex flex-col items-start p-3 sm:p-4 gap-2 sm:gap-3">
+                  <div className="w-full space-y-1.5 sm:space-y-2">
+                    <div className="h-3 sm:h-4 bg-gray-800/50 rounded w-3/4"></div>
+                    <div className="h-2.5 sm:h-3 bg-gray-800/50 rounded w-1/2"></div>
                   </div>
-                  <div className="h-10 bg-gray-800/50 rounded-full w-full"></div>
+                  <div className="h-8 sm:h-10 bg-gray-800/50 rounded-full w-full"></div>
                 </CardFooter>
               </Card>
             ))}
           </div>
         ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" ref={containerRef}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" ref={containerRef}>
           {paginatedTemplates.map((template, localIndex) => {
             // Calculate actual index in filteredTemplates for proper data-index
             const actualIndex = filteredTemplates.findIndex(t => t._id === template._id);

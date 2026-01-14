@@ -264,7 +264,7 @@ const InputMethodSelection = () => {
   const photoCount = selectedTemplate.frameCount || selectedTemplate.photoCount || 4;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-red-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-primary via-primary to-red-800 flex items-center justify-center p-3 sm:p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -272,18 +272,18 @@ const InputMethodSelection = () => {
         className="w-full max-w-4xl"
       >
         <Card className="bg-white/10 backdrop-blur-md border-0 shadow-2xl">
-          <CardContent className="p-8 lg:p-10">
+          <CardContent className="p-6 sm:p-8 lg:p-10">
             {/* Header */}
             <motion.div
               initial={{ y: -20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.2 }}
-              className="text-center mb-8"
+              className="text-center mb-6 sm:mb-8"
             >
-              <h1 className="text-3xl lg:text-4xl font-heading font-bold text-white mb-3">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-heading font-bold text-white mb-2 sm:mb-3">
                 Choose Your Input Method
               </h1>
-              <p className="text-lg lg:text-xl text-white/90">
+              <p className="text-base sm:text-lg lg:text-xl text-white/90">
                 How would you like to add your {photoCount} photos?
               </p>
             </motion.div>
@@ -293,61 +293,65 @@ const InputMethodSelection = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.3 }}
-              className="flex items-center justify-center gap-3 mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-4"
+              className="flex items-center justify-center gap-2 sm:gap-3 mb-6 sm:mb-8 bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4"
             >
               <img
                 src={selectedTemplate.thumbnail}
                 alt={selectedTemplate.name}
-                className="w-16 h-16 rounded-lg object-cover border-2 border-white/30 shadow-lg"
+                className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover border-2 border-white/30 shadow-lg flex-shrink-0"
               />
-              <div>
-                <h3 className="text-xl font-heading font-bold text-white">
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg sm:text-xl font-heading font-bold text-white truncate">
                   {selectedTemplate.name}
                 </h3>
-                <p className="text-white/80 text-base">
-                  {selectedTemplate.category} Template • {photoCount} photos needed
+                <p className="text-sm sm:text-base text-white/80">
+                  <span className="hidden sm:inline">{selectedTemplate.category} Template • </span>
+                  {photoCount} photos needed
                 </p>
               </div>
             </motion.div>
 
             {/* Method Selection Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               {/* Use Camera Card */}
               <motion.button
                 initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                whileHover={{ scale: 1.03, y: -5 }}
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleSelectMethod('camera')}
                 onMouseEnter={handleCameraHover}
-                className="group relative bg-white/95 hover:bg-white rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-2xl"
+                className="group relative bg-white/95 hover:bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl text-left"
               >
-                <div className="text-center">
+                <div className="flex items-center gap-3 sm:gap-4">
                   {/* Icon Container */}
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Camera className="w-12 h-12 text-white" strokeWidth={2.5} />
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                    <Camera className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 text-white" strokeWidth={2.5} />
                   </div>
                   
-                  {/* Title */}
-                  <h3 className="text-2xl font-heading font-bold text-gray-900 mb-3">
-                    Use Camera
-                  </h3>
-                  
-                  {/* Description */}
-                  <p className="text-base text-gray-600 mb-4">
-                    Take photos directly with your device camera
-                  </p>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title */}
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2">
+                      Use Camera
+                    </h3>
+                    
+                    {/* Description */}
+                    <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
+                      Take photos directly with your device camera
+                    </p>
 
-                  {/* Arrow Indicator */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <ArrowRight className="w-6 h-6 text-primary mx-auto" />
+                    {/* Arrow Indicator - Hidden on mobile, shown on larger screens */}
+                    <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Decorative Elements */}
-                <div className="absolute top-3 right-3 w-2 h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute bottom-3 left-3 w-2 h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-primary rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </motion.button>
 
               {/* Upload Pictures Card */}
@@ -355,36 +359,39 @@ const InputMethodSelection = () => {
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
-                whileHover={{ scale: 1.03, y: -5 }}
+                whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleSelectMethod('upload')}
-                className="group relative bg-white/95 hover:bg-white rounded-2xl p-8 transition-all duration-300 shadow-xl hover:shadow-2xl"
+                className="group relative bg-white/95 hover:bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl text-left"
               >
-                <div className="text-center">
+                <div className="flex items-center gap-3 sm:gap-4">
                   {/* Icon Container */}
-                  <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
-                    <Upload className="w-12 h-12 text-white" strokeWidth={2.5} />
+                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                    <Upload className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 text-white" strokeWidth={2.5} />
                   </div>
                   
-                  {/* Title */}
-                  <h3 className="text-2xl font-heading font-bold text-gray-900 mb-3">
-                    Upload Pictures
-                  </h3>
-                  
-                  {/* Description */}
-                  <p className="text-base text-gray-600 mb-4">
-                    Choose existing photos from your device
-                  </p>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    {/* Title */}
+                    <h3 className="text-lg sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2">
+                      Upload Pictures
+                    </h3>
+                    
+                    {/* Description */}
+                    <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
+                      Choose existing photos from your device
+                    </p>
 
-                  {/* Arrow Indicator */}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <ArrowRight className="w-6 h-6 text-green-500 mx-auto" />
+                    {/* Arrow Indicator - Hidden on mobile, shown on larger screens */}
+                    <div className="hidden sm:block opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 text-green-500" />
+                    </div>
                   </div>
                 </div>
 
                 {/* Decorative Elements */}
-                <div className="absolute top-3 right-3 w-2 h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <div className="absolute bottom-3 left-3 w-2 h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute top-2 right-2 sm:top-3 sm:right-3 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3 w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </motion.button>
             </div>
 
@@ -393,11 +400,11 @@ const InputMethodSelection = () => {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="text-center mt-6"
+              className="text-center mt-4 sm:mt-6"
             >
               <button
                 onClick={() => navigate('/gallery')}
-                className="text-white/80 hover:text-white text-base font-medium transition-colors underline decoration-2 underline-offset-4"
+                className="text-white/80 hover:text-white text-sm sm:text-base font-medium transition-colors underline decoration-2 underline-offset-4"
               >
                 ← Back to Gallery
               </button>
