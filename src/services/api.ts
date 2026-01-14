@@ -521,10 +521,10 @@ export const dashboardAPI = {
   },
 };
 
-// Template API with request deduplication
+// Template API with request deduplication and optimized caching
 let templatesPromise: Promise<any> | null = null;
 let templatesCache: { data: any; timestamp: number } | null = null;
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+const CACHE_DURATION = 2 * 60 * 1000; // Reduced to 2 minutes for fresher data
 
 export const templateAPI = {
   // Get all templates with deduplication and caching
@@ -549,9 +549,9 @@ export const templateAPI = {
       return templatesPromise;
     }
     
-    // Make the actual request with extended timeout for template queries (90s)
+    // Make the actual request with optimized timeout (30s instead of 90s)
     // Retry once if timeout occurs
-    templatesPromise = apiCallWithRetry(`/templates?${query.toString()}`, { method: 'GET' }, 90000, 1)
+    templatesPromise = apiCallWithRetry(`/templates?${query.toString()}`, { method: 'GET' }, 30000, 1)
       .then(data => {
         templatesCache = { data, timestamp: Date.now() };
         templatesPromise = null;

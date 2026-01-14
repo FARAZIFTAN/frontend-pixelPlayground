@@ -16,6 +16,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import LazyImage from "@/components/ui/LazyImage";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +63,7 @@ const Templates = () => {
     setIsLoading(true);
     try {
       console.log("Fetching templates...");
-      const response = await templateAPI.getTemplates({ limit: 100 }) as {
+      const response = await templateAPI.getTemplates({ limit: 20 }) as {
         success: boolean;
         data?: { templates: Template[] };
       };
@@ -243,7 +244,7 @@ const Templates = () => {
                 <div className="relative">
                   {/* Template Image */}
                   <div className="aspect-[2/3] bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden">
-                    <img
+                    <LazyImage
                       src={template.thumbnail}
                       alt={template.name}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
@@ -327,7 +328,7 @@ const Templates = () => {
                   <tr key={template._id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <img
+                        <LazyImage
                           src={template.thumbnail}
                           alt={template.name}
                           className="w-12 h-16 object-cover rounded border border-white/20"
