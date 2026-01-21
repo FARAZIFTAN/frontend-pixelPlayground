@@ -204,11 +204,11 @@ const Booth = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [photoCount, setPhotoCount] = useState<number>(4); // Number of photos to take (2, 3, or 4)
   const [hasLoadedTemplate, setHasLoadedTemplate] = useState(false); // Track if template is loaded
-  
+
   // Backend integration states
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [uploadedPhotoIds, setUploadedPhotoIds] = useState<string[]>([]);
-  
+
   // Edit Photo states
   const [globalFilter, setGlobalFilter] = useState<FilterSettings>(FILTER_PRESETS.none);
   const [allPhotosCaptured, setAllPhotosCaptured] = useState(false);
@@ -217,35 +217,35 @@ const Booth = () => {
   const [editTab, setEditTab] = useState<'stickers' | 'filters' | 'frame' | 'adjust'>('stickers');
   const [previewZoom, setPreviewZoom] = useState(1);
   const [filterIntensity, setFilterIntensity] = useState(100);
-  
+
   // Sticker states
   const [stickers, setStickers] = useState<Sticker[]>([]);
   const [showStickerPanel, setShowStickerPanel] = useState(false);
   const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
   const [stickerCategory, setStickerCategory] = useState<'all' | 'emoji' | 'hearts' | 'stars' | 'objects'>('all');
   const [stickerSearch, setStickerSearch] = useState('');
-  
+
   // Undo/Redo states
   const [stickerHistory, setStickerHistory] = useState<Sticker[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  
+
   // New UI states
   const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
   const [showFullscreenPreview, setShowFullscreenPreview] = useState(false);
   const [fullscreenZoom, setFullscreenZoom] = useState(1);
   const [draggingSticker, setDraggingSticker] = useState<string | null>(null);
-  
+
   // Frame change states
   const [showFrameSelector, setShowFrameSelector] = useState(false);
   const [availableTemplates, setAvailableTemplates] = useState<Template[]>([]);
   const [userCustomFrames, setUserCustomFrames] = useState<any[]>([]);
-  
+
   // Input method selection states
   const [inputMethod, setInputMethod] = useState<'camera' | 'upload' | null>(null); // null = show selection screen
-  
+
   const [compositeImageDimensions, setCompositeImageDimensions] = useState({ width: 800, height: 600 });
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const filterCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -279,11 +279,11 @@ const Booth = () => {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
-    
+
     // Check if this is the first photo (no photos captured yet)
     const actualPhotos = capturedImages.filter(img => img !== '').length;
     const isFirstPhoto = actualPhotos === 0 && currentPhotoIndex === 0;
-    
+
     if (isFirstPhoto) {
       // First photo: capture immediately without countdown
       capturePhoto();
@@ -316,16 +316,16 @@ const Booth = () => {
       console.log('⏸️ Camera start already in progress, skipping...');
       return;
     }
-    
+
     // Prevent re-initialization if already initialized
     if (cameraInitializedRef.current && hasPermission) {
       console.log('📹 Camera already initialized, skipping...');
       return;
     }
-    
+
     console.log('🎥 Starting camera...');
     isStartingCameraRef.current = true;
-    
+
     try {
       // Clear video element first
       if (videoRef.current) {
@@ -342,44 +342,44 @@ const Booth = () => {
     } catch (cleanupError) {
       console.warn('Cleanup error (non-critical):', cleanupError);
     }
-    
+
     if (!isMountedRef.current) {
       console.log('⚠️ Component unmounted, aborting camera start');
       isStartingCameraRef.current = false;
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       console.log('📸 Requesting camera access...');
       // Request camera with optimal settings
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          facingMode: "user", 
+        video: {
+          facingMode: "user",
           width: { ideal: 1280 },
           height: { ideal: 720 },
           frameRate: { ideal: 30 }
         },
         audio: false,
       });
-      
+
       if (!isMountedRef.current) {
         console.log('⚠️ Component unmounted during camera request, cleaning up...');
         mediaStream.getTracks().forEach(track => track.stop());
         isStartingCameraRef.current = false;
         return;
       }
-      
+
       console.log('✅ Camera access granted, stream obtained');
       setStream(mediaStream);
-      
+
       // Ensure video element gets the stream
       if (videoRef.current && isMountedRef.current) {
         console.log('📹 Setting video stream...');
         const video = videoRef.current;
         video.srcObject = mediaStream;
-        
+
         // Wait for video to be ready and play
         try {
           // Check if video is already ready
@@ -393,13 +393,13 @@ const Booth = () => {
                 console.warn('⚠️ Video load timeout, proceeding anyway');
                 resolve();
               }, 2000);
-              
+
               video.onloadedmetadata = () => {
                 clearTimeout(timeoutId);
                 console.log('📊 Video metadata loaded');
                 resolve();
               };
-              
+
               video.onerror = () => {
                 clearTimeout(timeoutId);
                 console.warn('Video load error, proceeding anyway');
@@ -407,17 +407,17 @@ const Booth = () => {
               };
             });
           }
-          
+
           // Play the video
           if (isMountedRef.current && videoRef.current) {
             await video.play();
             console.log('▶️ Video playing successfully');
-            
+
             if (isMountedRef.current) {
               cameraInitializedRef.current = true;
               setIsLoading(false);
               setHasPermission(true);
-              
+
               // If in retake mode, auto-start capture immediately
               if (isRetakingPhotoRef.current) {
                 handleCapture();
@@ -466,7 +466,7 @@ const Booth = () => {
     try {
       console.log('🔄 Creating photo session with template:', selectedTemplate.name);
       console.log('👤 User ID:', user.id);
-      
+
       const response = await sessionAPI.createSession({
         sessionName: `Photo Session ${new Date().toLocaleDateString('id-ID')} ${new Date().toLocaleTimeString('id-ID')}`,
         templateId: selectedTemplate._id,
@@ -476,22 +476,22 @@ const Booth = () => {
           startedAt: new Date().toISOString(),
         }
       });
-      
+
       console.log('📦 Session API Response:', response);
-      
-      const data = response as { 
+
+      const data = response as {
         success?: boolean;
-        data?: { _id?: string; session?: { _id: string } }; 
+        data?: { _id?: string; session?: { _id: string } };
         session?: { _id: string };
         _id?: string;
       };
-      
-      const newSessionId = 
-        data.data?._id || 
-        data.data?.session?._id || 
-        data.session?._id || 
+
+      const newSessionId =
+        data.data?._id ||
+        data.data?.session?._id ||
+        data.session?._id ||
         data._id;
-      
+
       if (newSessionId) {
         setSessionId(newSessionId);
         console.log('✅ Photo session created successfully:', newSessionId);
@@ -504,7 +504,7 @@ const Booth = () => {
       console.error('❌ Failed to create photo session:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error details:', errorMessage);
-      
+
       if (errorMessage.includes('Unauthorized')) {
         toast.error('Please login to save your photos', { duration: 3000 });
       } else if (errorMessage.includes('Cannot connect')) {
@@ -529,32 +529,32 @@ const Booth = () => {
     const templateIdFromUrl = searchParams.get("template");
     const aiFrameFromUrl = searchParams.get("aiFrame");
     const methodFromUrl = searchParams.get("method");
-    
-    console.log('Template loading effect:', { 
-      templateIdFromUrl, 
-      aiFrameFromUrl, 
+
+    console.log('Template loading effect:', {
+      templateIdFromUrl,
+      aiFrameFromUrl,
       methodFromUrl,
       hasLoadedTemplate,
       inputMethod,
       selectedTemplate: selectedTemplate?.name
     });
-    
+
     // Reset hasLoadedTemplate if we need to reload (e.g., when method changes)
     if (aiFrameFromUrl === "true" && methodFromUrl && !selectedTemplate) {
       console.log('Resetting hasLoadedTemplate to reload AI frame');
       setHasLoadedTemplate(false);
     }
-    
+
     if (aiFrameFromUrl === "true" && !hasLoadedTemplate) {
       // Load AI generated frame from sessionStorage
       const aiFrameSpec = sessionStorage.getItem('aiFrameSpec');
       const aiFrameImage = sessionStorage.getItem('aiFrameImage');
-      
-      console.log('AI Frame data from sessionStorage:', { 
-        hasSpec: !!aiFrameSpec, 
-        hasImage: !!aiFrameImage 
+
+      console.log('AI Frame data from sessionStorage:', {
+        hasSpec: !!aiFrameSpec,
+        hasImage: !!aiFrameImage
       });
-      
+
       if (aiFrameSpec && aiFrameImage) {
         try {
           const spec = JSON.parse(aiFrameSpec);
@@ -583,17 +583,17 @@ const Booth = () => {
             frameCount: spec.frameCount,
             layoutPositions: layoutPositions,
           };
-          
+
           console.log('⚡ AI Template created (instant):', aiTemplate);
-          
+
           // Set template immediately
           setSelectedTemplate(aiTemplate);
           setPhotoCount(spec.frameCount);
           setHasLoadedTemplate(true);
-          
+
           // Check if input method is already set from URL or state
           const currentInputMethod = inputMethod || methodFromUrl;
-          
+
           // If no input method is selected, redirect to input method selection
           if (!currentInputMethod) {
             console.log('No input method, redirecting to input-method page');
@@ -604,10 +604,10 @@ const Booth = () => {
             // Keep sessionStorage for InputMethodSelection page
             return;
           }
-          
+
           console.log('Input method available, loading frame with method:', currentInputMethod);
           console.log('✅ AI template loaded, camera should be starting...');
-          
+
           // Clean up sessionStorage immediately
           sessionStorage.removeItem('aiFrameSpec');
           sessionStorage.removeItem('aiFrameImage');
@@ -620,7 +620,7 @@ const Booth = () => {
       }
       return;
     }
-    
+
     if (templateIdFromUrl && !hasLoadedTemplate) {
       const loadTemplate = async (templateId: string) => {
         try {
@@ -643,20 +643,20 @@ const Booth = () => {
             // Remove invalid cache
             sessionStorage.removeItem('booth_template_cache');
           }
-          
+
           // Fallback: Load from API
           console.log('📷 Loading template from API...');
           const response = await templateAPI.getTemplate(templateId) as {
             success: boolean;
             data?: { template: Template };
           };
-          
+
           if (response.success && response.data) {
             const template = response.data.template;
-            
+
             // Cegah load template premium jika belum login
             if (template.isPremium && !user) {
-              toast.error("Login diperlukan untuk menggunakan frame premium!", { 
+              toast.error("Login diperlukan untuk menggunakan frame premium!", {
                 duration: 4000,
                 icon: "🔒"
               });
@@ -665,11 +665,11 @@ const Booth = () => {
               }, 1500);
               return;
             }
-            
+
             setSelectedTemplate(template);
             setPhotoCount(template.frameCount);
             setHasLoadedTemplate(true);
-            
+
             console.log('✅ Template loaded:', template.name);
           }
         } catch (error) {
@@ -698,14 +698,14 @@ const Booth = () => {
         });
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [stream]);
-  
+
   // Camera initialization effect - START IMMEDIATELY, don't wait for template
   useEffect(() => {
     // Start camera as soon as inputMethod is 'camera' - parallel with template loading
@@ -713,7 +713,7 @@ const Booth = () => {
       console.log('🚀 Camera mode detected - starting camera IMMEDIATELY (parallel with template load)...');
       startCamera();
     }
-    
+
     return () => {
       // Cleanup on unmount or when switching away from camera
       if (stream) {
@@ -727,14 +727,14 @@ const Booth = () => {
       // Reset camera initialized flag on cleanup
       cameraInitializedRef.current = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputMethod]); // Only depend on inputMethod, not startCamera to prevent re-trigger loops
-  
+
   // Mount/unmount tracking
   useEffect(() => {
     isMountedRef.current = true;
     console.log('✅ Booth component mounted');
-    
+
     return () => {
       isMountedRef.current = false;
       cameraInitializedRef.current = false;
@@ -764,10 +764,10 @@ const Booth = () => {
           canvas.width = img.width;
           canvas.height = img.height;
           const ctx = canvas.getContext("2d");
-          
+
           if (ctx) {
             ctx.drawImage(img, 0, 0);
-            
+
             // Apply CSS filter using canvas filter property
             const filterString = `
               brightness(${filter.brightness}%)
@@ -779,10 +779,10 @@ const Booth = () => {
               ${filter.blur ? `blur(${filter.blur}px)` : ""}
               ${filter.invert ? `invert(${filter.invert}%)` : ""}
             `;
-            
+
             ctx.filter = filterString;
             ctx.drawImage(img, 0, 0);
-            
+
             // Get filtered image data
             const filteredData = canvas.toDataURL("image/png");
             resolve(filteredData);
@@ -835,10 +835,10 @@ const Booth = () => {
 
   const handleStickerDragMove = (id: string, event: MouseEvent | TouchEvent) => {
     if (!stickerContainerRef.current) return;
-    
+
     const rect = stickerContainerRef.current.getBoundingClientRect();
     let clientX: number, clientY: number;
-    
+
     if ('touches' in event) {
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
@@ -846,24 +846,24 @@ const Booth = () => {
       clientX = event.clientX;
       clientY = event.clientY;
     }
-    
+
     // Skip if drag is at 0,0 (invalid drag event)
     if (clientX === 0 && clientY === 0) return;
-    
+
     // Calculate position relative to container
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-    
+
     // Skip if outside container
     if (x < 0 || x > rect.width || y < 0 || y > rect.height) return;
-    
+
     // Convert to percentage with bounds
     const percentX = Math.max(5, Math.min(95, (x / rect.width) * 100));
     const percentY = Math.max(5, Math.min(95, (y / rect.height) * 100));
-    
+
     // Use requestAnimationFrame to prevent too many updates
     requestAnimationFrame(() => {
-      setStickers(prev => prev.map(sticker => 
+      setStickers(prev => prev.map(sticker =>
         sticker.id === id ? { ...sticker, x: percentX, y: percentY } : sticker
       ));
     });
@@ -901,7 +901,7 @@ const Booth = () => {
             success: boolean;
             data?: { templates: Template[] };
           };
-          
+
           if (response.success && response.data) {
             setAvailableTemplates(response.data.templates);
             console.log('✅ Templates preloaded:', response.data.templates.length);
@@ -911,7 +911,7 @@ const Booth = () => {
         }
       }
     };
-    
+
     preloadTemplates();
   }, []);
 
@@ -927,7 +927,7 @@ const Booth = () => {
 
   const handleOpenFrameSelector = async () => {
     setShowFrameSelector(true);
-    
+
     // Load public templates if not already loaded
     if (availableTemplates.length === 0) {
       try {
@@ -935,7 +935,7 @@ const Booth = () => {
           success: boolean;
           data?: { templates: Template[] };
         };
-        
+
         if (response.success && response.data) {
           setAvailableTemplates(response.data.templates);
         }
@@ -990,10 +990,10 @@ const Booth = () => {
       // Update selected template
       setSelectedTemplate(newTemplate);
       setPhotoCount(newTemplate.frameCount);
-      
+
       // Re-generate composite with new frame
       await regenerateComposite(newTemplate, capturedImages);
-      
+
       setShowFrameSelector(false);
       setIsLoading(false);
     } catch (error) {
@@ -1013,7 +1013,7 @@ const Booth = () => {
     // Load template frame
     const templateImg = document.createElement('img');
     templateImg.crossOrigin = "anonymous";
-    
+
     await new Promise<void>((resolve, reject) => {
       templateImg.onload = () => resolve();
       templateImg.onerror = () => reject(new Error('Failed to load template'));
@@ -1032,18 +1032,18 @@ const Booth = () => {
     for (let i = 0; i < Math.min(images.length, template.layoutPositions.length); i++) {
       const position = template.layoutPositions[i];
       const photoImg = document.createElement('img');
-      
+
       // Apply filter to image first
       const filteredImageData = await applyFilterToImage(images[i], globalFilter);
-      
+
       await new Promise<void>((resolve) => {
         photoImg.onload = () => {
           // Calculate aspect ratios
           const photoAspect = photoImg.width / photoImg.height;
           const targetAspect = position.width / position.height;
-          
+
           let srcX = 0, srcY = 0, srcWidth = photoImg.width, srcHeight = photoImg.height;
-          
+
           // Crop photo to fit target aspect ratio (cover behavior)
           if (photoAspect > targetAspect) {
             // Photo is wider - crop width
@@ -1054,7 +1054,7 @@ const Booth = () => {
             srcHeight = photoImg.width / targetAspect;
             srcY = (photoImg.height - srcHeight) / 2;
           }
-          
+
           // Draw cropped and fitted photo
           ctx.drawImage(
             photoImg,
@@ -1078,12 +1078,12 @@ const Booth = () => {
   // Apply global filter to all captured images
   const handleApplyGlobalFilter = async (filter: FilterSettings) => {
     setGlobalFilter(filter);
-    
+
     // Re-generate composite with filter applied to photos only
     if (finalCompositeImage && selectedTemplate && canvasRef.current && capturedImages.length > 0) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext("2d");
-      
+
       if (!ctx) return;
 
       // Load template image first
@@ -1104,7 +1104,7 @@ const Booth = () => {
           const img = new Image();
           img.crossOrigin = "anonymous";
           img.src = photoDataUrl;
-          
+
           img.onload = () => {
             photoImages[index] = img;
             loadedPhotos++;
@@ -1127,7 +1127,7 @@ const Booth = () => {
               const scaledSepia = filter.sepia * intensity;
               const scaledGrayscale = filter.grayscale * intensity;
               const scaledHueRotate = filter.hueRotate * intensity;
-              
+
               const filterString = `brightness(${scaledBrightness}%) contrast(${scaledContrast}%) saturate(${scaledSaturate}%) sepia(${scaledSepia}%) grayscale(${scaledGrayscale}%) hue-rotate(${scaledHueRotate}deg)`;
 
               // Draw each photo in its position with filter
@@ -1210,36 +1210,36 @@ const Booth = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
-      
+
       if (ctx) {
         // Draw video (flipped for mirror effect)
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0);
         ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-        
+
         // Save the captured photo (no filter yet)
         const imageData = canvas.toDataURL("image/jpeg", 0.6);
-        
+
         // USE RETAKE INDEX FROM REF IF RETAKING, OTHERWISE USE CURRENT INDEX
         const targetIndex = retakeIndexRef.current !== null ? retakeIndexRef.current : currentPhotoIndex;
         const isRetaking = retakeIndexRef.current !== null;
-        
+
         console.log(`📸 CAPTURE: Target index: ${targetIndex} (currentPhotoIndex: ${currentPhotoIndex}, retakeIndex: ${retakeIndexRef.current})`);
         console.log(`📊 CAPTURE: Current array:`, capturedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
-        
+
         if (isRetaking) {
           console.log(`🔄 CAPTURE: RETAKING photo at index ${targetIndex}`);
         } else {
           console.log(`➕ CAPTURE: Adding NEW photo at index ${targetIndex}`);
         }
-        
+
         // Always update at the specific targetIndex - don't append
         const newCapturedImages = [...capturedImages];
         newCapturedImages[targetIndex] = imageData;
         setCapturedImages(newCapturedImages);
         console.log(`✅ CAPTURE: Photo stored at index ${targetIndex}`);
-        
+
         // Upload photo to backend
         if (sessionId) {
           try {
@@ -1253,7 +1253,7 @@ const Booth = () => {
                 isRetake: isRetaking
               }
             });
-            
+
             // Extract photo ID
             const data = response as { data?: { photo?: { _id: string } }; photo?: { _id: string } };
             const photoId = data.data?.photo?._id || data.photo?._id;
@@ -1269,14 +1269,14 @@ const Booth = () => {
             console.error('Failed to upload photo:', error);
           }
         }
-        
+
         // Clear retake refs after successful capture
         if (isRetaking) {
           retakeIndexRef.current = null;
           isRetakingPhotoRef.current = false;
           console.log('🧹 CAPTURE: Cleared retake refs');
         }
-        
+
         // Calculate next index: if retaking, check for completion; otherwise increment
         let nextPhotoIndex: number;
         if (isRetaking) {
@@ -1295,7 +1295,7 @@ const Booth = () => {
           nextPhotoIndex = targetIndex + 1;
           console.log(`➡️ NEXT: Normal flow from ${targetIndex}, next index: ${nextPhotoIndex}`);
         }
-        
+
         // Check if we've captured all photos
         if (nextPhotoIndex >= photoCount) {
           // All photos captured, auto-create composite and show results
@@ -1316,7 +1316,7 @@ const Booth = () => {
               clearInterval(countdownIntervalRef.current);
               countdownIntervalRef.current = null;
             }
-            
+
             setCountdown(3);
             countdownIntervalRef.current = setInterval(() => {
               setCountdown((prev) => {
@@ -1348,29 +1348,29 @@ const Booth = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext("2d");
-      
+
       if (ctx) {
         // Draw video (flipped for mirror effect)
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0);
         ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform
-        
+
         // Save the captured photo
         const imageData = canvas.toDataURL("image/jpeg", 0.6);
-        
+
         // Update state with callback to handle next step
         setCapturedImages((prevImages) => {
           let newCapturedImages: string[];
           const photoIdx = prevImages.length; // Use actual length instead of currentPhotoIndex
-          
+
           if (photoIdx < prevImages.length) {
             newCapturedImages = [...prevImages];
             newCapturedImages[photoIdx] = imageData;
           } else {
             newCapturedImages = [...prevImages, imageData];
           }
-          
+
           // Upload photo to backend
           if (sessionId) {
             photoAPI.uploadPhoto({
@@ -1385,7 +1385,7 @@ const Booth = () => {
               console.error('Failed to upload photo:', error);
             });
           }
-          
+
           // Schedule next capture or finish
           const nextPhotoIdx = photoIdx + 1;
           if (nextPhotoIdx >= photoCount) {
@@ -1397,14 +1397,14 @@ const Booth = () => {
             // Schedule next capture
             setCurrentPhotoIndex(nextPhotoIdx);
 
-            
+
             setTimeout(() => {
               // Clear any existing countdown first
               if (countdownIntervalRef.current) {
                 clearInterval(countdownIntervalRef.current);
                 countdownIntervalRef.current = null;
               }
-              
+
               setCountdown(3);
               countdownIntervalRef.current = setInterval(() => {
                 setCountdown((prev) => {
@@ -1424,7 +1424,7 @@ const Booth = () => {
               }, 1000);
             }, 1500);
           }
-          
+
           return newCapturedImages;
         });
       }
@@ -1456,7 +1456,7 @@ const Booth = () => {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
-    
+
     if (!ctx) {
       console.error('❌ Canvas context not found!');
       toast.error("Canvas error. Please try again.");
@@ -1477,7 +1477,7 @@ const Booth = () => {
 
     templateImg.onload = () => {
       console.log('✅ Template loaded!', templateImg.width, 'x', templateImg.height);
-      
+
       // Set canvas size to EXACT template size
       canvas.width = templateImg.width;
       canvas.height = templateImg.height;
@@ -1492,12 +1492,12 @@ const Booth = () => {
         const img = new Image();
         img.crossOrigin = "anonymous";
         img.src = photoDataUrl;
-        
+
         img.onerror = (error) => {
           console.error(`❌ Failed to load photo ${index + 1}:`, error);
           toast.error(`Failed to load photo ${index + 1}`);
         };
-        
+
         img.onload = () => {
           console.log(`✅ Photo ${index + 1} loaded:`, img.width, 'x', img.height);
           photoImages[index] = img;
@@ -1517,24 +1517,24 @@ const Booth = () => {
 
             // STEP 2: Draw each photo in its position (BEHIND template)
             console.log(`🎨 Drawing ${photos.length} photos using ${selectedTemplate.layoutPositions.length} positions`);
-            
+
             photos.forEach((_, i) => {
               const position = selectedTemplate.layoutPositions[i];
-              
+
               if (!position) {
                 console.warn(`⚠️ No position data for photo ${i + 1}`);
                 return;
               }
-              
+
               if (!photoImages[i]) {
                 console.warn(`⚠️ Photo ${i + 1} not loaded`);
                 return;
               }
-              
+
               // Auto-detect if positions are in percentage (0-100) or pixels
               // Old AI frames use percentage, new ones use pixels
               const isPercentage = position.width <= 100 && position.height <= 100;
-              
+
               let actualPosition = position;
               if (isPercentage) {
                 // Convert percentage to pixels
@@ -1546,7 +1546,7 @@ const Booth = () => {
                 };
                 console.log(`🔄 Converted position ${i + 1} from percentage to pixels:`, actualPosition);
               }
-              
+
               const photo = photoImages[i];
               console.log(`📍 Drawing photo ${i + 1} at position:`, actualPosition);
 
@@ -1611,17 +1611,17 @@ const Booth = () => {
               toast.error("Failed to create photo strip. Please try again.");
               return;
             }
-            
+
             // Auto-save to gallery if user is logged in
             if (user && sessionId) {
               console.log('💾 Auto-saving to gallery...');
 
-              
+
               // Auto-save after short delay
               setTimeout(async () => {
                 try {
                   setIsSaving(true);
-                  
+
                   const response = await compositeAPI.uploadCompositeImage(
                     finalImage,
                     sessionId,
@@ -1630,7 +1630,7 @@ const Booth = () => {
 
                   console.log('✅ Auto-saved to gallery:', response);
                   setIsSaving(false);
-                  
+
 
                 } catch (error) {
                   console.error('❌ Auto-save failed:', error);
@@ -1663,116 +1663,116 @@ const Booth = () => {
   // Handle file upload
   // GANTI SELURUH FUNGSI handleFileUpload DENGAN INI:
 
-const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-  const files = event.target.files;
-  if (!files || files.length === 0) return;
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
 
-  // Helper untuk kompresi file
-  const compressFile = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = (event) => {
-        const img = new Image();
-        img.src = event.target?.result as string;
-        img.onload = () => {
-          const elem = document.createElement('canvas');
-          // Resize jika terlalu besar (opsional, max lebar 1280px)
-          const scaleFactor = Math.min(1, 1280 / img.width);
-          elem.width = img.width * scaleFactor;
-          elem.height = img.height * scaleFactor;
-          
-          const ctx = elem.getContext('2d');
-          ctx?.drawImage(img, 0, 0, elem.width, elem.height);
-          
-          // KOMPRESI DISINI: JPEG kualitas 0.6 (60%)
-          resolve(elem.toDataURL('image/jpeg', 0.6) || '');
+    // Helper untuk kompresi file
+    const compressFile = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            const elem = document.createElement('canvas');
+            // Resize jika terlalu besar (opsional, max lebar 1280px)
+            const scaleFactor = Math.min(1, 1280 / img.width);
+            elem.width = img.width * scaleFactor;
+            elem.height = img.height * scaleFactor;
+
+            const ctx = elem.getContext('2d');
+            ctx?.drawImage(img, 0, 0, elem.width, elem.height);
+
+            // KOMPRESI DISINI: JPEG kualitas 0.6 (60%)
+            resolve(elem.toDataURL('image/jpeg', 0.6) || '');
+          };
+          img.onerror = (error) => reject(error);
         };
-        img.onerror = (error) => reject(error);
-      };
-      reader.onerror = (error) => reject(error);
-    });
-  };
-
-  try {
-    setIsLoading(true);
-    const uploadedImages: string[] = [];
-
-    // Calculate how many more photos we can accept
-    const remainingSlots = photoCount - capturedImages.length;
-    const filesToProcess = Math.min(files.length, remainingSlots);
-
-    console.log(`📸 Uploading ${filesToProcess} files...`);
-
-    for (let i = 0; i < filesToProcess; i++) {
-      const file = files[i];
-      
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error(`File ${file.name} is not an image`);
-        continue;
-      }
-
-      // Proses kompresi
-      try {
-        const compressedData = await compressFile(file);
-        uploadedImages.push(compressedData);
-        console.log(`✅ Processed & Compressed image ${i + 1}/${filesToProcess}`);
-      } catch (err) {
-        console.error("Compression failed", err);
-        toast.error(`Failed to process ${file.name}`);
-      }
-    }
-
-    if (uploadedImages.length === 0) {
-      toast.error('No valid images selected');
-      setIsLoading(false);
-      return;
-    }
-
-    // ... (SISA KODE KE BAWAH TETAP SAMA SEPERTI ASLINYA) ...
-    // ... Append to captured images ...
-    const newCapturedImages = [...capturedImages, ...uploadedImages];
-    setCapturedImages(newCapturedImages);
-    setCurrentPhotoIndex(newCapturedImages.length);
-    
-    // Upload to backend
-    if (sessionId) {
-      const uploadPromises = uploadedImages.map(async (imageData, index) => {
-        const response = await photoAPI.uploadPhoto({
-          sessionId,
-          photoUrl: imageData, // INI SEKARANG SUDAH KECIL (JPEG)
-          order: capturedImages.length + index + 1,
-          metadata: {
-            source: 'upload',
-            uploadedAt: new Date().toISOString()
-          }
-        });
-        const data = response as { data?: { _id?: string } };
-        return data.data?._id || '';
+        reader.onerror = (error) => reject(error);
       });
+    };
 
-      const photoIds = await Promise.all(uploadPromises);
-      setUploadedPhotoIds([...uploadedPhotoIds, ...photoIds]);
+    try {
+      setIsLoading(true);
+      const uploadedImages: string[] = [];
+
+      // Calculate how many more photos we can accept
+      const remainingSlots = photoCount - capturedImages.length;
+      const filesToProcess = Math.min(files.length, remainingSlots);
+
+      console.log(`📸 Uploading ${filesToProcess} files...`);
+
+      for (let i = 0; i < filesToProcess; i++) {
+        const file = files[i];
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          toast.error(`File ${file.name} is not an image`);
+          continue;
+        }
+
+        // Proses kompresi
+        try {
+          const compressedData = await compressFile(file);
+          uploadedImages.push(compressedData);
+          console.log(`✅ Processed & Compressed image ${i + 1}/${filesToProcess}`);
+        } catch (err) {
+          console.error("Compression failed", err);
+          toast.error(`Failed to process ${file.name}`);
+        }
+      }
+
+      if (uploadedImages.length === 0) {
+        toast.error('No valid images selected');
+        setIsLoading(false);
+        return;
+      }
+
+      // ... (SISA KODE KE BAWAH TETAP SAMA SEPERTI ASLINYA) ...
+      // ... Append to captured images ...
+      const newCapturedImages = [...capturedImages, ...uploadedImages];
+      setCapturedImages(newCapturedImages);
+      setCurrentPhotoIndex(newCapturedImages.length);
+
+      // Upload to backend
+      if (sessionId) {
+        const uploadPromises = uploadedImages.map(async (imageData, index) => {
+          const response = await photoAPI.uploadPhoto({
+            sessionId,
+            photoUrl: imageData, // INI SEKARANG SUDAH KECIL (JPEG)
+            order: capturedImages.length + index + 1,
+            metadata: {
+              source: 'upload',
+              uploadedAt: new Date().toISOString()
+            }
+          });
+          const data = response as { data?: { _id?: string } };
+          return data.data?._id || '';
+        });
+
+        const photoIds = await Promise.all(uploadPromises);
+        setUploadedPhotoIds([...uploadedPhotoIds, ...photoIds]);
+      }
+
+      // Check completion
+      if (newCapturedImages.length >= photoCount) {
+        setAllPhotosCaptured(true);
+      }
+
+      if (files.length > remainingSlots) {
+        toast(`⚠️ Only ${remainingSlots} slots available.`, { icon: '⚠️' });
+      }
+
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload photos.');
+    } finally {
+      setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-
-    // Check completion
-    if (newCapturedImages.length >= photoCount) {
-      setAllPhotosCaptured(true);
-    }
-
-    if (files.length > remainingSlots) {
-      toast(`⚠️ Only ${remainingSlots} slots available.`, { icon: '⚠️' });
-    }
-
-  } catch (error) {
-    console.error('Upload error:', error);
-    toast.error('Failed to upload photos.');
-  } finally {
-    setIsLoading(false);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  }
-};
+  };
 
   const handleRetake = () => {
     // Stop existing camera stream first
@@ -1780,7 +1780,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       stream.getTracks().forEach((track) => track.stop());
       setStream(null);
     }
-    
+
     setCapturedImages([]);
     setFinalCompositeImage(null);
     setCurrentPhotoIndex(0);
@@ -1789,13 +1789,13 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     setAllPhotosCaptured(false);
     setGlobalFilter(FILTER_PRESETS.none);
     setShowEditPanel(false);
-    
+
     // Create new session for retake (only if template exists)
     if (selectedTemplate) {
       console.log('🔄 Retaking photos, creating new session...');
       createPhotoSession();
     }
-    
+
     // Restart camera for camera mode
     if (inputMethod === 'camera') {
       setTimeout(() => {
@@ -1814,7 +1814,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     // Check if user is logged in first
     if (!user) {
       console.warn('⚠️ User not logged in, saving state for later...');
-      
+
       // Save current state to sessionStorage sebelum login
       sessionStorage.setItem('booth_pending_save', JSON.stringify({
         finalCompositeImage,
@@ -1822,7 +1822,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         capturedImages,
         timestamp: Date.now()
       }));
-      
+
       toast.error('Please login to save photos to your gallery', {
         duration: 4000,
         icon: '🔒',
@@ -1836,14 +1836,14 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     // If no session ID, try to create one as fallback
     if (!sessionId) {
       console.warn('⚠️ Session ID not available, trying to create session...');
-      
+
       // Try to create session if we have a template
       if (selectedTemplate) {
         await createPhotoSession();
         // Wait a bit for session to be created
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
-      
+
       // If still no session after retry, show error
       if (!sessionId) {
         console.error('❌ Cannot create session for auto-save');
@@ -1859,9 +1859,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       console.log('💾 Saving composite to gallery...');
       console.log('📋 Session ID:', sessionId);
       console.log('🖼️ Template:', selectedTemplate?.name);
-      
+
       setIsSaving(true);
-      
+
       // Upload composite image as file (not base64 string)
       const response = await compositeAPI.uploadCompositeImage(
         finalCompositeImage,
@@ -1870,15 +1870,15 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       );
 
       console.log('✅ Composite saved to gallery:', response);
-      
+
       setIsSaving(false);
-      
+
       // Clear pending save state
       sessionStorage.removeItem('booth_pending_save');
-      
+
       // Show success notification
 
-      
+
       // Navigate to gallery after short delay
       setTimeout(() => {
         navigate('/my-gallery');
@@ -1888,7 +1888,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       setIsSaving(false);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error details:', errorMessage);
-      
+
       // Show error notification but allow user to continue
       toast.error('Failed to save to gallery. Try again or download to device.', {
         duration: 5000,
@@ -1903,40 +1903,40 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
   const handleRetakePhoto = (photoIndex: number) => {
     console.log(`🔄 RETAKE: Starting retake for photo at index ${photoIndex}`);
     console.log(`📊 RETAKE: Current array before clear:`, capturedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
-    
+
     // Clear any existing countdown/intervals first
     if (countdownIntervalRef.current) {
       clearInterval(countdownIntervalRef.current);
       countdownIntervalRef.current = null;
     }
     setCountdown(null);
-    
+
     // Clear only that specific photo, maintaining array structure
     const updatedImages = [...capturedImages];
     updatedImages[photoIndex] = ""; // Mark as empty/to be retaken, don't remove
     setCapturedImages(updatedImages);
     console.log(`🗑️ RETAKE: Cleared photo at index ${photoIndex}`, updatedImages.map((img, i) => `[${i}]: ${img ? 'HAS_PHOTO' : 'EMPTY'}`));
-    
+
     // Update uploaded photo IDs similarly - keep array structure
     const updatedIds = [...uploadedPhotoIds];
     updatedIds[photoIndex] = ""; // Mark as empty
     setUploadedPhotoIds(updatedIds.filter(id => id !== "")); // Only keep actual IDs
-    
+
     // Clear the composite and UI state - HIDE IMMEDIATELY
     setFinalCompositeImage(null);
     setAllPhotosCaptured(false);
     setShowEditPanel(false);
     setShowRetakeOptions(false);
-    
+
     // IMPORTANT: Set currentPhotoIndex to the photo we want to retake
     setCurrentPhotoIndex(photoIndex);
-    
+
     // CRITICAL: Store in ref to ensure capturePhoto uses correct index immediately
     retakeIndexRef.current = photoIndex;
     isRetakingPhotoRef.current = true;
-    
+
     console.log(`✅ RETAKE: Set retakeIndexRef to ${photoIndex}`);
-    
+
 
 
     // Restart camera - stop current stream and start fresh
@@ -1946,7 +1946,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       });
       setStream(null);
     }
-    
+
     // Give browser time to release stream, then restart camera
     // Don't manually call handleCapture - let startCamera do it
     setTimeout(() => {
@@ -1986,8 +1986,8 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         });
       }
 
-  
-      
+
+
       // Redirect to PhotoSessions page after 1.5 seconds
       setTimeout(() => {
         navigate('/booth/sessions');
@@ -2002,7 +2002,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 
   const renderStickersToCanvas = async (baseImage: string): Promise<string> => {
     if (stickers.length === 0) return baseImage;
-    
+
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -2015,7 +2015,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       img.onload = () => {
         canvas.width = img.width;
         canvas.height = img.height;
-        
+
         // Draw base image
         ctx.drawImage(img, 0, 0);
 
@@ -2023,13 +2023,13 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const containerRect = stickerContainerRef.current?.getBoundingClientRect();
         const containerWidth = containerRect?.width || 800;
         const containerHeight = containerRect?.height || 600;
-        
+
         // Draw stickers with EXACT same positioning as preview
         stickers.forEach(sticker => {
           // Use exact same percentage calculation
           const x = (sticker.x / 100) * canvas.width;
           const y = (sticker.y / 100) * canvas.height;
-          
+
           // Calculate scale factor but use SQUARE ROOT to prevent oversizing
           // If canvas is 4x bigger (2400px vs 600px), sqrt(4) = 2x sticker size
           // This keeps visual proportions correct without making stickers too large
@@ -2040,18 +2040,18 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
           ctx.save();
           ctx.translate(x, y);
           ctx.rotate((sticker.rotation * Math.PI) / 180);
-          
+
           // Better font rendering
           ctx.font = `${fontSize}px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
-          
+
           // Add shadow for better visibility
           ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
           ctx.shadowBlur = 6;
           ctx.shadowOffsetX = 2;
           ctx.shadowOffsetY = 2;
-          
+
           ctx.fillText(sticker.emoji, 0, 0);
           ctx.restore();
         });
@@ -2088,10 +2088,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       }, 1500);
       return;
     }
-    
+
     try {
       // Render stickers to image
-      const imageWithStickers = stickers.length > 0 
+      const imageWithStickers = stickers.length > 0
         ? await renderStickersToCanvas(finalCompositeImage)
         : finalCompositeImage;
 
@@ -2101,9 +2101,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
 
-      
+
+
       console.log('✅ Photo downloaded successfully');
     } catch (error) {
       console.error('❌ Download failed:', error);
@@ -2135,11 +2135,11 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       }, 1500);
       return;
     }
-    
+
     try {
       const blob = await (await fetch(finalCompositeImage)).blob();
       const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
-      
+
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
@@ -2165,16 +2165,16 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       toast.error("No photo to share. Please take photos first.");
       return;
     }
-    
+
     try {
       // Render stickers to image first
-      const imageWithStickers = stickers.length > 0 
+      const imageWithStickers = stickers.length > 0
         ? await renderStickersToCanvas(finalCompositeImage)
         : finalCompositeImage;
 
       const blob = await (await fetch(imageWithStickers)).blob();
       const file = new File([blob], "pixelplayground-photo-strip.png", { type: "image/png" });
-      
+
       // Try native share API first (works best on mobile)
       if (navigator.share && navigator.canShare({ files: [file] })) {
         console.log('📱 Using native Web Share API');
@@ -2188,7 +2188,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       } else {
         // Fallback: Download & suggest WhatsApp
         console.log('📱 Using WhatsApp Web fallback');
-        
+
         // Create download link for the image
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -2198,7 +2198,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
+
         // Open WhatsApp Web
         setTimeout(() => {
           window.open('https://web.whatsapp.com/', '_blank');
@@ -2322,7 +2322,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         Change Settings
                         <ArrowRight className="w-3 h-3 ml-1 rotate-90 group-hover:translate-y-0.5 transition-transform" />
                       </Button>
-                      
+
                       {/* Dropdown Menu */}
                       <div className="hidden group-hover:block absolute top-full right-0 mt-2 bg-card border border-border rounded-lg shadow-xl min-w-[200px] z-50">
                         <div className="py-2">
@@ -2380,7 +2380,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.6, delay: 0.2 }}
-          className={finalCompositeImage 
+          className={finalCompositeImage
             ? "grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] gap-6 items-start"
             : "max-w-5xl mx-auto"
           }
@@ -2484,9 +2484,8 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
           {/* CENTER: Main Preview Area */}
           <Card className="gradient-card border-0 shadow-hover overflow-hidden">
             <CardContent className="p-6 lg:p-8">
-              <div className={`relative bg-secondary rounded-2xl overflow-hidden ${
-                finalCompositeImage ? 'aspect-[3/4] sm:aspect-[2/3] lg:aspect-[2/3]' : 'aspect-video'
-              }`}>>
+              <div className={`relative bg-secondary rounded-2xl overflow-hidden ${finalCompositeImage ? 'aspect-[3/4] sm:aspect-[2/3] lg:aspect-[2/3]' : 'aspect-video'
+                }`}>
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
                     <div className="text-center">
@@ -2531,9 +2530,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       alt="Final Photo Strip"
                       className="w-full h-full object-contain"
                     />
-                    
+
                     {/* Sticker Overlay - with proper ref */}
-                    <div 
+                    <div
                       ref={stickerContainerRef}
                       className="absolute inset-0"
                       style={{ zIndex: 30, pointerEvents: 'none' }}
@@ -2599,10 +2598,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           >
                             {sticker.emoji}
                           </div>
-                          
+
                           {/* Control buttons - only show when selected */}
                           {selectedStickerId === sticker.id && (
-                            <div 
+                            <div
                               className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex gap-1 bg-black/90 rounded-full p-1.5 shadow-lg"
                               style={{ pointerEvents: 'auto' }}
                             >
@@ -2661,7 +2660,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         </div>
                       ))}
                     </div>
-                    
+
                     {/* Auto-saved indicator - only show when user is logged in */}
                     {user && sessionId && (
                       <div className="absolute top-4 left-4 bg-green-500/90 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-2 backdrop-blur-sm">
@@ -2690,13 +2689,12 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           {Array.from({ length: photoCount }).map((_, index) => (
                             <div
                               key={index}
-                              className={`w-3 h-3 rounded-full transition-all ${
-                                index < capturedImages.length
+                              className={`w-3 h-3 rounded-full transition-all ${index < capturedImages.length
                                   ? "bg-green-500"
                                   : index === currentPhotoIndex
-                                  ? "bg-primary animate-pulse"
-                                  : "bg-gray-500"
-                              }`}
+                                    ? "bg-primary animate-pulse"
+                                    : "bg-gray-500"
+                                }`}
                             />
                           ))}
                         </div>
@@ -2747,76 +2745,76 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
 
           {/* RIGHT SIDEBAR: Action Buttons - Simple & Clean (Separate Column) */}
           {finalCompositeImage && (
-                <motion.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="hidden lg:block"
-                >
-                  <Card className="gradient-card border-0 shadow-soft sticky top-24">
-                    <CardContent className="p-6 space-y-3">
-                      {/* Header */}
-                      <div className="mb-4">
-                        <h2 className="font-heading font-bold text-lg mb-1 flex items-center gap-2">
-                          <Sparkles className="w-5 h-5 text-primary" />
-                          Quick Actions
-                        </h2>
-                        <p className="text-xs text-muted-foreground">What would you like to do next?</p>
-                      </div>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              className="hidden lg:block"
+            >
+              <Card className="gradient-card border-0 shadow-soft sticky top-24">
+                <CardContent className="p-6 space-y-3">
+                  {/* Header */}
+                  <div className="mb-4">
+                    <h2 className="font-heading font-bold text-lg mb-1 flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      Quick Actions
+                    </h2>
+                    <p className="text-xs text-muted-foreground">What would you like to do next?</p>
+                  </div>
 
-                      {/* PRIMARY ACTION - Download */}
-                      <Button
-                        onClick={handleDownload}
-                        className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all py-7 text-base font-bold group"
-                      >
-                        <Download className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                        Download Photo
-                      </Button>
+                  {/* PRIMARY ACTION - Download */}
+                  <Button
+                    onClick={handleDownload}
+                    className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all py-7 text-base font-bold group"
+                  >
+                    <Download className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                    Download Photo
+                  </Button>
 
-                      {/* SECONDARY ACTIONS */}
-                      <Button
-                        onClick={handleShareToWhatsApp}
-                        className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all py-5 font-semibold"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share Photo
-                      </Button>
+                  {/* SECONDARY ACTIONS */}
+                  <Button
+                    onClick={handleShareToWhatsApp}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-md hover:shadow-lg transition-all py-5 font-semibold"
+                  >
+                    <Share2 className="w-4 h-4 mr-2" />
+                    Share Photo
+                  </Button>
 
-                      <Button
-                        onClick={() => setShowEditPanel(true)}
-                        variant="outline"
-                        className="w-full border-2 border-primary/50 hover:bg-primary/10 hover:border-primary text-primary transition-all py-5 font-semibold"
-                      >
-                        <Sparkles className="w-4 h-4 mr-2" />
-                        Edit Photo
-                      </Button>
+                  <Button
+                    onClick={() => setShowEditPanel(true)}
+                    variant="outline"
+                    className="w-full border-2 border-primary/50 hover:bg-primary/10 hover:border-primary text-primary transition-all py-5 font-semibold"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Edit Photo
+                  </Button>
 
-                      <div className="border-t border-border my-4"></div>
+                  <div className="border-t border-border my-4"></div>
 
-                      {/* RETAKE ACTION */}
-                      <Button
-                        onClick={() => setShowStartOverConfirm(true)}
-                        variant="outline"
-                        className="w-full border-2 border-destructive/40 hover:bg-destructive/10 hover:border-destructive text-destructive transition-all py-4"
-                      >
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Start Over
-                      </Button>
+                  {/* RETAKE ACTION */}
+                  <Button
+                    onClick={() => setShowStartOverConfirm(true)}
+                    variant="outline"
+                    className="w-full border-2 border-destructive/40 hover:bg-destructive/10 hover:border-destructive text-destructive transition-all py-4"
+                  >
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Start Over
+                  </Button>
 
-                      {/* Optional: View Gallery Link */}
-                      {user && (
-                        <button
-                          onClick={() => navigate('/my-gallery')}
-                          className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-2 flex items-center justify-center gap-1"
-                        >
-                          <ImageIcon className="w-3 h-3" />
-                          View My Gallery
-                        </button>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              )}
+                  {/* Optional: View Gallery Link */}
+                  {user && (
+                    <button
+                      onClick={() => navigate('/my-gallery')}
+                      className="w-full text-center text-sm text-muted-foreground hover:text-primary transition-colors py-2 flex items-center justify-center gap-1"
+                    >
+                      <ImageIcon className="w-3 h-3" />
+                      View My Gallery
+                    </button>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
         </motion.div>
 
         {/* EDIT MODAL - Enhanced Split Screen with Dark Theme */}
@@ -2868,7 +2866,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         >
                           <ZoomIn className="w-3.5 h-3.5" />
                         </button>
-                        
+
                         <input
                           type="range"
                           min="50"
@@ -2878,11 +2876,11 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           className="h-20 w-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-blue-500 [writing-mode:vertical-lr] rotate-180"
                           title="Zoom Slider"
                         />
-                        
+
                         <div className="text-[10px] text-gray-400 font-mono text-center">
                           {Math.round(previewZoom * 100)}%
                         </div>
-                        
+
                         <button
                           onClick={() => setPreviewZoom(prev => Math.max(0.5, prev - 0.1))}
                           className="p-1 hover:bg-gray-700 rounded-full text-white transition-colors"
@@ -2890,9 +2888,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         >
                           <ZoomOut className="w-3.5 h-3.5" />
                         </button>
-                        
+
                         <div className="h-px w-4 bg-gray-700"></div>
-                        
+
                         <button
                           onClick={() => setPreviewZoom(1)}
                           className="px-1.5 py-1 bg-gray-700 hover:bg-gray-600 rounded-full text-white transition-colors text-[10px] font-bold"
@@ -2904,9 +2902,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                     </div>
 
                     <div className="relative max-w-md w-full">
-                      <div 
+                      <div
                         className="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-gray-600 shadow-2xl bg-[#1a1a1a] transition-transform duration-200"
-                        style={{ 
+                        style={{
                           transform: `scale(${previewZoom})`,
                           transformOrigin: 'center center'
                         }}
@@ -2916,9 +2914,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           alt="Preview"
                           className="w-full h-full object-contain"
                         />
-                        
+
                         {/* Stickers Overlay on Preview - Interactive */}
-                        <div 
+                        <div
                           ref={stickerContainerRef}
                           className="absolute inset-0"
                           style={{ pointerEvents: 'none' }}
@@ -2982,9 +2980,9 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                               >
                                 {sticker.emoji}
                               </div>
-                              
+
                               {selectedStickerId === sticker.id && (
-                                <div 
+                                <div
                                   className="absolute -top-12 left-1/2 transform -translate-x-1/2 flex gap-1 bg-black/90 rounded-full p-1.5 shadow-lg"
                                   style={{ pointerEvents: 'auto' }}
                                 >
@@ -3039,7 +3037,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           ))}
                         </div>
                       </div>
-                      
+
                       {/* Preview Info */}
                       <div className="mt-3 text-center">
                         <p className="text-xs text-gray-500">
@@ -3055,44 +3053,40 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                     <div className="flex border-b border-gray-800 bg-[#202020] flex-shrink-0">
                       <button
                         onClick={() => setEditTab('stickers')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                          editTab === 'stickers'
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'stickers'
                             ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                        }`}
+                          }`}
                       >
                         <Smile size={16} />
                         <span className="hidden sm:inline">Stickers</span>
                       </button>
                       <button
                         onClick={() => setEditTab('filters')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                          editTab === 'filters'
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'filters'
                             ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                        }`}
+                          }`}
                       >
                         <Sparkles size={16} />
                         <span className="hidden sm:inline">Filters</span>
                       </button>
                       <button
                         onClick={() => setEditTab('frame')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                          editTab === 'frame'
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'frame'
                             ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                        }`}
+                          }`}
                       >
                         <Shapes size={16} />
                         <span className="hidden sm:inline">Frame</span>
                       </button>
                       <button
                         onClick={() => setEditTab('adjust')}
-                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                          editTab === 'adjust'
+                        className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'adjust'
                             ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
                             : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                        }`}
+                          }`}
                       >
                         <Sliders size={16} />
                         <span className="hidden sm:inline">Adjust</span>
@@ -3120,69 +3114,64 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           <div className="flex gap-2 overflow-x-auto pb-2">
                             <button
                               onClick={() => setStickerCategory('all')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                                stickerCategory === 'all'
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${stickerCategory === 'all'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                              }`}
+                                }`}
                             >
                               All
                             </button>
                             <button
                               onClick={() => setStickerCategory('emoji')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                                stickerCategory === 'emoji'
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'emoji'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                              }`}
+                                }`}
                             >
                               <Smile className="w-3 h-3" /> Emoji
                             </button>
                             <button
                               onClick={() => setStickerCategory('hearts')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                                stickerCategory === 'hearts'
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'hearts'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                              }`}
+                                }`}
                             >
                               <Heart className="w-3 h-3" /> Hearts
                             </button>
                             <button
                               onClick={() => setStickerCategory('stars')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${
-                                stickerCategory === 'stars'
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'stars'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                              }`}
+                                }`}
                             >
                               <Star className="w-3 h-3" /> Stars
                             </button>
                             <button
                               onClick={() => setStickerCategory('objects')}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                                stickerCategory === 'objects'
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${stickerCategory === 'objects'
                                   ? 'bg-blue-600 text-white'
                                   : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                              }`}
+                                }`}
                             >
                               🎁 Objects
                             </button>
                           </div>
-                          
+
                           {/* Sticker Grid - 5 columns with better spacing */}
                           <div className="grid grid-cols-5 gap-3 max-h-64 overflow-y-auto pr-2">
                             {(() => {
-                              let filteredStickers = stickerCategory === 'all' 
-                                ? STICKER_EMOJIS 
+                              let filteredStickers = stickerCategory === 'all'
+                                ? STICKER_EMOJIS
                                 : STICKER_CATEGORIES[stickerCategory];
-                              
+
                               if (stickerSearch) {
-                                filteredStickers = filteredStickers.filter(emoji => 
+                                filteredStickers = filteredStickers.filter(emoji =>
                                   emoji.includes(stickerSearch)
                                 );
                               }
-                              
+
                               return filteredStickers.map((emoji, index) => (
                                 <button
                                   key={`${emoji}-${index}`}
@@ -3195,7 +3184,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                               ));
                             })()}
                           </div>
-                          
+
                           {/* Active Stickers List - Improved */}
                           <div className="mt-4 pt-4 border-t border-gray-800">
                             <div className="flex items-center justify-between mb-3">
@@ -3215,17 +3204,16 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                                 </button>
                               )}
                             </div>
-                            
+
                             {stickers.length > 0 ? (
                               <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                                 {stickers.map(sticker => (
-                                  <div 
-                                    key={sticker.id} 
-                                    className={`flex items-center justify-between bg-[#202020] rounded-lg p-2.5 border transition-all ${
-                                      selectedStickerId === sticker.id
+                                  <div
+                                    key={sticker.id}
+                                    className={`flex items-center justify-between bg-[#202020] rounded-lg p-2.5 border transition-all ${selectedStickerId === sticker.id
                                         ? 'border-blue-500 bg-blue-500/10'
                                         : 'border-gray-700 hover:border-gray-600'
-                                    }`}
+                                      }`}
                                   >
                                     <div className="flex items-center gap-2">
                                       <span className="text-2xl">{sticker.emoji}</span>
@@ -3237,11 +3225,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                                     <div className="flex gap-1">
                                       <button
                                         onClick={() => setSelectedStickerId(sticker.id)}
-                                        className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${
-                                          selectedStickerId === sticker.id 
-                                            ? 'bg-blue-600 text-white' 
+                                        className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${selectedStickerId === sticker.id
+                                            ? 'bg-blue-600 text-white'
                                             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                                        }`}
+                                          }`}
                                         title="Click to select and edit on preview"
                                       >
                                         {selectedStickerId === sticker.id ? '✓ Selected' : 'Select'}
@@ -3272,7 +3259,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       {editTab === 'filters' && (
                         <div className="space-y-4">
                           <p className="text-sm text-gray-400">Apply filters to enhance your photo</p>
-                          
+
                           {/* Compact Filter Grid - 2 columns with mini preview */}
                           <div className="grid grid-cols-2 gap-2">
                             {Object.values(FILTER_PRESETS).map((filter) => (
@@ -3282,11 +3269,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                                   setGlobalFilter(filter);
                                   handleApplyGlobalFilter(filter);
                                 }}
-                                className={`flex flex-col items-center p-3 rounded-lg font-medium text-sm transition-all border-2 ${
-                                  globalFilter.name === filter.name
+                                className={`flex flex-col items-center p-3 rounded-lg font-medium text-sm transition-all border-2 ${globalFilter.name === filter.name
                                     ? "bg-blue-600/20 text-blue-400 border-blue-500 shadow-lg"
                                     : "bg-[#202020] hover:bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-600"
-                                }`}
+                                  }`}
                               >
                                 {/* Mini Preview Placeholder */}
                                 <div className="w-full aspect-square mb-2 rounded bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center">
@@ -3325,7 +3311,7 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       {editTab === 'frame' && (
                         <div className="space-y-4">
                           <p className="text-sm text-gray-400">Change your photo frame template</p>
-                          
+
                           <Button
                             onClick={handleOpenFrameSelector}
                             className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 rounded-lg transition-all flex items-center justify-center gap-2"
@@ -3355,18 +3341,18 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                       {editTab === 'adjust' && (
                         <div className="space-y-4">
                           <p className="text-sm text-gray-400">Retake individual photos or start over</p>
-                          
+
                           <div className="space-y-2">
                             {capturedImages
                               .map((image, idx) => ({ image, idx }))
                               .filter(({ image }) => image !== "")
                               .map(({ image, idx }) => {
-                                const frameLabel = selectedTemplate?.frameCount === 2 
+                                const frameLabel = selectedTemplate?.frameCount === 2
                                   ? (idx === 0 ? "Top Frame" : "Bottom Frame")
                                   : selectedTemplate?.frameCount === 3
-                                  ? (idx === 0 ? "Top Frame" : idx === 1 ? "Middle Frame" : "Bottom Frame")
-                                  : `Frame ${idx + 1}`;
-                                
+                                    ? (idx === 0 ? "Top Frame" : idx === 1 ? "Middle Frame" : "Bottom Frame")
+                                    : `Frame ${idx + 1}`;
+
                                 return (
                                   <button
                                     key={idx}
@@ -3624,219 +3610,218 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
           )}
         </AnimatePresence>
 
-      {/* Mobile Controls (below grid) */}
-      <div className={finalCompositeImage ? "mt-6 lg:hidden" : "mt-6"}>
-                {finalCompositeImage ? (
-                  <div className="space-y-3">
+        {/* Mobile Controls (below grid) */}
+        <div className={finalCompositeImage ? "mt-6 lg:hidden" : "mt-6"}>
+          {finalCompositeImage ? (
+            <div className="space-y-3">
+              <Button
+                onClick={handleDownload}
+                className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all py-6 text-base font-semibold"
+              >
+                <Download className="w-5 h-5 mr-2" />
+                Download Photo
+              </Button>
+
+              <Button
+                onClick={handleShare}
+                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg transition-all py-5 font-semibold"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+
+              {user && (
+                <Button
+                  onClick={() => navigate('/my-gallery')}
+                  className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white shadow-lg transition-all py-5"
+                >
+                  <ImageIcon className="w-4 h-4 mr-2" />
+                  View My Gallery
+                </Button>
+              )}
+
+              <Button
+                onClick={handleRetake}
+                variant="outline"
+                className="w-full border-2 border-destructive/50 hover:bg-destructive/10 hover:border-destructive text-destructive transition-all py-5"
+              >
+                <RotateCcw className="w-5 h-5 mr-2" />
+                Start Over
+              </Button>
+
+              {/* Edit Options Accordion for Mobile */}
+              <Button
+                onClick={() => setShowEditPanel(!showEditPanel)}
+                variant="outline"
+                className="w-full border-2 hover:bg-accent transition-all py-5"
+              >
+                <Sparkles className="w-5 h-5 mr-2" />
+                {showEditPanel ? 'Hide' : 'Show'} Edit Options
+              </Button>
+
+              {/* Mobile Edit Panel */}
+              {showEditPanel && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="space-y-4 p-4 bg-card border-2 border-border rounded-xl"
+                >
+                  {/* Stickers */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">Stickers</h3>
                     <Button
-                      onClick={handleDownload}
-                      className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg hover:shadow-xl transition-all py-6 text-base font-semibold"
-                    >
-                      <Download className="w-5 h-5 mr-2" />
-                      Download Photo
-                    </Button>
-                    
-                    <Button
-                      onClick={handleShare}
-                      className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-lg transition-all py-5 font-semibold"
-                    >
-                      <Share2 className="w-4 h-4 mr-2" />
-                      Share
-                    </Button>
-                    
-                    {user && (
-                      <Button
-                        onClick={() => navigate('/my-gallery')}
-                        className="w-full bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-700 hover:to-purple-600 text-white shadow-lg transition-all py-5"
-                      >
-                        <ImageIcon className="w-4 h-4 mr-2" />
-                        View My Gallery
-                      </Button>
-                    )}
-                    
-                    <Button
-                      onClick={handleRetake}
-                      variant="outline"
-                      className="w-full border-2 border-destructive/50 hover:bg-destructive/10 hover:border-destructive text-destructive transition-all py-5"
-                    >
-                      <RotateCcw className="w-5 h-5 mr-2" />
-                      Start Over
-                    </Button>
-                    
-                    {/* Edit Options Accordion for Mobile */}
-                    <Button
-                      onClick={() => setShowEditPanel(!showEditPanel)}
-                      variant="outline"
-                      className="w-full border-2 hover:bg-accent transition-all py-5"
-                    >
-                      <Sparkles className="w-5 h-5 mr-2" />
-                      {showEditPanel ? 'Hide' : 'Show'} Edit Options
-                    </Button>
-                    
-                    {/* Mobile Edit Panel */}
-                    {showEditPanel && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-4 p-4 bg-card border-2 border-border rounded-xl"
-                      >
-                        {/* Stickers */}
-                        <div>
-                          <h3 className="font-semibold text-sm mb-2">Stickers</h3>
-                          <Button
-                            onClick={() => setShowStickerPanel(!showStickerPanel)}
-                            variant="outline"
-                            className="w-full"
-                          >
-                            {showStickerPanel ? 'Hide' : 'Add'} Stickers
-                          </Button>
-                          {showStickerPanel && (
-                            <div className="mt-2 grid grid-cols-6 gap-2 p-2 bg-secondary/50 rounded-lg">
-                              {STICKER_EMOJIS.map((emoji, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => handleAddSticker(emoji)}
-                                  className="text-2xl hover:scale-110 transition-transform p-2"
-                                >
-                                  {emoji}
-                                </button>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Filters */}
-                        <div>
-                          <h3 className="font-semibold text-sm mb-2">Filters</h3>
-                          <div className="grid grid-cols-3 gap-2">
-                            {Object.values(FILTER_PRESETS).map((filter) => (
-                              <button
-                                key={filter.name}
-                                onClick={() => {
-                                  setGlobalFilter(filter);
-                                  handleApplyGlobalFilter(filter);
-                                }}
-                                className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                                  globalFilter.name === filter.name
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-secondary hover:bg-accent"
-                                }`}
-                              >
-                                {filter.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        
-                        {/* Frame Change */}
-                        <Button
-                          onClick={handleOpenFrameSelector}
-                          variant="outline"
-                          className="w-full"
-                        >
-                          <Shapes className="w-4 h-4 mr-2" />
-                          Change Frame
-                        </Button>
-                      </motion.div>
-                    )}
-                  </div>
-                ) : capturedImages.filter(img => img !== '').length === 0 ? (
-                  <div className="flex flex-col gap-3">
-                    {inputMethod === 'camera' ? (
-                      <Button
-                        onClick={handleCapture}
-                        disabled={!hasPermission || isLoading || !selectedTemplate}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Camera className="w-5 h-5 mr-2" />
-                        Start Photo Session
-                      </Button>
-                    ) : inputMethod === 'upload' ? (
-                      <Button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isLoading || !selectedTemplate}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Upload className="w-5 h-5 mr-2" />
-                        Upload Photos ({photoCount} needed)
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : capturedImages.length > 0 && !allPhotosCaptured ? (
-                  <div className="flex flex-col gap-3">
-                    {inputMethod === 'upload' && (
-                      <Button
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isLoading || !selectedTemplate}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Upload className="w-5 h-5 mr-2" />
-                        Upload More Photos ({capturedImages.length}/{photoCount})
-                      </Button>
-                    )}
-                    {inputMethod === 'camera' && (
-                      <Button
-                        onClick={handleCapture}
-                        disabled={!hasPermission || isLoading || !selectedTemplate}
-                        className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                      >
-                        <Camera className="w-5 h-5 mr-2" />
-                        Continue ({capturedImages.length}/{photoCount})
-                      </Button>
-                    )}
-                    <Button
-                      onClick={handleRetake}
+                      onClick={() => setShowStickerPanel(!showStickerPanel)}
                       variant="outline"
                       className="w-full"
                     >
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Start Over
+                      {showStickerPanel ? 'Hide' : 'Add'} Stickers
                     </Button>
+                    {showStickerPanel && (
+                      <div className="mt-2 grid grid-cols-6 gap-2 p-2 bg-secondary/50 rounded-lg">
+                        {STICKER_EMOJIS.map((emoji, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleAddSticker(emoji)}
+                            className="text-2xl hover:scale-110 transition-transform p-2"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                ) : allPhotosCaptured && !finalCompositeImage ? (
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      onClick={() => createCompositeImage(capturedImages)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
-                    >
-                      <ArrowRight className="w-5 h-5 mr-2" />
-                      Create Photo Strip
-                    </Button>
+
+                  {/* Filters */}
+                  <div>
+                    <h3 className="font-semibold text-sm mb-2">Filters</h3>
+                    <div className="grid grid-cols-3 gap-2">
+                      {Object.values(FILTER_PRESETS).map((filter) => (
+                        <button
+                          key={filter.name}
+                          onClick={() => {
+                            setGlobalFilter(filter);
+                            handleApplyGlobalFilter(filter);
+                          }}
+                          className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${globalFilter.name === filter.name
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-secondary hover:bg-accent"
+                            }`}
+                        >
+                          {filter.name}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                ) : null}
-              </div>
+
+                  {/* Frame Change */}
+                  <Button
+                    onClick={handleOpenFrameSelector}
+                    variant="outline"
+                    className="w-full"
+                  >
+                    <Shapes className="w-4 h-4 mr-2" />
+                    Change Frame
+                  </Button>
+                </motion.div>
+              )}
+            </div>
+          ) : capturedImages.filter(img => img !== '').length === 0 ? (
+            <div className="flex flex-col gap-3">
+              {inputMethod === 'camera' ? (
+                <Button
+                  onClick={handleCapture}
+                  disabled={!hasPermission || isLoading || !selectedTemplate}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  Start Photo Session
+                </Button>
+              ) : inputMethod === 'upload' ? (
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading || !selectedTemplate}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload Photos ({photoCount} needed)
+                </Button>
+              ) : null}
+            </div>
+          ) : capturedImages.length > 0 && !allPhotosCaptured ? (
+            <div className="flex flex-col gap-3">
+              {inputMethod === 'upload' && (
+                <Button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading || !selectedTemplate}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Upload className="w-5 h-5 mr-2" />
+                  Upload More Photos ({capturedImages.length}/{photoCount})
+                </Button>
+              )}
+              {inputMethod === 'camera' && (
+                <Button
+                  onClick={handleCapture}
+                  disabled={!hasPermission || isLoading || !selectedTemplate}
+                  className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+                >
+                  <Camera className="w-5 h-5 mr-2" />
+                  Continue ({capturedImages.length}/{photoCount})
+                </Button>
+              )}
+              <Button
+                onClick={handleRetake}
+                variant="outline"
+                className="w-full"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Start Over
+              </Button>
+            </div>
+          ) : allPhotosCaptured && !finalCompositeImage ? (
+            <div className="flex flex-col gap-3">
+              <Button
+                onClick={() => createCompositeImage(capturedImages)}
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-6 text-lg rounded-full shadow-lg hover:shadow-xl transition-all"
+              >
+                <ArrowRight className="w-5 h-5 mr-2" />
+                Create Photo Strip
+              </Button>
+            </div>
+          ) : null}
+        </div>
       </div>
 
       {/* Instructions */}
       {!finalCompositeImage && hasPermission && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-8 text-center space-y-2"
-          >
-            <p className="text-muted-foreground">
-              {selectedTemplate 
-                ? capturedImages.filter(img => img !== '').length === 0
-                  ? `📸 Ready! You'll take ${photoCount} photos. Click "Start Photo Session" to begin.`
-                  : `📸 Photo ${currentPhotoIndex + 1} of ${photoCount} - Get ready for the next shot!`
-                : `⚠️ Please select a template first to start your photo session`
-              }
-            </p>
-            {!selectedTemplate && (
-              <Button
-                variant="link"
-                onClick={() => navigate('/gallery')}
-                className="text-primary hover:text-primary/80"
-              >
-                Browse templates →
-              </Button>
-            )}
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="mt-8 text-center space-y-2"
+        >
+          <p className="text-muted-foreground">
+            {selectedTemplate
+              ? capturedImages.filter(img => img !== '').length === 0
+                ? `📸 Ready! You'll take ${photoCount} photos. Click "Start Photo Session" to begin.`
+                : `📸 Photo ${currentPhotoIndex + 1} of ${photoCount} - Get ready for the next shot!`
+              : `⚠️ Please select a template first to start your photo session`
+            }
+          </p>
+          {!selectedTemplate && (
+            <Button
+              variant="link"
+              onClick={() => navigate('/gallery')}
+              className="text-primary hover:text-primary/80"
+            >
+              Browse templates →
+            </Button>
+          )}
+        </motion.div>
+      )}
 
-        {/* Frame Selector Modal */}
-        <AnimatePresence>
+      {/* Frame Selector Modal */}
+      <AnimatePresence>
         {showFrameSelector && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -3882,11 +3867,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleChangeFrame(customFrame as Template)}
-                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-                            selectedTemplate?._id === customFrame._id
+                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${selectedTemplate?._id === customFrame._id
                               ? 'border-primary ring-2 ring-primary ring-offset-2'
                               : 'border-border hover:border-primary'
-                          }`}
+                            }`}
                         >
                           <img
                             src={customFrame.thumbnail}
@@ -3935,11 +3919,10 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleChangeFrame(template)}
-                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${
-                            selectedTemplate?._id === template._id
+                          className={`relative rounded-xl overflow-hidden border-2 transition-all ${selectedTemplate?._id === template._id
                               ? 'border-primary ring-2 ring-primary ring-offset-2'
                               : 'border-border hover:border-primary'
-                          }`}
+                            }`}
                         >
                           <img
                             src={template.thumbnail}
@@ -3978,8 +3961,8 @@ const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
                         )}
                       </p>
                       {!user?.isPremium && availableTemplates.length > 0 && (
-                        <Button 
-                          size="sm" 
+                        <Button
+                          size="sm"
                           className="mt-2"
                           onClick={() => navigate('/settings')}
                         >
