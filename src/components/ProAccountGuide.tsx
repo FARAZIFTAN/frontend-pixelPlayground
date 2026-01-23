@@ -5,15 +5,15 @@ import { Badge } from "@/components/ui/badge";
 
 const ProAccountGuide = () => {
   return (
-    <section className="py-16 lg:py-24 bg-gradient-to-b from-[#0D0D0D] to-[#1A1A1A]">
-      <div className="container mx-auto px-4 lg:px-8">
+    <section className="py-12 sm:py-16 lg:py-24 bg-gradient-to-b from-[#0D0D0D] to-[#1A1A1A]">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="text-center mb-8 sm:mb-12"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -28,15 +28,15 @@ const ProAccountGuide = () => {
             </span>
           </motion.div>
 
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-4 text-white">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-3 sm:mb-4 text-white">
             AI Template Creator
           </h2>
-          <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+          <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto px-4">
             Buat template foto unik dengan bantuan AI - Gratis untuk semua pengguna KaryaKlik!
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-12">
           {/* Chat dengan AI */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -45,13 +45,13 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
-                    <MessageSquare className="w-6 h-6 text-purple-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0">
+                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-purple-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-heading font-bold text-white mb-1">
+                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">
                       1. Chat dengan AI
                     </h3>
                     <p className="text-sm text-gray-400">
@@ -94,13 +94,13 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                    <Zap className="w-6 h-6 text-blue-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                    <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-blue-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-heading font-bold text-white mb-1">
+                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">
                       2. Generate SVG
                     </h3>
                     <p className="text-sm text-gray-400">
@@ -143,13 +143,13 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                    <Eye className="w-6 h-6 text-green-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                    <Eye className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-heading font-bold text-white mb-1">
+                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">
                       3. Preview & Test
                     </h3>
                     <p className="text-sm text-gray-400">
@@ -192,13 +192,13 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <div className="flex items-start gap-4 mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
-                    <Save className="w-6 h-6 text-orange-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                    <Save className="w-5 h-5 sm:w-6 sm:h-6 text-orange-400" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-heading font-bold text-white mb-1">
+                    <h3 className="text-lg sm:text-xl font-heading font-bold text-white mb-1">
                       4. Save & Gunakan
                     </h3>
                     <p className="text-sm text-gray-400">
@@ -240,7 +240,7 @@ const ProAccountGuide = () => {
         </div>
 
         {/* Additional Info Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid sm:grid-cols-2 gap-4 sm:gap-6">
           {/* Keunggulan AI Creator */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -249,7 +249,7 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5, delay: 0.1 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
                     <Sparkles className="w-5 h-5 text-purple-400" />
@@ -286,7 +286,7 @@ const ProAccountGuide = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <Card className="gradient-card border-0 shadow-soft h-full">
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                     <Camera className="w-5 h-5 text-blue-400" />
@@ -322,16 +322,16 @@ const ProAccountGuide = () => {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3 }}
-          className="mt-8"
+          className="mt-6 sm:mt-8"
         >
           <Card className="gradient-card border border-green-500/30 shadow-soft">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                  <CheckCircle2 className="w-6 h-6 text-green-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-green-400" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-white mb-2">Akses Penuh untuk Semua Pengguna</h3>
+                  <h3 className="text-base sm:text-lg font-semibold text-white mb-2">Akses Penuh untuk Semua Pengguna</h3>
                   <ul className="space-y-2 text-sm text-gray-300">
                     <li className="flex items-start gap-2">
                       <span className="text-green-400 font-bold">•</span>

@@ -1,8 +1,8 @@
 // API Base URL from environment variable
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api';
 
 // Configuration constants
-const DEFAULT_TIMEOUT = 30000; // 30 seconds
+const DEFAULT_TIMEOUT = 180000; // 180 seconds (3 minutes) - increased for slow backend
 const TOKEN_STORAGE_KEY = 'token';
 
 /**
@@ -44,7 +44,7 @@ const handleApiError = async (response: Response, endpoint: string): Promise<nev
   }
 
   let errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
-  
+
   if (errorData.details) {
     errorMessage += ` - ${errorData.details}`;
   }
@@ -62,7 +62,7 @@ async function apiCall<T>(
   timeout: number = DEFAULT_TIMEOUT
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const config: RequestInit = {
     ...options,
     mode: 'cors',
@@ -77,11 +77,11 @@ async function apiCall<T>(
       fetch(url, config),
       createTimeoutPromise(timeout),
     ]);
-    
+
     if (!response.ok) {
       return handleApiError(response, endpoint);
     }
-    
+
     const data = await response.json();
     return data;
   } catch (error) {
@@ -90,7 +90,7 @@ async function apiCall<T>(
 
     // More descriptive error messages
     if (err.message === 'Failed to fetch') {
-      throw new Error('Cannot connect to server. Please make sure the backend is running on port 3001.');
+      throw new Error('Cannot connect to server. Please make sure the backend is running on port 3000.');
     }
 
     if (err.message === 'Request timeout') {
@@ -111,7 +111,7 @@ async function apiCallWithRetry<T>(
   maxRetries: number = 2
 ): Promise<T> {
   let lastError: Error | null = null;
-  
+
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       if (attempt > 0) {
@@ -120,25 +120,25 @@ async function apiCallWithRetry<T>(
         console.log(`⏳ Retrying request to ${endpoint} (attempt ${attempt + 1}/${maxRetries + 1}) after ${delay}ms delay...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
+
       return await apiCall<T>(endpoint, options, timeout);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
-      
+
       // Don't retry on auth errors or client errors
-      if (lastError.message.includes('401') || 
-          lastError.message.includes('403') || 
-          lastError.message.includes('400')) {
+      if (lastError.message.includes('401') ||
+        lastError.message.includes('403') ||
+        lastError.message.includes('400')) {
         throw lastError;
       }
-      
+
       // Continue to next retry
       if (attempt < maxRetries) {
         console.warn(`⚠️ Request failed (attempt ${attempt + 1}/${maxRetries + 1}):`, lastError.message);
       }
     }
   }
-  
+
   // All retries exhausted
   throw lastError || new Error('Request failed after all retries');
 }
@@ -219,7 +219,7 @@ export const sessionAPI = {
     if (params?.status) query.append('status', params.status);
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
-    
+
     return apiCall(`/sessions?${query.toString()}`, { method: 'GET' });
   },
 
@@ -277,13 +277,13 @@ export const compositeAPI = {
     }
     const byteArray = new Uint8Array(byteNumbers);
     const blob = new Blob([byteArray], { type: 'image/png' });
-    
+
     // Create FormData
     const formData = new FormData();
     formData.append('image', blob, `composite-${Date.now()}.png`);
     formData.append('sessionId', sessionId);
     if (templateId) formData.append('templateId', templateId);
-    
+
     // Upload without JSON.stringify (FormData handles its own encoding)
     const token = sessionStorage.getItem('token');
     const response = await fetch(`${API_BASE_URL}/composites/upload`, {
@@ -293,12 +293,12 @@ export const compositeAPI = {
       },
       body: formData, // Don't stringify FormData!
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.message || 'Upload failed');
     }
-    
+
     return response.json();
   },
 
@@ -322,7 +322,7 @@ export const compositeAPI = {
     const query = new URLSearchParams();
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
-    
+
     return apiCall(`/composites?${query.toString()}`, { method: 'GET' });
   },
 
@@ -353,14 +353,14 @@ export const userAPI = {
   // Upload profile picture — FormData, do not set JSON content-type
   uploadAvatar: async (file: File) => {
     const token = sessionStorage.getItem('token');
-    
+
     if (!token) {
       console.error('No token found for upload');
       throw new Error('Authentication required. Please login again.');
     }
-    
+
     const url = `${API_BASE_URL}/users/profile-picture`;
-    
+
     console.log('Uploading to:', url);
     console.log('Token exists:', !!token);
     console.log('File size:', file.size, 'bytes');
@@ -383,11 +383,11 @@ export const userAPI = {
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       console.error('Upload error response:', data);
-      
+
       if (res.status === 401) {
         throw new Error('Unauthorized - Your session may have expired');
       }
-      
+
       throw new Error(data.message || `Upload failed with status ${res.status}`);
     }
 
@@ -441,7 +441,7 @@ export const userAPI = {
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.skip) params.append('skip', options.skip.toString());
     if (options?.role) params.append('role', options.role);
-    
+
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiCall(`/users/all${query}`);
   },
@@ -497,7 +497,7 @@ export const userAPI = {
     const params = new URLSearchParams();
     if (options?.limit) params.append('limit', options.limit.toString());
     if (options?.skip) params.append('skip', options.skip.toString());
-    
+
     const query = params.toString() ? `?${params.toString()}` : '';
     return apiCall(`/users/${id}/activities${query}`);
   },
@@ -534,24 +534,24 @@ export const templateAPI = {
     if (params?.isPremium !== undefined) query.append('isPremium', params.isPremium.toString());
     if (params?.page) query.append('page', params.page.toString());
     if (params?.limit) query.append('limit', params.limit.toString());
-    
+
     const cacheKey = query.toString();
-    
+
     // Check memory cache first
     if (templatesCache && Date.now() - templatesCache.timestamp < CACHE_DURATION) {
       console.log('⚡ Using memory cache for templates');
       return Promise.resolve(templatesCache.data);
     }
-    
+
     // Deduplicate simultaneous requests
     if (templatesPromise) {
       console.log('⏳ Reusing in-flight template request');
       return templatesPromise;
     }
-    
-    // Make the actual request with optimized timeout (30s instead of 90s)
+
+    // Make the actual request with extended timeout (180s for templates)
     // Retry once if timeout occurs
-    templatesPromise = apiCallWithRetry(`/templates?${query.toString()}`, { method: 'GET' }, 30000, 1)
+    templatesPromise = apiCallWithRetry(`/templates?${query.toString()}`, { method: 'GET' }, 180000, 1)
       .then(data => {
         templatesCache = { data, timestamp: Date.now() };
         templatesPromise = null;
@@ -561,7 +561,7 @@ export const templateAPI = {
         templatesPromise = null;
         throw err;
       });
-    
+
     return templatesPromise;
   },
 
@@ -616,7 +616,7 @@ export const templateAPI = {
 };
 
 // AI API
-import type { 
+import type {
   GenerateFrameRequest,
   GenerateFrameResponse,
   ChatAIRequest,
@@ -669,7 +669,7 @@ export const aiAPI = {
    * ```
    */
   generateImage: async (
-    prompt: string, 
+    prompt: string,
     negativePrompt?: string
   ): Promise<GenerateImageResponse> => {
     const request: GenerateImageRequest = {
@@ -677,7 +677,7 @@ export const aiAPI = {
       negative_prompt: negativePrompt,
       num_inference_steps: 10,
     };
-    
+
     return apiCall<GenerateImageResponse>('/ai/generate-image', {
       method: 'POST',
       body: JSON.stringify(request),

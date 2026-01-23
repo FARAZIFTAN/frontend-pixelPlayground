@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Camera, Upload, ArrowRight, Loader2, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,6 +21,7 @@ interface Template {
 
 const InputMethodSelection = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const templateId = searchParams.get('template');
   const isAIFrame = searchParams.get('aiFrame') === 'true';
@@ -38,7 +39,15 @@ const InputMethodSelection = () => {
     const loadTemplate = async () => {
       try {
         setLoading(true);
-        
+
+        // 0. Check Navigation State (Instant Load)
+        if (location.state?.template && location.state.template._id === templateId) {
+          console.log('⚡ Using template from navigation state');
+          setSelectedTemplate(location.state.template);
+          setLoading(false);
+          return;
+        }
+
         // Handle AI-generated frame (not from backend API)
         if (isAIFrame && templateId.startsWith('ai-generated-')) {
           // Get AI frame data from sessionStorage
@@ -71,7 +80,7 @@ const InputMethodSelection = () => {
             }
           }
         }
-        
+
         // Try to get from cache first
         const cacheResult = safeSessionStorageGet<Template[]>('templates_cache', {
           maxAge: 5 * 60 * 1000, // 5 minutes
@@ -117,22 +126,22 @@ const InputMethodSelection = () => {
         } else if (cacheResult.error) {
           console.warn('Template cache validation failed:', cacheResult.error);
         }
-        
+
         // Try to load regular template from backend
         try {
           const response = await templateAPI.getTemplate(templateId) as {
             success: boolean;
             data?: { template: any };
           };
-          
+
           console.log('📦 Template API response:', response);
-          
+
           if (response.success && response.data?.template) {
             const template = response.data.template;
-            
+
             // Check if template is premium and user is not logged in or not premium
             if (template.isPremium && !user) {
-              toast.error('Login required untuk menggunakan frame premium', { 
+              toast.error('Login required untuk menggunakan frame premium', {
                 duration: 4000,
                 icon: "🔒"
               });
@@ -141,18 +150,18 @@ const InputMethodSelection = () => {
               }, 1500);
               return;
             }
-            
+
             if (template.isPremium && !isPremium) {
-              toast.error('Upgrade ke Premium untuk menggunakan frame PRO', { 
+              toast.error('Upgrade ke Premium untuk menggunakan frame PRO', {
                 duration: 3000,
                 icon: "👑"
               });
               navigate('/gallery');
               return;
             }
-            
+
             setSelectedTemplate(template);
-            
+
             // Preload template image immediately
             if (template.frameUrl) {
               const img = document.createElement('img');
@@ -164,40 +173,43 @@ const InputMethodSelection = () => {
         } catch (templateError) {
           console.log('⚠️ Public template not found, trying custom frames...');
         }
-        
+
         // Template not found in public templates, try custom frames
-        console.log('🔄 Checking custom frames...');
-        try {
-          const customFrameResponse = await userFrameAPI.getById(templateId);
-          console.log('📦 Custom frame response:', customFrameResponse);
-          
-          // Response format: { success: true, data: frame }
-          let customFrame = customFrameResponse?.data || customFrameResponse;
-          
-          if (customFrame && customFrame._id) {
-            // Ensure custom frame has all required fields for Template interface
-            customFrame = {
-              ...customFrame,
-              category: customFrame.category || 'User Generated',
-              isPremium: false,
-              thumbnail: customFrame.thumbnail || customFrame.frameUrl,
-            };
-            
-            console.log('✅ Found custom frame:', customFrame.name);
-            setSelectedTemplate(customFrame);
-            
-            // Preload custom frame image
-            if (customFrame.frameUrl) {
-              const img = document.createElement('img');
-              img.src = customFrame.frameUrl;
-              console.log('⚡ Preloading custom frame image');
+        // Only try if user is logged in to avoid 401 errors
+        if (user) {
+          console.log('🔄 Checking custom frames...');
+          try {
+            const customFrameResponse = await userFrameAPI.getById(templateId);
+            console.log('📦 Custom frame response:', customFrameResponse);
+
+            // Response format: { success: true, data: frame }
+            let customFrame = customFrameResponse?.data || customFrameResponse;
+
+            if (customFrame && customFrame._id) {
+              // Ensure custom frame has all required fields for Template interface
+              customFrame = {
+                ...customFrame,
+                category: customFrame.category || 'User Generated',
+                isPremium: false,
+                thumbnail: customFrame.thumbnail || customFrame.frameUrl,
+              };
+
+              console.log('✅ Found custom frame:', customFrame.name);
+              setSelectedTemplate(customFrame);
+
+              // Preload custom frame image
+              if (customFrame.frameUrl) {
+                const img = document.createElement('img');
+                img.src = customFrame.frameUrl;
+                console.log('⚡ Preloading custom frame image');
+              }
+              return;
             }
-            return;
+          } catch (customError) {
+            console.error('❌ Custom frame not found:', customError);
           }
-        } catch (customError) {
-          console.error('❌ Custom frame not found:', customError);
         }
-        
+
         console.error('❌ Frame not found in both public and custom');
         toast.error('Frame tidak ditemukan');
         navigate('/gallery');
@@ -207,11 +219,11 @@ const InputMethodSelection = () => {
     };
 
     loadTemplate();
-  }, [templateId, isAIFrame, navigate]);
+  }, [templateId, isAIFrame, navigate, location.state, user]);
 
   const handleSelectMethod = (method: 'camera' | 'upload') => {
     console.log('🎯 Navigating to Booth with method:', method);
-    
+
     // Cache template data for instant load in Booth
     if (selectedTemplate) {
       sessionStorage.setItem('booth_template_cache', JSON.stringify({
@@ -220,12 +232,12 @@ const InputMethodSelection = () => {
       }));
       console.log('⚡ Template cached for instant Booth load');
     }
-    
+
     // Navigate immediately - no delay
-    const url = isAIFrame 
+    const url = isAIFrame
       ? `/booth?template=${templateId}&method=${method}&aiFrame=true`
       : `/booth?template=${templateId}&method=${method}`;
-    
+
     navigate(url, { replace: false });
   };
 
@@ -312,7 +324,7 @@ const InputMethodSelection = () => {
             </motion.div>
 
             {/* Method Selection Cards */}
-            <div className="grid grid-cols-1 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6">
               {/* Use Camera Card */}
               <motion.button
                 initial={{ x: -50, opacity: 0 }}
@@ -324,22 +336,22 @@ const InputMethodSelection = () => {
                 onMouseEnter={handleCameraHover}
                 className="group relative bg-white/95 hover:bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl text-left"
               >
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
                   {/* Icon Container */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-primary to-red-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
                     <Camera className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 text-white" strokeWidth={2.5} />
                   </div>
-                  
+
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     {/* Title */}
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2">
+                    <h3 className="text-base sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2 leading-tight">
                       Use Camera
                     </h3>
-                    
+
                     {/* Description */}
-                    <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
-                      Take photos directly with your device camera
+                    <p className="text-xs sm:text-base text-gray-600 mb-0 sm:mb-3 line-clamp-2 sm:line-clamp-none">
+                      Take photos directly
                     </p>
 
                     {/* Arrow Indicator - Hidden on mobile, shown on larger screens */}
@@ -364,22 +376,22 @@ const InputMethodSelection = () => {
                 onClick={() => handleSelectMethod('upload')}
                 className="group relative bg-white/95 hover:bg-white rounded-xl sm:rounded-2xl p-4 sm:p-6 lg:p-8 transition-all duration-300 shadow-xl hover:shadow-2xl text-left"
               >
-                <div className="flex items-center gap-3 sm:gap-4">
+                <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 text-center sm:text-left">
                   {/* Icon Container */}
-                  <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
+                  <div className="w-14 h-14 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg flex-shrink-0">
                     <Upload className="w-6 h-6 sm:w-8 sm:h-8 lg:w-12 lg:h-12 text-white" strokeWidth={2.5} />
                   </div>
-                  
+
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 w-full">
                     {/* Title */}
-                    <h3 className="text-lg sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2">
-                      Upload Pictures
+                    <h3 className="text-base sm:text-xl lg:text-2xl font-heading font-bold text-gray-900 mb-1 sm:mb-2 leading-tight">
+                      Upload Photos
                     </h3>
-                    
+
                     {/* Description */}
-                    <p className="text-sm sm:text-base text-gray-600 mb-2 sm:mb-3">
-                      Choose existing photos from your device
+                    <p className="text-xs sm:text-base text-gray-600 mb-0 sm:mb-3 line-clamp-2 sm:line-clamp-none">
+                      From your device
                     </p>
 
                     {/* Arrow Indicator - Hidden on mobile, shown on larger screens */}

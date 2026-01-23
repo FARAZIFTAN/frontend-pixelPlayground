@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart, User } from "lucide-react";
+import { Image, Sparkles, ArrowRight, Eye, Award, Camera, TrendingUp, Star, Loader2, Search, Filter, ChevronDown, Check, X, Heart, User, Tag, Layout } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -53,7 +53,7 @@ const Gallery = () => {
 
   // Ref for infinite scroll trigger
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  
+
   // Ref to track if initial load is done
   const initialLoadDone = useRef(false);
 
@@ -66,13 +66,13 @@ const Gallery = () => {
 
   // Available categories with template counts
   const categories = ["All", "Education", "Wedding", "Birthday", "Corporate", "Baby", "Holiday", "Love", "Artistic", "General"];
-  
+
   // Calculate template counts per category
   const categoryCounts = templates.reduce((acc, template) => {
     acc[template.category] = (acc[template.category] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
-  
+
   // All templates count
   categoryCounts["All"] = templates.length;
 
@@ -103,39 +103,39 @@ const Gallery = () => {
     } else {
       setIsLoadingMore(true);
     }
-    
+
     // Skip cache completely - templates are too large for sessionStorage
     // Fetch directly from server instead
     await fetchTemplates(page, append);
   };
-  
+
   const fetchTemplates = async (page = 1, append = false) => {
     try {
       console.time('⏱️ Template fetch time');
       // Remove redundant skip parameter - backend calculates it from page
-      const response = await templateAPI.getTemplates({ 
-        limit: itemsPerPage, 
+      const response = await templateAPI.getTemplates({
+        limit: itemsPerPage,
         page
       }) as {
         success: boolean;
         data?: { templates: Template[]; total?: number };
       };
       console.timeEnd('⏱️ Template fetch time');
-      
+
       if (response.success && response.data) {
         console.log('✅ Templates loaded:', response.data.templates.length, 'items');
-        
+
         // Filter out AI-generated frames (they should only appear in My AI Frames)
         const publicTemplates = response.data.templates.filter(
           template => !template.isAIGenerated
         );
-        
+
         if (append) {
           setTemplates(prev => [...prev, ...publicTemplates]);
         } else {
           setTemplates(publicTemplates);
         }
-        
+
         // Check if there are more pages
         const totalTemplates = response.data.total || 0;
         const loadedCount = append ? templates.length + publicTemplates.length : publicTemplates.length;
@@ -192,7 +192,7 @@ const Gallery = () => {
   // Infinite scroll effect (optimized with debouncing)
   useEffect(() => {
     let timeoutId: NodeJS.Timeout;
-    
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !isLoadingMore && !isLoading) {
@@ -204,7 +204,7 @@ const Gallery = () => {
           }, 100);
         }
       },
-      { 
+      {
         threshold: 0.1,
         rootMargin: '100px' // Load before reaching bottom
       }
@@ -224,7 +224,7 @@ const Gallery = () => {
   useEffect(() => {
     // Skip initial load (already loaded in mount effect) and if templates are still empty
     if (!initialLoadDone.current || templates.length === 0) return;
-    
+
     setCurrentPage(1);
     setHasMore(true);
     loadTemplates(1, false);
@@ -287,7 +287,7 @@ const Gallery = () => {
           }
         });
       },
-      { 
+      {
         rootMargin: '200px', // Increased from 100px for earlier loading
         threshold: 0.01 // Lower threshold for earlier trigger
       }
@@ -308,7 +308,7 @@ const Gallery = () => {
   // Expand visible range on scroll for better UX (optimized with throttling)
   useEffect(() => {
     let ticking = false;
-    
+
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
@@ -369,7 +369,9 @@ const Gallery = () => {
     }
 
     safeAnalytics.templateSelect(template._id, template.name, user?.id);
-    navigate(`/input-method?template=${template._id}`);
+    navigate(`/input-method?template=${template._id}`, {
+      state: { template }
+    });
   };
 
   return (
@@ -386,7 +388,7 @@ const Gallery = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-8 md:mb-16"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -414,14 +416,14 @@ const Gallery = () => {
         >
           <Card className="shadow-xl bg-black/30 backdrop-blur-lg border border-white/10">
             <CardContent className="p-4 sm:p-6">
-              <motion.div 
+              <motion.div
                 className="flex flex-col gap-4"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.4 }}
               >
                 {/* Search Input */}
-                <motion.div 
+                <motion.div
                   className="relative w-full"
                   whileHover={{ scale: 1.01 }}
                   transition={{ duration: 0.2 }}
@@ -433,7 +435,7 @@ const Gallery = () => {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#C62828] focus:border-transparent text-white placeholder-gray-400 transition-all duration-300 text-base sm:text-lg"
-                    whileFocus={{ 
+                    whileFocus={{
                       boxShadow: "0 0 0 3px rgba(198, 40, 40, 0.1)",
                       scale: 1.005
                     }}
@@ -442,7 +444,7 @@ const Gallery = () => {
                 </motion.div>
 
                 {/* Category Filter with Multi-Select */}
-                <motion.div 
+                <motion.div
                   className="flex items-start gap-2"
                   whileHover={{ scale: 1.01 }}
                   transition={{ duration: 0.2 }}
@@ -452,7 +454,7 @@ const Gallery = () => {
                     {/* Selected Categories Chips */}
                     <AnimatePresence mode="popLayout">
                       {selectedCategories.length > 0 && (
-                        <motion.div 
+                        <motion.div
                           className="flex flex-wrap gap-1.5 sm:gap-2 mb-2"
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -467,9 +469,9 @@ const Gallery = () => {
                                 initial={{ scale: 0, opacity: 0 }}
                                 animate={{ scale: 1, opacity: 1 }}
                                 exit={{ scale: 0, opacity: 0 }}
-                                transition={{ 
-                                  type: "spring", 
-                                  stiffness: 500, 
+                                transition={{
+                                  type: "spring",
+                                  stiffness: 500,
                                   damping: 30,
                                   opacity: { duration: 0.2 }
                                 }}
@@ -508,8 +510,8 @@ const Gallery = () => {
                             className="w-full justify-between px-3 sm:px-4 py-2.5 sm:py-3 bg-white/10 border border-white/20 rounded-lg hover:border-white/30 text-white transition-all duration-300 text-base sm:text-lg"
                           >
                             <span className="truncate">
-                              {selectedCategories.length === 0 
-                                ? "Select categories..." 
+                              {selectedCategories.length === 0
+                                ? "Select categories..."
                                 : `${selectedCategories.length} selected`
                               }
                             </span>
@@ -524,7 +526,7 @@ const Gallery = () => {
                           </Button>
                         </motion.div>
                       </PopoverTrigger>
-                      <PopoverContent 
+                      <PopoverContent
                         className="w-72 sm:w-80 p-0 bg-gray-900 border border-white/20 text-white shadow-2xl"
                         align="start"
                         side="bottom"
@@ -535,139 +537,137 @@ const Gallery = () => {
                           initial={{ opacity: 0, y: -10, scale: 0.95 }}
                           animate={{ opacity: 1, y: 0, scale: 1 }}
                           exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                          transition={{ 
-                            type: "spring", 
-                            stiffness: 400, 
+                          transition={{
+                            type: "spring",
+                            stiffness: 400,
                             damping: 30,
-                            duration: 0.3 
+                            duration: 0.3
                           }}
                         >
-                        <div className="p-3 border-b border-white/10">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                            <input
-                              type="text"
-                              placeholder="Search categories..."
-                              value={categorySearchQuery}
-                              onChange={(e) => setCategorySearchQuery(e.target.value)}
-                              className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 text-white placeholder-gray-400 text-sm"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div className="max-h-60 overflow-y-auto">
-                          {/* All Categories Option */}
-                          <div className="p-2">
-                            <motion.button
-                              whileHover={{ 
-                                backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                scale: 1.02 
-                              }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => {
-                                setSelectedCategories(prev => {
-                                  if (prev.includes("All")) {
-                                    return [];
-                                  } else {
-                                    return ["All"];
-                                  }
-                                });
-                              }}
-                              className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                                selectedCategories.includes("All") 
-                                  ? 'bg-primary/20 text-primary border border-primary/30' 
-                                  : 'hover:bg-white/5 text-white'
-                              } ${categorySearchQuery && !("All".toLowerCase().includes(categorySearchQuery.toLowerCase())) ? 'hidden' : ''}`}
-                            >
-                              <span className="font-medium">All Categories</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-xs text-gray-400">
-                                  ({categoryCounts["All"] || 0} templates)
-                                </span>
-                                <AnimatePresence>
-                                  {selectedCategories.includes("All") && (
-                                    <motion.div
-                                      initial={{ scale: 0, opacity: 0 }}
-                                      animate={{ scale: 1, opacity: 1 }}
-                                      exit={{ scale: 0, opacity: 0 }}
-                                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                    >
-                                      <Check className="w-4 h-4 text-primary" />
-                                    </motion.div>
-                                  )}
-                                </AnimatePresence>
-                              </div>
-                            </motion.button>
+                          <div className="p-3 border-b border-white/10">
+                            <div className="relative">
+                              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                              <input
+                                type="text"
+                                placeholder="Search categories..."
+                                value={categorySearchQuery}
+                                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 text-white placeholder-gray-400 text-sm"
+                              />
+                            </div>
                           </div>
 
-                          {/* Individual Categories */}
-                          <div className="border-t border-white/10">
-                            <AnimatePresence mode="popLayout">
-                              {categories
-                                .filter(cat => cat !== "All")
-                                .filter(cat => cat.toLowerCase().includes(categorySearchQuery.toLowerCase()))
-                                .map((cat, index) => (
-                                <motion.div
-                                  key={cat}
-                                  layout
-                                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
-                                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
-                                  transition={{ 
-                                    type: "spring", 
-                                    stiffness: 400, 
-                                    damping: 30,
-                                    delay: index * 0.02 
-                                  }}
-                                >
-                                  <motion.button
-                                    whileHover={{ 
-                                      backgroundColor: "rgba(255, 255, 255, 0.1)",
-                                      scale: 1.02 
-                                    }}
-                                    whileTap={{ scale: 0.98 }}
-                                    onClick={() => {
-                                      setSelectedCategories(prev => {
-                                        if (prev.includes(cat)) {
-                                          // Remove category
-                                          const newCategories = prev.filter(c => c !== cat);
-                                          return newCategories.length === 0 ? ["All"] : newCategories;
-                                        } else {
-                                          // Add category, remove "All" if present
-                                          return prev.filter(c => c !== "All").concat(cat);
-                                        }
-                                      });
-                                    }}
-                                    className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${
-                                      selectedCategories.includes(cat) 
-                                        ? 'bg-primary/20 text-primary border border-primary/30' 
-                                        : 'hover:bg-white/5 text-white'
-                                    }`}
-                                  >
-                                    <span className="font-medium">{cat}</span>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-400">
-                                        ({categoryCounts[cat] || 0} templates)
-                                      </span>
-                                      <AnimatePresence>
-                                        {selectedCategories.includes(cat) && (
-                                          <motion.div
-                                            initial={{ scale: 0, opacity: 0 }}
-                                            animate={{ scale: 1, opacity: 1 }}
-                                            exit={{ scale: 0, opacity: 0 }}
-                                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                                          >
-                                            <Check className="w-4 h-4 text-primary" />
-                                          </motion.div>
-                                        )}
-                                      </AnimatePresence>
-                                    </div>
-                                  </motion.button>
-                                </motion.div>
-                              ))}
-                            </AnimatePresence>
+                          <div className="max-h-60 overflow-y-auto">
+                            {/* All Categories Option */}
+                            <div className="p-2">
+                              <motion.button
+                                whileHover={{
+                                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                  scale: 1.02
+                                }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => {
+                                  setSelectedCategories(prev => {
+                                    if (prev.includes("All")) {
+                                      return [];
+                                    } else {
+                                      return ["All"];
+                                    }
+                                  });
+                                }}
+                                className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${selectedCategories.includes("All")
+                                  ? 'bg-primary/20 text-primary border border-primary/30'
+                                  : 'hover:bg-white/5 text-white'
+                                  } ${categorySearchQuery && !("All".toLowerCase().includes(categorySearchQuery.toLowerCase())) ? 'hidden' : ''}`}
+                              >
+                                <span className="font-medium">All Categories</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-400">
+                                    ({categoryCounts["All"] || 0} templates)
+                                  </span>
+                                  <AnimatePresence>
+                                    {selectedCategories.includes("All") && (
+                                      <motion.div
+                                        initial={{ scale: 0, opacity: 0 }}
+                                        animate={{ scale: 1, opacity: 1 }}
+                                        exit={{ scale: 0, opacity: 0 }}
+                                        transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                      >
+                                        <Check className="w-4 h-4 text-primary" />
+                                      </motion.div>
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </motion.button>
+                            </div>
+
+                            {/* Individual Categories */}
+                            <div className="border-t border-white/10">
+                              <AnimatePresence mode="popLayout">
+                                {categories
+                                  .filter(cat => cat !== "All")
+                                  .filter(cat => cat.toLowerCase().includes(categorySearchQuery.toLowerCase()))
+                                  .map((cat, index) => (
+                                    <motion.div
+                                      key={cat}
+                                      layout
+                                      initial={{ opacity: 0, x: -20, scale: 0.95 }}
+                                      animate={{ opacity: 1, x: 0, scale: 1 }}
+                                      exit={{ opacity: 0, x: -20, scale: 0.95 }}
+                                      transition={{
+                                        type: "spring",
+                                        stiffness: 400,
+                                        damping: 30,
+                                        delay: index * 0.02
+                                      }}
+                                    >
+                                      <motion.button
+                                        whileHover={{
+                                          backgroundColor: "rgba(255, 255, 255, 0.1)",
+                                          scale: 1.02
+                                        }}
+                                        whileTap={{ scale: 0.98 }}
+                                        onClick={() => {
+                                          setSelectedCategories(prev => {
+                                            if (prev.includes(cat)) {
+                                              // Remove category
+                                              const newCategories = prev.filter(c => c !== cat);
+                                              return newCategories.length === 0 ? ["All"] : newCategories;
+                                            } else {
+                                              // Add category, remove "All" if present
+                                              return prev.filter(c => c !== "All").concat(cat);
+                                            }
+                                          });
+                                        }}
+                                        className={`w-full flex items-center justify-between p-3 rounded-lg text-left transition-colors ${selectedCategories.includes(cat)
+                                          ? 'bg-primary/20 text-primary border border-primary/30'
+                                          : 'hover:bg-white/5 text-white'
+                                          }`}
+                                      >
+                                        <span className="font-medium">{cat}</span>
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-xs text-gray-400">
+                                            ({categoryCounts[cat] || 0} templates)
+                                          </span>
+                                          <AnimatePresence>
+                                            {selectedCategories.includes(cat) && (
+                                              <motion.div
+                                                initial={{ scale: 0, opacity: 0 }}
+                                                animate={{ scale: 1, opacity: 1 }}
+                                                exit={{ scale: 0, opacity: 0 }}
+                                                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                                              >
+                                                <Check className="w-4 h-4 text-primary" />
+                                              </motion.div>
+                                            )}
+                                          </AnimatePresence>
+                                        </div>
+                                      </motion.button>
+                                    </motion.div>
+                                  ))}
+                              </AnimatePresence>
+                            </div>
                           </div>
-                        </div>
                         </motion.div>
                       </PopoverContent>
                     </Popover>
@@ -676,7 +676,7 @@ const Gallery = () => {
               </motion.div>
 
               {/* Results Count */}
-              <motion.div 
+              <motion.div
                 className="mt-3 text-xs sm:text-sm text-gray-400"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -732,78 +732,78 @@ const Gallery = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-12">
                   {userCustomFrames.map((frame, index) => (
-                <motion.div
-                  key={`custom-${frame._id}`}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.3, delay: index * 0.05 }}
-                  whileHover={{ scale: 1.02 }}
-                  onMouseEnter={() => setHoveredTemplate(`custom-${frame._id}`)}
-                  onMouseLeave={() => setHoveredTemplate(null)}
-                  className="group cursor-pointer"
-                >
-                  <Card className="overflow-hidden bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 h-full flex flex-col">
-                    <CardContent className="p-0 relative flex-1 overflow-hidden">
-                      {/* Template Image */}
-                      <div className="relative w-full aspect-[3/4] overflow-hidden bg-black/20">
-                        {failedImages.has(frame.thumbnail) ? (
-                          <ImagePlaceholder className="w-full h-full" />
-                        ) : (
-                          <img
-                            src={frame.thumbnail}
-                            alt={frame.name}
-                            className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
-                            loading="lazy"
-                            onError={() => handleImageError(frame.thumbnail)}
-                          />
-                        )}
-                        
-                        {/* Custom Frame Badge */}
-                        <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                          <Heart className="w-3 h-3 fill-current" />
-                          Your Frame
-                        </div>
+                    <motion.div
+                      key={`custom-${frame._id}`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: index * 0.05 }}
+                      whileHover={{ scale: 1.02 }}
+                      onMouseEnter={() => setHoveredTemplate(`custom-${frame._id}`)}
+                      onMouseLeave={() => setHoveredTemplate(null)}
+                      className="group cursor-pointer"
+                    >
+                      <Card className="overflow-hidden bg-gradient-to-br from-white/5 to-white/[0.02] border-white/10 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300 h-full flex flex-col">
+                        <CardContent className="p-0 relative flex-1 overflow-hidden">
+                          {/* Template Image */}
+                          <div className="relative w-full aspect-[3/4] overflow-hidden bg-black/20">
+                            {failedImages.has(frame.thumbnail) ? (
+                              <ImagePlaceholder className="w-full h-full" />
+                            ) : (
+                              <img
+                                src={frame.thumbnail}
+                                alt={frame.name}
+                                className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
+                                loading="lazy"
+                                onError={() => handleImageError(frame.thumbnail)}
+                              />
+                            )}
 
-                        {/* Hover Overlay */}
-                        <AnimatePresence>
-                          {hoveredTemplate === `custom-${frame._id}` && (
-                            <motion.div
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              exit={{ opacity: 0 }}
-                              className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center gap-3"
-                            >
-                              <Button
-                                onClick={() => handlePreview(frame)}
-                                className="bg-primary hover:bg-primary/90 text-white"
-                                size="sm"
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                Preview
-                              </Button>
-                              <Button
-                                onClick={() => handleUseTemplate(frame)}
-                                disabled={authLoading}
-                                className={`bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/50 text-white ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                size="sm"
-                              >
-                                <ArrowRight className="w-4 h-4 mr-2" />
-                                Use
-                              </Button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-4 border-t border-white/5 bg-white/[0.02]">
-                      <div className="w-full">
-                        <h3 className="font-semibold text-white truncate">{frame.name}</h3>
-                        <p className="text-xs text-gray-400 mt-1">{frame.frameCount} photos</p>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                </motion.div>
-              ))}
+                            {/* Custom Frame Badge */}
+                            <div className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                              <Heart className="w-3 h-3 fill-current" />
+                              Your Frame
+                            </div>
+
+                            {/* Hover Overlay */}
+                            <AnimatePresence>
+                              {hoveredTemplate === `custom-${frame._id}` && (
+                                <motion.div
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  className="absolute inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center gap-3"
+                                >
+                                  <Button
+                                    onClick={() => handlePreview(frame)}
+                                    className="bg-primary hover:bg-primary/90 text-white"
+                                    size="sm"
+                                  >
+                                    <Eye className="w-4 h-4 mr-2" />
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    onClick={() => handleUseTemplate(frame)}
+                                    disabled={authLoading}
+                                    className={`bg-gradient-to-r from-primary to-primary/80 hover:shadow-lg hover:shadow-primary/50 text-white ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    size="sm"
+                                  >
+                                    <ArrowRight className="w-4 h-4 mr-2" />
+                                    Use
+                                  </Button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </CardContent>
+                        <CardFooter className="p-4 border-t border-white/5 bg-white/[0.02]">
+                          <div className="w-full">
+                            <h3 className="font-semibold text-white truncate">{frame.name}</h3>
+                            <p className="text-xs text-gray-400 mt-1">{frame.frameCount} photos</p>
+                          </div>
+                        </CardFooter>
+                      </Card>
+                    </motion.div>
+                  ))}
                 </div>
               )}
             </motion.div>
@@ -812,7 +812,7 @@ const Gallery = () => {
 
         {/* Template Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
             {/* Skeleton Loading */}
             {Array.from({ length: 12 }).map((_, index) => (
               <Card key={index} className="gradient-card border-0 shadow-soft overflow-hidden h-full animate-pulse">
@@ -830,151 +830,154 @@ const Gallery = () => {
             ))}
           </div>
         ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6" ref={containerRef}>
-          {paginatedTemplates.map((template, localIndex) => {
-            // Calculate actual index in filteredTemplates for proper data-index
-            const actualIndex = filteredTemplates.findIndex(t => t._id === template._id);
-            return (
-            <motion.div
-              key={template._id}
-              data-template-index={actualIndex}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.3, delay: Math.min(localIndex * 0.02, 0.5) }} // Max 0.5s delay, faster stagger
-              onHoverStart={() => setHoveredTemplate(template._id)}
-              onHoverEnd={() => setHoveredTemplate(null)}
-            >
-              <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all group overflow-hidden h-full">
-                {/* Template Image */}
-                <div className="relative cursor-pointer">
-                  <CardContent className="p-0">
-                    <div className="aspect-[3/4] bg-secondary relative overflow-hidden">
-                      {failedImages.has(template.thumbnail) ? (
-                        <ImagePlaceholder className="w-full h-full" />
-                      ) : (
-                        <img
-                          src={template.thumbnail}
-                          alt={template.name}
-                          className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
-                          loading="lazy"
-                          onError={() => handleImageError(template.thumbnail)}
-                        />
-                      )}
-                      
-                      {/* Premium Badge */}
-                      {template.isPremium && (
-                        <Badge className="absolute top-3 left-3 bg-amber-500 text-white border-0 shadow-lg">
-                          <Award className="w-3 h-3 mr-1" />
-                          PRO
-                        </Badge>
-                      )}
-                      
-                      {/* AI Generated Badge - Only show for user's own AI frames */}
-                      {template.isAIGenerated && template.createdBy === user?.id && (
-                        <Badge className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 shadow-lg">
-                          <Heart className="w-3 h-3 mr-1 fill-current" />
-                          Your Frame
-                        </Badge>
-                      )}
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6" ref={containerRef}>
+            {paginatedTemplates.map((template, localIndex) => {
+              // Calculate actual index in filteredTemplates for proper data-index
+              const actualIndex = filteredTemplates.findIndex(t => t._id === template._id);
+              return (
+                <motion.div
+                  key={template._id}
+                  data-template-index={actualIndex}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: Math.min(localIndex * 0.02, 0.5) }} // Max 0.5s delay, faster stagger
+                  onHoverStart={() => setHoveredTemplate(template._id)}
+                  onHoverEnd={() => setHoveredTemplate(null)}
+                >
+                  <Card className="gradient-card border-0 shadow-soft hover:shadow-hover transition-all group overflow-hidden h-full">
+                    <div
+                      className="relative cursor-pointer active:scale-[0.98] transition-transform duration-100"
+                      onClick={() => handlePreview(template)}
+                    >
+                      <CardContent className="p-0">
+                        <div className="aspect-[3/4] bg-secondary relative overflow-hidden">
+                          {failedImages.has(template.thumbnail) ? (
+                            <ImagePlaceholder className="w-full h-full" />
+                          ) : (
+                            <img
+                              src={template.thumbnail}
+                              alt={template.name}
+                              className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-500"
+                              loading="lazy"
+                              onError={() => handleImageError(template.thumbnail)}
+                            />
+                          )}
 
-                      {/* Quick View Button */}
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ 
-                          opacity: hoveredTemplate === template._id ? 1 : 0,
-                          y: hoveredTemplate === template._id ? 0 : 10
+                          {/* Premium Badge */}
+                          {template.isPremium && (
+                            <Badge className="absolute top-3 left-3 bg-amber-500 text-white border-0 shadow-lg">
+                              <Award className="w-3 h-3 mr-1" />
+                              PRO
+                            </Badge>
+                          )}
+
+                          {/* AI Generated Badge - Only show for user's own AI frames */}
+                          {template.isAIGenerated && template.createdBy === user?.id && (
+                            <Badge className="absolute top-3 right-3 bg-gradient-to-r from-red-500 to-pink-500 text-white border-0 shadow-lg">
+                              <Heart className="w-3 h-3 mr-1 fill-current" />
+                              Your Frame
+                            </Badge>
+                          )}
+
+                          {/* Quick View Button - Always visible on mobile, hover on desktop */}
+                          <motion.div
+                            initial={{ opacity: 1, y: 0 }}
+                            animate={{
+                              opacity: hoveredTemplate === template._id ? 1 : 1, // Logic handled by CSS class
+                              y: hoveredTemplate === template._id ? 0 : 0
+                            }}
+                            className={`absolute top-3 right-3 transition-all duration-200 md:opacity-0 md:translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 z-10`}
+                          >
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="w-8 h-8 rounded-full shadow-lg backdrop-blur-md bg-black/40 hover:bg-black/60 text-white border border-white/10 p-0"
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent double trigger
+                                handlePreview(template);
+                              }}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </motion.div>
+
+                          {/* Hover Overlay with Info */}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 pointer-events-none">
+                            <motion.div
+                              initial={{ y: 20, opacity: 0 }}
+                              animate={{
+                                y: hoveredTemplate === template._id ? 0 : 20,
+                                opacity: hoveredTemplate === template._id ? 1 : 0
+                              }}
+                              transition={{ duration: 0.3 }}
+                            >
+                              <Badge className="mb-2 bg-primary/90 text-white border-0">
+                                {template.category}
+                              </Badge>
+                              <p className="text-white text-sm font-medium mb-1">
+                                {template.name}
+                              </p>
+                              <p className="text-gray-300 text-xs">
+                                Click to preview or use template
+                              </p>
+                            </motion.div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </div>
+
+                    {/* Template Info & Action */}
+                    <CardFooter className="flex flex-col items-start p-3 sm:p-4 gap-2 sm:gap-3">
+                      <div className="w-full">
+                        <h3 className="font-heading font-semibold text-sm sm:text-base mb-1 text-white line-clamp-1">
+                          {template.name}
+                        </h3>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm text-muted-foreground">{template.category}</p>
+                          {!template.isPremium && (
+                            <Badge variant="outline" className="text-xs border-green-500/50 text-green-500">
+                              Free
+                            </Badge>
+                          )}
+                        </div>
+                        {template.createdBy && template.visibility === 'public' && template.createdBy !== user?.id && (
+                          <div className="hidden sm:flex items-center gap-1.5 mt-2">
+                            <User className="w-3.5 h-3.5 text-purple-400" />
+                            <p className="text-xs text-purple-300">
+                              By {template.creatorName || 'Community Creator'}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUseTemplate(template);
                         }}
-                        transition={{ duration: 0.2 }}
-                        className="absolute top-3 right-3"
+                        disabled={authLoading}
+                        size="sm"
+                        className={`w-full h-8 sm:h-10 text-xs sm:text-sm rounded-full shadow-soft group-hover:shadow-hover transition-all ${template.isPremium && !isPremium
+                          ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
+                          : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                          } ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       >
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="rounded-full shadow-lg backdrop-blur-sm bg-black/50 hover:bg-black/70 text-white border-0"
-                          onClick={() => handlePreview(template)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </motion.div>
-
-                      {/* Hover Overlay with Info */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4">
-                        <motion.div
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ 
-                            y: hoveredTemplate === template._id ? 0 : 20,
-                            opacity: hoveredTemplate === template._id ? 1 : 0
-                          }}
-                          transition={{ duration: 0.3 }}
-                        >
-                          <Badge className="mb-2 bg-primary/90 text-white border-0">
-                            {template.category}
-                          </Badge>
-                          <p className="text-white text-sm font-medium mb-1">
-                            {template.name}
-                          </p>
-                          <p className="text-gray-300 text-xs">
-                            Click to preview or use template
-                          </p>
-                        </motion.div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </div>
-
-                {/* Template Info & Action */}
-                <CardFooter className="flex flex-col items-start p-4 gap-3">
-                  <div className="w-full">
-                    <h3 className="font-heading font-semibold text-base mb-1 text-white line-clamp-1">
-                      {template.name}
-                    </h3>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm text-muted-foreground">{template.category}</p>
-                      {!template.isPremium && (
-                        <Badge variant="outline" className="text-xs border-green-500/50 text-green-500">
-                          Free
-                        </Badge>
-                      )}
-                    </div>
-                    {/* Creator Info - Show for user-submitted frames */}
-                    {template.createdBy && template.visibility === 'public' && template.createdBy !== user?.id && (
-                      <div className="flex items-center gap-1.5 mt-2">
-                        <User className="w-3.5 h-3.5 text-purple-400" />
-                        <p className="text-xs text-purple-300">
-                          By {template.creatorName || 'Community Creator'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  <Button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleUseTemplate(template);
-                    }}
-                    disabled={authLoading}
-                    className={`w-full rounded-full shadow-soft group-hover:shadow-hover transition-all ${
-                      template.isPremium && !isPremium
-                        ? 'bg-gray-600 hover:bg-gray-500 cursor-not-allowed'
-                        : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                    } ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  >
-                    {template.isPremium && !isPremium ? (
-                      <>
-                        <span>🔒 Premium Only</span>
-                      </>
-                    ) : (
-                      <>
-                        Use Template
-                        <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                      </>
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-            );
-          })}
-        </div>
+                        {template.isPremium && !isPremium ? (
+                          <>
+                            <span>🔒 Premium</span>
+                          </>
+                        ) : (
+                          <>
+                            Use
+                            <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 ml-1.5 group-hover:translate-x-1 transition-transform" />
+                          </>
+                        )}
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                </motion.div>
+              );
+            })}
+          </div>
         )}
 
         {/* Load More Trigger */}
@@ -1009,7 +1012,7 @@ const Gallery = () => {
                 Try adjusting your search or category filters
               </p>
 
-              <Button 
+              <Button
                 onClick={() => {
                   setSearchQuery('');
                   setSelectedCategories([]);
@@ -1024,125 +1027,89 @@ const Gallery = () => {
 
         {/* Enhanced Template Preview Modal */}
         <Dialog open={!!selectedTemplateForPreview} onOpenChange={(open) => !open && setSelectedTemplateForPreview(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl bg-card border-border w-full">
-            <DialogHeader>
-              <DialogTitle className="text-xl sm:text-2xl font-heading flex items-center gap-2">
-                {selectedTemplateForPreview?.name}
-                {selectedTemplateForPreview?.isPremium && (
-                  <Badge className="bg-amber-500 text-white border-0">
-                    <Award className="w-3 h-3 mr-1" />
-                    PRO
-                  </Badge>
-                )}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground text-sm">
-                {selectedTemplateForPreview?.category} Template • Perfect for your event
-              </DialogDescription>
-            </DialogHeader>
-            
+          <DialogContent className="max-w-[95vw] sm:max-w-xl md:max-w-2xl bg-[#0F0F0F] border border-white/10 p-0 overflow-hidden gap-0">
             {selectedTemplateForPreview && (
-              <div className="space-y-4 sm:space-y-6 px-2 sm:px-0">
-                {/* Template Preview Image */}
-                <div className="aspect-video rounded-lg overflow-hidden bg-secondary relative group">
-                  {selectedTemplateForPreview && failedImages.has(selectedTemplateForPreview.thumbnail) ? (
-                    <ImagePlaceholder className="w-full h-full" iconSize="w-16 h-16" />
-                  ) : (
-                    <img
-                      src={selectedTemplateForPreview?.thumbnail || selectedTemplateForPreview?.frameUrl}
-                      alt={selectedTemplateForPreview?.name}
-                      className="w-full h-full object-contain"
-                      onError={() => selectedTemplateForPreview && handleImageError(selectedTemplateForPreview.thumbnail)}
-                    />
-                  )}
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <Badge className="bg-white/90 text-black">
-                      <Eye className="w-3 h-3 mr-1" />
-                      Preview Mode
-                    </Badge>
+              <>
+                {/* Header Section */}
+                <div className="flex items-start justify-between p-5 pb-2">
+                  <div className="space-y-1 pr-6">
+                    <DialogTitle className="text-xl sm:text-2xl font-heading font-bold flex items-center gap-2 text-white leading-tight">
+                      {selectedTemplateForPreview.name}
+                      {selectedTemplateForPreview.isPremium && (
+                        <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 h-5 px-1.5 text-[9px] font-bold tracking-wider">
+                          PRO
+                        </Badge>
+                      )}
+                    </DialogTitle>
+                    <DialogDescription className="text-gray-400 text-sm flex items-center gap-1.5">
+                      <span className="text-white/80">{selectedTemplateForPreview.category}</span>
+                      <span className="w-1 h-1 rounded-full bg-gray-600"></span>
+                      <span>by {selectedTemplateForPreview.creatorName || 'Community'}</span>
+                    </DialogDescription>
                   </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full w-8 h-8 text-gray-400 hover:text-white hover:bg-white/10 -mr-2 -mt-2 flex-shrink-0 transition-colors"
+                    onClick={() => setSelectedTemplateForPreview(null)}
+                  >
+                    <X className="w-5 h-5" />
+                  </Button>
                 </div>
 
-                {/* Template Details Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
-                    <Image className="w-5 h-5 text-primary mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground mb-1">Category</p>
-                    <p className="font-semibold text-white text-sm">{selectedTemplateForPreview.category}</p>
+                <div className="p-5 pt-2 space-y-6">
+                  {/* Image Preview */}
+                  <div className="aspect-video w-full rounded-xl overflow-hidden bg-white/5 border border-white/10 relative group flex items-center justify-center">
+                    {failedImages.has(selectedTemplateForPreview.thumbnail) ? (
+                      <ImagePlaceholder className="w-full h-full" iconSize="w-12 h-12" />
+                    ) : (
+                      <img
+                        src={selectedTemplateForPreview.thumbnail || selectedTemplateForPreview.frameUrl}
+                        alt={selectedTemplateForPreview.name}
+                        className="w-full h-full object-contain"
+                        onError={() => handleImageError(selectedTemplateForPreview.thumbnail)}
+                      />
+                    )}
                   </div>
-                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
-                    <Award className="w-5 h-5 text-amber-500 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground mb-1">Type</p>
-                    <p className="font-semibold text-white text-sm">
-                      {selectedTemplateForPreview.isPremium ? "Premium" : "Free"}
-                    </p>
-                  </div>
-                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
-                    <TrendingUp className="w-5 h-5 text-green-500 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground mb-1">Quality</p>
-                    <p className="font-semibold text-white text-sm">High-Res</p>
-                  </div>
-                  <div className="p-3 sm:p-4 bg-secondary/50 rounded-lg text-center border border-border">
-                    <Star className="w-5 h-5 text-yellow-500 mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground mb-1">Rating</p>
-                    <p className="font-semibold text-white text-sm">4.8/5</p>
-                  </div>
-                </div>
 
-                {/* Features List */}
-                <div className="p-3 sm:p-4 bg-secondary/30 rounded-lg border border-border">
-                  <p className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    Template Features
-                  </p>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Professional design
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      High-resolution output
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Instant download
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                      Easy sharing
-                    </li>
-                  </ul>
-                </div>
+                  {/* Info Badges Row */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300">
+                      <Layout className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{selectedTemplateForPreview.frameCount} Photo Slots</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-gray-300">
+                      <Image className="w-3.5 h-3.5 text-purple-400" />
+                      <span>High Quality</span>
+                    </div>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs ${selectedTemplateForPreview.isPremium
+                      ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                      : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                      }`}>
+                      {selectedTemplateForPreview.isPremium ? <Award className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                      <span>{selectedTemplateForPreview.isPremium ? 'Premium Template' : 'Free to Use'}</span>
+                    </div>
+                  </div>
 
-                {/* Action Buttons */}
-                <div className="flex flex-col sm:flex-row gap-3">
+                  {/* Primary Action */}
                   <Button
                     onClick={() => handleUseTemplate(selectedTemplateForPreview)}
                     disabled={authLoading}
-                    className={`flex-1 bg-primary hover:bg-primary/90 rounded-full py-4 sm:py-6 shadow-lg shadow-primary/20 ${authLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    size="lg"
+                    className={`w-full h-12 sm:h-14 rounded-full font-bold text-base shadow-xl active:scale-[0.98] transition-all ${authLoading ? 'opacity-50 cursor-not-allowed' : 'bg-primary hover:bg-primary/90 hover:shadow-primary/20'
+                      }`}
                   >
                     <Camera className="w-5 h-5 mr-2" />
                     Use This Template
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setSelectedTemplateForPreview(null)}
-                    className="rounded-full px-6 sm:px-8 py-4 sm:py-6"
-                    size="lg"
-                  >
-                    Close
                   </Button>
                 </div>
-              </div>
+              </>
             )}
           </DialogContent>
         </Dialog>
 
         {/* Premium Modal */}
-        <PremiumModal 
-          isOpen={showPremiumModal} 
+        <PremiumModal
+          isOpen={showPremiumModal}
           onClose={() => setShowPremiumModal(false)}
           feature="Gallery"
         />

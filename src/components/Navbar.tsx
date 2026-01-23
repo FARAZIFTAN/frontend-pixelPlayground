@@ -10,23 +10,18 @@ const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [showExploreMenu, setShowExploreMenu] = useState(false);
+  const [userFocusIndex, setUserFocusIndex] = useState(-1);
   const [profilePicVersion, setProfilePicVersion] = useState(Date.now());
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [profileLoadError, setProfileLoadError] = useState(false);
+
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
 
   // Refs for dropdowns and buttons
-  const exploreMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const exploreButtonRef = useRef<HTMLButtonElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
-
-  // Focus management states
-  const [exploreFocusIndex, setExploreFocusIndex] = useState(-1);
-  const [userFocusIndex, setUserFocusIndex] = useState(-1);
 
   // Update profile pic version when user changes
   useEffect(() => {
@@ -44,108 +39,24 @@ const Navbar = () => {
 
   // Scroll detection for navbar styling
   // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
+  // Consolidated Event Listeners
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
 
-  // Keyboard navigation support for accessibility
-  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
-  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Global Escape
       if (e.key === 'Escape') {
         setShowUserMenu(false);
-        setShowExploreMenu(false);
         setIsMobileMenuOpen(false);
+        return;
       }
-    };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Global keyboard navigation
-  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowUserMenu(false);
-        setShowExploreMenu(false);
-        setIsMobileMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  // Click outside handler for dropdowns
-  // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (exploreMenuRef.current && !exploreMenuRef.current.contains(event.target as Node)) {
-        setShowExploreMenu(false);
-        setExploreFocusIndex(-1);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setShowUserMenu(false);
-        setUserFocusIndex(-1);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  // Focus management: return focus to trigger after dropdown closes
-  useEffect(() => {
-    if (!showExploreMenu && exploreButtonRef.current) {
-      exploreButtonRef.current.focus();
-    }
-  }, [showExploreMenu]);
-
-  useEffect(() => {
-    if (!showUserMenu && userButtonRef.current) {
-      userButtonRef.current.focus();
-    }
-  }, [showUserMenu]);
-
-  // Keyboard navigation inside dropdowns
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (showExploreMenu) {
-        const exploreItems = user?.isPremium 
-          ? ['gallery', 'my-gallery', 'ai-template-creator', 'my-submissions']
-          : ['gallery', 'my-gallery', 'ai-template-creator'];
-        
-        if (e.key === 'ArrowDown') {
-          e.preventDefault();
-          setExploreFocusIndex(prev => (prev + 1) % exploreItems.length);
-        } else if (e.key === 'ArrowUp') {
-          e.preventDefault();
-          setExploreFocusIndex(prev => prev <= 0 ? exploreItems.length - 1 : prev - 1);
-        } else if (e.key === 'Enter') {
-          e.preventDefault();
-          // Trigger navigation based on focus index
-          const item = exploreItems[exploreFocusIndex];
-          if (item) {
-            setShowExploreMenu(false);
-            setExploreFocusIndex(-1);
-            // Navigate to the selected item
-            if (item === 'gallery') navigate('/gallery');
-            else if (item === 'my-gallery') navigate('/my-gallery');
-            else if (item === 'ai-template-creator') navigate('/ai-template-creator');
-            else if (item === 'my-submissions') navigate('/user/my-submissions');
-          }
-        }
-      } else if (showUserMenu) {
-        const userItems = user?.isPremium 
+      // User Menu Navigation
+      if (showUserMenu) {
+        const userItems = user?.isPremium
           ? ['my-gallery', 'my-ai-frames', 'my-account', 'my-submissions', 'logout']
           : ['my-gallery', 'my-ai-frames', 'my-account', 'logout'];
-        
+
         if (e.key === 'ArrowDown') {
           e.preventDefault();
           setUserFocusIndex(prev => (prev + 1) % userItems.length);
@@ -155,45 +66,47 @@ const Navbar = () => {
         } else if (e.key === 'Enter') {
           e.preventDefault();
           const item = userItems[userFocusIndex];
-          if (item === 'my-gallery') {
-            setShowUserMenu(false);
-            setUserFocusIndex(-1);
-            navigate('/my-gallery');
-          } else if (item === 'my-ai-frames') {
-            setShowUserMenu(false);
-            setUserFocusIndex(-1);
-            navigate('/my-ai-frames');
-          } else if (item === 'my-account') {
-            setShowUserMenu(false);
-            setUserFocusIndex(-1);
-            navigate('/my-account');
-          } else if (item === 'my-submissions') {
-            setShowUserMenu(false);
-            setUserFocusIndex(-1);
-            navigate('/user/my-submissions');
-          } else if (item === 'logout') {
-            setShowUserMenu(false);
-            setUserFocusIndex(-1);
+
+          if (!item) return;
+
+          setShowUserMenu(false);
+          setUserFocusIndex(-1);
+
+          if (item === 'logout') {
             handleLogout();
+          } else if (item === 'my-submissions') {
+            navigate('/user/my-submissions');
+          } else {
+            navigate(`/${item}`); // Simplified navigation mapping
           }
         }
       }
     };
 
-    if (showExploreMenu || showUserMenu) {
-      document.addEventListener('keydown', handleKeyDown);
-    }
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setShowUserMenu(false);
+        setUserFocusIndex(-1);
+      }
+    };
 
-    // Memory leak prevention: Event listener is properly cleaned up in useEffect return function
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [showExploreMenu, showUserMenu, exploreFocusIndex, userFocusIndex, user?.isPremium, navigate]);
+    window.addEventListener("scroll", handleScroll);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
 
-  // Set initial focus when dropdown opens
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showUserMenu, userFocusIndex, user?.isPremium, navigate]);
+
+  // Focus management
   useEffect(() => {
-    if (showExploreMenu) {
-      setExploreFocusIndex(0);
+    if (!showUserMenu && userButtonRef.current) {
+      userButtonRef.current.focus();
     }
-  }, [showExploreMenu]);
+  }, [showUserMenu]);
 
   useEffect(() => {
     if (showUserMenu) {
@@ -212,11 +125,10 @@ const Navbar = () => {
     <motion.nav
       initial={{ y: -100 }}
       animate={{ y: 0 }}
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? "bg-[#0F0F0F]/95 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] border-b border-[#C62828]/20" 
-          : "bg-transparent"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-[#0F0F0F]/95 backdrop-blur-md shadow-[0_4px_20px_rgba(0,0,0,0.3)] border-b border-[#C62828]/20"
+        : "bg-transparent"
+        }`}
     >
       <div className="container mx-auto px-4 lg:px-8">
         <div className="flex items-center justify-between h-14 lg:h-16">
@@ -233,11 +145,10 @@ const Navbar = () => {
             {/* Home Link */}
             <Link
               to="/"
-              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
-                isActive("/")
-                  ? "bg-[#C62828] text-white shadow-lg"
-                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-              }`}
+              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${isActive("/")
+                ? "bg-[#C62828] text-white shadow-lg"
+                : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+                }`}
               title="Back to homepage"
             >
               Home
@@ -249,11 +160,10 @@ const Navbar = () => {
             {/* Discover Frames - Direct link to Gallery */}
             <Link
               to="/gallery"
-              className={`text-sm group flex items-center gap-1.5 px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
-                isActive("/gallery")
-                  ? "bg-[#C62828] text-white shadow-lg"
-                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-              }`}
+              className={`text-sm group flex items-center gap-1.5 px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${isActive("/gallery")
+                ? "bg-[#C62828] text-white shadow-lg"
+                : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+                }`}
               title="Browse ready-to-use AI photo frames from our creative community"
             >
               <ImageIcon className="w-3.5 h-3.5 transition-all duration-200 group-hover:drop-shadow-[0_0_8px_rgba(198,40,40,0.6)]" aria-hidden="true" />
@@ -261,115 +171,7 @@ const Navbar = () => {
             </Link>
 
             {/* Old Explore Dropdown - REMOVED */}
-            {false && isAuthenticated && user && (
-              <div className="relative" ref={exploreMenuRef}>
-                <button
-                  ref={exploreButtonRef}
-                  id="explore-button"
-                  onClick={() => setShowExploreMenu(!showExploreMenu)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setShowExploreMenu(!showExploreMenu);
-                    } else if (e.key === 'Escape') {
-                      setShowExploreMenu(false);
-                      setExploreFocusIndex(-1);
-                    }
-                  }}
-                  className={`flex items-center space-x-1 px-4 lg:px-5 py-2.5 rounded-lg font-medium transition-all duration-200 ${
-                    isActive("/gallery") || isActive("/my-gallery") || isActive("/ai-template-creator")
-                      ? "bg-[#C62828] text-white shadow-lg"
-                      : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-                  }`}
-                  aria-expanded={showExploreMenu}
-                  aria-haspopup="menu"
-                  aria-label="Explore menu"
-                  aria-activedescendant={showExploreMenu && exploreFocusIndex >= 0 ? `explore-item-${exploreFocusIndex}` : undefined}
-                >
-                  <span>Explore</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showExploreMenu ? 'rotate-180' : ''}`} />
-                </button>
 
-                <AnimatePresence>
-                  {showExploreMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute left-1/2 -translate-x-1/2 md:left-0 md:translate-x-0 mt-2 w-80 md:w-64 bg-[#0F0F0F] border border-[#C62828]/30 rounded-lg shadow-xl overflow-hidden z-[9999]"
-                      role="menu"
-                      aria-labelledby="explore-button"
-                    >
-                    <div className="py-2">
-                      <Link
-                        to="/gallery"
-                        onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
-                          exploreFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                        }`}
-                        role="menuitem"
-                        id="explore-item-0"
-                      >
-                        <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
-                        <div>
-                          <div className="font-medium">Public Gallery</div>
-                          <div className="text-xs text-gray-400">Explore community creations</div>
-                        </div>
-                      </Link>
-                      <Link
-                        to="/my-gallery"
-                        onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
-                          exploreFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                        }`}
-                        role="menuitem"
-                        id="explore-item-1"
-                      >
-                        <ImageIcon className="w-5 h-5 text-[#C62828] group-hover:text-[#FF6B6B]" />
-                        <div>
-                          <div className="font-medium">My Gallery</div>
-                          <div className="text-xs text-gray-400">Your saved creations</div>
-                        </div>
-                      </Link>
-                      <Link
-                        to="/ai-template-creator"
-                        onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
-                          exploreFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                        }`}
-                        role="menuitem"
-                        id="explore-item-2"
-                      >
-                        <Sparkles className="w-5 h-5 text-yellow-400" />
-                        <div>
-                          <div className="font-medium">AI Template Creator</div>
-                          <div className="text-xs text-gray-400">Create with AI assistance</div>
-                        </div>
-                      </Link>
-                      {user && user.isPremium && (
-                        <Link
-                          to="/user/my-submissions"
-                          onClick={() => setShowExploreMenu(false)}
-                        className={`w-full px-4 py-4 md:py-3 text-left text-white hover:bg-white/5 active:bg-white/10 transition-colors flex items-center space-x-3 group min-h-[48px] ${
-                          exploreFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                        }`}
-                        role="menuitem"
-                        id="explore-item-3"
-                        >
-                          <Upload className="w-5 h-5 text-blue-400 group-hover:text-blue-300" />
-                          <div>
-                            <div className="font-medium">My Frame Submissions</div>
-                            <div className="text-xs text-gray-400">View your submissions</div>
-                          </div>
-                        </Link>
-                      )}
-                    </div>
-                  </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
 
             {/* Separator */}
             <div className="text-white/20 text-lg mx-0.5" aria-hidden="true">•</div>
@@ -377,11 +179,10 @@ const Navbar = () => {
             {/* Contact / Support Link */}
             <Link
               to="/contact"
-              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${
-                isActive("/contact")
-                  ? "bg-[#C62828] text-white shadow-lg"
-                  : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-              }`}
+              className={`text-sm px-4 lg:px-5 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F] ${isActive("/contact")
+                ? "bg-[#C62828] text-white shadow-lg"
+                : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+                }`}
               title="Need help? Contact our support team"
             >
               Contact / Support
@@ -394,7 +195,7 @@ const Navbar = () => {
               <>
                 {/* PRIMARY CTA - Create AI Photo Frame */}
                 <Link to="/ai-template-creator" className="mr-2.5">
-                  <Button 
+                  <Button
                     className="text-sm lg:text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2 rounded-full shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
                     title="Generate beautiful frames in seconds with AI"
                   >
@@ -459,7 +260,7 @@ const Navbar = () => {
                         {user.name.length > 15 ? `${user.name.substring(0, 15)}...` : user.name}
                       </span>
                       {user.isPremium && (
-                        <span 
+                        <span
                           className="px-1.5 py-0.5 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-[11px] font-bold rounded-full mt-0.5"
                           title="Unlimited creation · Premium access"
                         >
@@ -469,7 +270,7 @@ const Navbar = () => {
                     </div>
                     <ChevronDown className={`w-3.5 h-3.5 text-white/70 transition-transform duration-200 ${showUserMenu ? 'rotate-180' : ''}`} />
                   </button>
-                  
+
                   <AnimatePresence>
                     {showUserMenu && (
                       <motion.div
@@ -481,109 +282,104 @@ const Navbar = () => {
                         role="menu"
                         aria-labelledby="user-button"
                       >
-                      <div className="px-3.5 py-2.5 border-b border-white/10">
-                        <p className="text-[11px] text-gray-400 mb-1">Signed in as</p>
-                        <p className="text-white font-medium truncate text-[13px]">{user.email}</p>
-                        {user.isPremium && (
-                          <span 
-                            className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold rounded-full"
-                            title="Unlimited creation · Premium access"
-                          >
-                            <Crown className="w-2.5 h-2.5" />
-                            PRO CREATOR
-                          </span>
-                        )}
-                      </div>
-                      <div className="py-1.5">
-                        <Link
-                          to="/my-gallery"
-                          onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
-                            userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                          }`}
-                          role="menuitem"
-                          id="user-item-0"
-                          title="View and manage your created frames"
-                        >
-                          <ImageIcon className="w-3.5 h-3.5" />
-                          <span>My Creations</span>
-                        </Link>
-                        <Link
-                          to="/my-ai-frames"
-                          onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
-                            userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                          }`}
-                          role="menuitem"
-                          id="user-item-1"
-                          title="View your AI-generated frames workspace"
-                        >
-                          <Wand2 className="w-3.5 h-3.5 text-purple-400" />
-                          <span>My AI Frames</span>
-                        </Link>
-                        <Link
-                          to="/my-account"
-                          onClick={() => setShowUserMenu(false)}
-                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${
-                            userFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                          }`}
-                          role="menuitem"
-                          id="user-item-2"
-                          title="Manage your profile and preferences"
-                        >
-                          <User className="w-3.5 h-3.5" />
-                          <span>Account Settings</span>
-                        </Link>
-                        {user.isPremium && (
-                          <Link
-                            to="/user/my-submissions"
-                            onClick={() => setShowUserMenu(false)}
-                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center justify-between ${
-                              userFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                            }`}
-                            role="menuitem"
-                            id="user-item-3"
-                            title="Submit your frames to the community gallery (Pro only)"
-                          >
-                            <div className="flex items-center space-x-2.5">
-                              <Upload className="w-3.5 h-3.5" />
-                              <span>Submit Frames</span>
-                            </div>
-                            <Crown className="w-3.5 h-3.5 text-amber-400" />
-                          </Link>
-                        )}
-                      </div>
-                      {!user.isPremium && (
-                        <div className="px-1.5 py-1.5 border-t border-white/10">
-                          <Link
-                            to="/upgrade-pro"
-                            onClick={() => setShowUserMenu(false)}
-                            className="w-full px-3.5 py-2.5 text-left bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:shadow-lg hover:border-amber-500/50 rounded-lg transition-all duration-200 flex items-center gap-2"
-                            title="Upgrade to Pro Creator for unlimited features"
-                          >
-                            <Crown className="w-4 h-4 text-amber-400" />
-                            <div className="flex-1">
-                              <div className="font-semibold text-amber-400 text-sm leading-relaxed">Unlock Pro Features</div>
-                              <div className="text-[11px] text-gray-400 leading-relaxed">Unlimited frames · Premium access</div>
-                            </div>
-                          </Link>
+                        <div className="px-3.5 py-2.5 border-b border-white/10">
+                          <p className="text-[11px] text-gray-400 mb-1">Signed in as</p>
+                          <p className="text-white font-medium truncate text-[13px]">{user.email}</p>
+                          {user.isPremium && (
+                            <span
+                              className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold rounded-full"
+                              title="Unlimited creation · Premium access"
+                            >
+                              <Crown className="w-2.5 h-2.5" />
+                              PRO CREATOR
+                            </span>
+                          )}
                         </div>
-                      )}
-                      <div className="border-t border-white/10">
-                        <button
-                          onClick={handleLogout}
-                          className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-all duration-200 flex items-center space-x-2.5 ${
-                            userFocusIndex === 4 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
-                          }`}
-                          role="menuitem"
-                          id="user-item-4"
-                          title="Sign out from your account"
-                        >
-                          <LogOut className="w-3.5 h-3.5" />
-                          <span>Sign Out</span>
-                        </button>
-                      </div>
-                    </motion.div>
+                        <div className="py-1.5">
+                          <Link
+                            to="/my-gallery"
+                            onClick={() => setShowUserMenu(false)}
+                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${userFocusIndex === 0 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                              }`}
+                            role="menuitem"
+                            id="user-item-0"
+                            title="View and manage your created frames"
+                          >
+                            <ImageIcon className="w-3.5 h-3.5" />
+                            <span>My Creations</span>
+                          </Link>
+                          <Link
+                            to="/my-ai-frames"
+                            onClick={() => setShowUserMenu(false)}
+                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${userFocusIndex === 1 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                              }`}
+                            role="menuitem"
+                            id="user-item-1"
+                            title="View your AI-generated frames workspace"
+                          >
+                            <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                            <span>My AI Frames</span>
+                          </Link>
+                          <Link
+                            to="/my-account"
+                            onClick={() => setShowUserMenu(false)}
+                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center space-x-2.5 ${userFocusIndex === 2 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                              }`}
+                            role="menuitem"
+                            id="user-item-2"
+                            title="Manage your profile and preferences"
+                          >
+                            <User className="w-3.5 h-3.5" />
+                            <span>Account Settings</span>
+                          </Link>
+                          {user.isPremium && (
+                            <Link
+                              to="/user/my-submissions"
+                              onClick={() => setShowUserMenu(false)}
+                              className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-white/5 active:bg-white/10 transition-all duration-200 flex items-center justify-between ${userFocusIndex === 3 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                                }`}
+                              role="menuitem"
+                              id="user-item-3"
+                              title="Submit your frames to the community gallery (Pro only)"
+                            >
+                              <div className="flex items-center space-x-2.5">
+                                <Upload className="w-3.5 h-3.5" />
+                                <span>Submit Frames</span>
+                              </div>
+                              <Crown className="w-3.5 h-3.5 text-amber-400" />
+                            </Link>
+                          )}
+                        </div>
+                        {!user.isPremium && (
+                          <div className="px-1.5 py-1.5 border-t border-white/10">
+                            <Link
+                              to="/upgrade-pro"
+                              onClick={() => setShowUserMenu(false)}
+                              className="w-full px-3.5 py-2.5 text-left bg-gradient-to-r from-amber-500/10 to-purple-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:shadow-lg hover:border-amber-500/50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                              title="Upgrade to Pro Creator for unlimited features"
+                            >
+                              <Crown className="w-4 h-4 text-amber-400" />
+                              <div className="flex-1">
+                                <div className="font-semibold text-amber-400 text-sm leading-relaxed">Unlock Pro Features</div>
+                                <div className="text-[11px] text-gray-400 leading-relaxed">Unlimited frames · Premium access</div>
+                              </div>
+                            </Link>
+                          </div>
+                        )}
+                        <div className="border-t border-white/10">
+                          <button
+                            onClick={handleLogout}
+                            className={`w-full px-3.5 py-2.5 text-sm leading-relaxed text-left text-white hover:bg-[#C62828] active:bg-[#B71C1C] transition-all duration-200 flex items-center space-x-2.5 ${userFocusIndex === 4 ? 'bg-white/10 ring-2 ring-[#C62828]' : ''
+                              }`}
+                            role="menuitem"
+                            id="user-item-4"
+                            title="Sign out from your account"
+                          >
+                            <LogOut className="w-3.5 h-3.5" />
+                            <span>Sign Out</span>
+                          </button>
+                        </div>
+                      </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
@@ -591,8 +387,8 @@ const Navbar = () => {
             ) : (
               <>
                 <Link to="/login" state={{ returnUrl: '/ai-template-creator' }} className="mr-2.5">
-                  <Button 
-                    className="text-sm lg:text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2 rounded-full shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]" 
+                  <Button
+                    className="text-sm lg:text-[15px] bg-gradient-to-r from-[#C62828] to-[#E91E63] hover:from-[#E53935] hover:to-[#F06292] text-white font-bold px-5 py-2 rounded-full shadow-lg hover:shadow-[0_0_24px_rgba(198,40,40,0.6)] hover:scale-[1.02] transition-all duration-300 flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#C62828]/60 focus:ring-offset-2 focus:ring-offset-[#0F0F0F]"
                     title="Sign in to create beautiful photo frames in seconds"
                   >
                     <Sparkles className="w-3.5 h-3.5" />
@@ -634,23 +430,22 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`px-3.5 py-2.5 rounded-lg font-medium text-sm transition-all ${
-                    isActive(link.path)
-                      ? "bg-[#C62828] text-white"
-                      : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
-                  }`}
+                  className={`px-3.5 py-2.5 rounded-lg font-medium text-sm transition-all ${isActive(link.path)
+                    ? "bg-[#C62828] text-white"
+                    : "text-white hover:text-[#FF6B6B] hover:bg-white/5"
+                    }`}
                 >
                   {link.name}
                 </Link>
               ))}
-              
+
               {isAuthenticated && user ? (
                 <>
                   <div className="pt-2 pb-2 px-3 border-t border-white/10">
                     <div className="flex items-center space-x-2.5 mb-1.5">
                       {user.profilePicture && user.profilePicture.startsWith('http') && !profileLoadError ? (
                         <div className="relative">
-                          <img 
+                          <img
                             src={`${user.profilePicture}?t=${profilePicVersion}`}
                             alt={user.name}
                             className="w-9 h-9 rounded-full object-cover border-2 border-white/20"

@@ -2228,17 +2228,17 @@ const Booth = () => {
       />
 
       <div className="container mx-auto px-4 lg:px-8 max-w-5xl">
-        {/* Header */}
+        {/* Header - Hidden on mobile for more camera space */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-12"
+          className="hidden md:block text-center md:mb-8"
         >
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-heading font-bold mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-heading font-bold mb-2 md:mb-3">
             Photo Booth
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
             Strike a pose and capture your perfect moment!
           </p>
         </motion.div>
@@ -2248,50 +2248,50 @@ const Booth = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.15 }}
-          className="mb-8"
+          className="mb-4 sm:mb-6 md:mb-8"
         >
           {selectedTemplate ? (
             <Card className="gradient-card border-0 shadow-soft">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="relative">
+              <CardContent className="p-3 sm:p-4 md:p-6">
+                <div className="flex items-center justify-between gap-2 sm:gap-3 md:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-1">
+                    <div className="relative flex-shrink-0">
                       <img
                         src={selectedTemplate.thumbnail}
                         alt={selectedTemplate.name}
-                        className="w-12 h-12 sm:w-16 sm:h-16 rounded-lg object-cover border-2 border-primary/20"
+                        className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 rounded-lg object-cover border-2 border-primary/20"
                       />
                       {selectedTemplate.isPremium && (
-                        <Badge className="absolute -top-2 -right-2 text-[10px] px-1.5 py-0 bg-amber-500 text-white border-0 shadow-lg">
-                          <Sparkles className="w-3 h-3" />
+                        <Badge className="absolute -top-1 -right-1 text-[8px] sm:text-[10px] px-1 py-0 bg-amber-500 text-white border-0 shadow-lg">
+                          <Sparkles className="w-2 h-2 sm:w-3 sm:h-3" />
                         </Badge>
                       )}
                     </div>
-                    <div>
-                      <div className="font-heading font-semibold text-lg text-white flex items-center gap-2">
-                        {selectedTemplate.name}
+                    <div className="min-w-0 flex-1">
+                      <div className="font-heading font-semibold text-sm sm:text-base md:text-lg text-white flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                        <span className="truncate">{selectedTemplate.name}</span>
                         {inputMethod && (
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-[10px] sm:text-xs flex-shrink-0">
                             {inputMethod === 'camera' ? (
                               <>
-                                <Camera className="w-3 h-3 mr-1" />
+                                <Camera className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
                                 Camera
                               </>
                             ) : (
                               <>
-                                <Upload className="w-3 h-3 mr-1" />
+                                <Upload className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-0.5 sm:mr-1" />
                                 Upload
                               </>
                             )}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {selectedTemplate.category} Template • {photoCount} photos needed
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                        {selectedTemplate.category} • {photoCount} photos
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-1.5 md:gap-2 flex-shrink-0">
                     {/* Back Button */}
                     <Button
                       variant="ghost"
@@ -2306,21 +2306,21 @@ const Booth = () => {
                           navigate(-1);
                         }
                       }}
-                      className="rounded-full hover:bg-secondary"
+                      className="rounded-full hover:bg-secondary h-8 w-8 sm:h-9 sm:w-9 p-0"
                       title="Go back"
                     >
-                      <ArrowRight className="w-4 h-4 rotate-180" />
+                      <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 rotate-180" />
                     </Button>
 
-                    {/* Unified Template/Mode Selector */}
+                    {/* Settings Button - Icon only on mobile */}
                     <div className="relative group">
                       <Button
                         variant="outline"
                         size="sm"
-                        className="rounded-full"
-                      >
-                        Change Settings
-                        <ArrowRight className="w-3 h-3 ml-1 rotate-90 group-hover:translate-y-0.5 transition-transform" />
+                        className="rounded-full h-8 sm:h-9">
+                        <span className="hidden sm:inline text-xs sm:text-sm">Settings</span>
+                        <Sliders className="w-4 h-4 sm:hidden" />
+                        <ArrowRight className="hidden sm:inline w-3 h-3 ml-1 rotate-90 group-hover:translate-y-0.5 transition-transform" />
                       </Button>
 
                       {/* Dropdown Menu */}
@@ -2483,8 +2483,10 @@ const Booth = () => {
 
           {/* CENTER: Main Preview Area */}
           <Card className="gradient-card border-0 shadow-hover overflow-hidden">
-            <CardContent className="p-6 lg:p-8">
-              <div className={`relative bg-secondary rounded-2xl overflow-hidden ${finalCompositeImage ? 'aspect-[3/4] sm:aspect-[2/3] lg:aspect-[2/3]' : 'aspect-video'
+            <CardContent className="p-3 sm:p-4 md:p-6 lg:p-8">
+              <div className={`relative bg-secondary rounded-2xl overflow-hidden ${finalCompositeImage
+                  ? 'aspect-[3/4] sm:aspect-[2/3] lg:aspect-[2/3]'
+                  : 'aspect-[4/5] sm:aspect-[3/4] md:aspect-video'
                 }`}>
                 {isLoading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
@@ -2506,7 +2508,7 @@ const Booth = () => {
                       initial={{ scale: 1.5, opacity: 0 }}
                       animate={{ scale: 1, opacity: 1 }}
                       exit={{ scale: 0.5, opacity: 0 }}
-                      className="text-9xl font-heading font-bold text-primary"
+                      className="text-6xl sm:text-7xl md:text-8xl lg:text-9xl font-heading font-bold text-primary"
                     >
                       {countdown}
                     </motion.div>
@@ -2690,10 +2692,10 @@ const Booth = () => {
                             <div
                               key={index}
                               className={`w-3 h-3 rounded-full transition-all ${index < capturedImages.length
-                                  ? "bg-green-500"
-                                  : index === currentPhotoIndex
-                                    ? "bg-primary animate-pulse"
-                                    : "bg-gray-500"
+                                ? "bg-green-500"
+                                : index === currentPhotoIndex
+                                  ? "bg-primary animate-pulse"
+                                  : "bg-gray-500"
                                 }`}
                             />
                           ))}
@@ -3054,8 +3056,8 @@ const Booth = () => {
                       <button
                         onClick={() => setEditTab('stickers')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'stickers'
-                            ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                           }`}
                       >
                         <Smile size={16} />
@@ -3064,8 +3066,8 @@ const Booth = () => {
                       <button
                         onClick={() => setEditTab('filters')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'filters'
-                            ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                           }`}
                       >
                         <Sparkles size={16} />
@@ -3074,8 +3076,8 @@ const Booth = () => {
                       <button
                         onClick={() => setEditTab('frame')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'frame'
-                            ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                           }`}
                       >
                         <Shapes size={16} />
@@ -3084,8 +3086,8 @@ const Booth = () => {
                       <button
                         onClick={() => setEditTab('adjust')}
                         className={`flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2 ${editTab === 'adjust'
-                            ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
-                            : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
+                          ? 'text-blue-400 border-b-2 border-blue-400 bg-[#252525]'
+                          : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
                           }`}
                       >
                         <Sliders size={16} />
@@ -3115,8 +3117,8 @@ const Booth = () => {
                             <button
                               onClick={() => setStickerCategory('all')}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${stickerCategory === 'all'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
                               All
@@ -3124,8 +3126,8 @@ const Booth = () => {
                             <button
                               onClick={() => setStickerCategory('emoji')}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'emoji'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
                               <Smile className="w-3 h-3" /> Emoji
@@ -3133,8 +3135,8 @@ const Booth = () => {
                             <button
                               onClick={() => setStickerCategory('hearts')}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'hearts'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
                               <Heart className="w-3 h-3" /> Hearts
@@ -3142,8 +3144,8 @@ const Booth = () => {
                             <button
                               onClick={() => setStickerCategory('stars')}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex items-center gap-1 ${stickerCategory === 'stars'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
                               <Star className="w-3 h-3" /> Stars
@@ -3151,8 +3153,8 @@ const Booth = () => {
                             <button
                               onClick={() => setStickerCategory('objects')}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${stickerCategory === 'objects'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                 }`}
                             >
                               🎁 Objects
@@ -3211,8 +3213,8 @@ const Booth = () => {
                                   <div
                                     key={sticker.id}
                                     className={`flex items-center justify-between bg-[#202020] rounded-lg p-2.5 border transition-all ${selectedStickerId === sticker.id
-                                        ? 'border-blue-500 bg-blue-500/10'
-                                        : 'border-gray-700 hover:border-gray-600'
+                                      ? 'border-blue-500 bg-blue-500/10'
+                                      : 'border-gray-700 hover:border-gray-600'
                                       }`}
                                   >
                                     <div className="flex items-center gap-2">
@@ -3226,8 +3228,8 @@ const Booth = () => {
                                       <button
                                         onClick={() => setSelectedStickerId(sticker.id)}
                                         className={`px-2.5 py-1.5 rounded text-xs font-medium transition-colors ${selectedStickerId === sticker.id
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                          ? 'bg-blue-600 text-white'
+                                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                                           }`}
                                         title="Click to select and edit on preview"
                                       >
@@ -3270,8 +3272,8 @@ const Booth = () => {
                                   handleApplyGlobalFilter(filter);
                                 }}
                                 className={`flex flex-col items-center p-3 rounded-lg font-medium text-sm transition-all border-2 ${globalFilter.name === filter.name
-                                    ? "bg-blue-600/20 text-blue-400 border-blue-500 shadow-lg"
-                                    : "bg-[#202020] hover:bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-600"
+                                  ? "bg-blue-600/20 text-blue-400 border-blue-500 shadow-lg"
+                                  : "bg-[#202020] hover:bg-gray-800 text-gray-300 border-gray-700 hover:border-gray-600"
                                   }`}
                               >
                                 {/* Mini Preview Placeholder */}
@@ -3703,8 +3705,8 @@ const Booth = () => {
                             handleApplyGlobalFilter(filter);
                           }}
                           className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${globalFilter.name === filter.name
-                              ? "bg-primary text-primary-foreground"
-                              : "bg-secondary hover:bg-accent"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-secondary hover:bg-accent"
                             }`}
                         >
                           {filter.name}
@@ -3868,8 +3870,8 @@ const Booth = () => {
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleChangeFrame(customFrame as Template)}
                           className={`relative rounded-xl overflow-hidden border-2 transition-all ${selectedTemplate?._id === customFrame._id
-                              ? 'border-primary ring-2 ring-primary ring-offset-2'
-                              : 'border-border hover:border-primary'
+                            ? 'border-primary ring-2 ring-primary ring-offset-2'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
                           <img
@@ -3920,8 +3922,8 @@ const Booth = () => {
                           whileTap={{ scale: 0.95 }}
                           onClick={() => handleChangeFrame(template)}
                           className={`relative rounded-xl overflow-hidden border-2 transition-all ${selectedTemplate?._id === template._id
-                              ? 'border-primary ring-2 ring-primary ring-offset-2'
-                              : 'border-border hover:border-primary'
+                            ? 'border-primary ring-2 ring-primary ring-offset-2'
+                            : 'border-border hover:border-primary'
                             }`}
                         >
                           <img
