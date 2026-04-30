@@ -1,0 +1,21 @@
+Name,Description,List
+Deskripsi Proyek KaryaKlik,"Ringkas tujuan aplikasi + fitur inti + link repo/demo + anggota kelompok",Info Proyek
+Aturan Kerja Tim,"Komunikasi, jadwal sync, PIC, Definition of Done",Info Proyek
+Definition of Done (DoD),"Kriteria selesai untuk setiap card",Info Proyek
+US-01 — Gallery template (list + filter + search),"AC: list tampil; filter kategori; search nama",Backlog
+US-02 — Preview template sebelum mulai,"AC: preview; tombol lanjut; premium locked utk non-Pro",Backlog
+US-03 — Booth capture multi-foto + countdown,"AC: izin kamera; preview; countdown; multi-foto",Backlog
+US-04 — Retake foto sebelum finalisasi,"AC: retake per foto; composite pakai foto terbaru",Backlog
+US-05 — Edit hasil (filter + sticker),"AC: preset filter; penyesuaian; sticker bisa ditambah & dipindah",Backlog
+US-06 — Download composite,"AC: download berhasil; nama file jelas",Backlog
+US-07 — Share via link (public share page),"AC: share page; Web Share; fallback copy; views & likes",Backlog
+US-08 — Pro: My Gallery (kelola hasil),"AC: gating Pro; list; sort/filter; download; delete",Backlog
+US-09 — Pro: AI Template Creator (generate frame),"AC: gating Pro; prompt; generate spec+frame; simpan ke My AI Frames",Backlog
+US-10 — Pro: Pakai AI frame untuk Booth,"AC: Use mengarah ke flow booth; template ter-load",Backlog
+US-11 — Pro: Submit custom frame untuk approval,"AC: gating Pro; isi data; status pending",Backlog
+US-12 — Admin: kelola template,"AC: list; edit metadata; deactivate",Backlog
+US-13 — Admin: approve/reject frame submission,"AC: list pending; approve; reject wajib alasan",Backlog
+US-14 — Admin: verifikasi pembayaran Pro,"AC: list pembayaran; approve/reject; user jadi Pro",Backlog
+Smoke test — Guest flow,"Gallery→Preview→Booth→Retake→Download",Testing
+Smoke test — Share flow,"Create share link→Open incognito→Download→Copy link",Testing
+Smoke test — Pro & Admin flow,"UpgradePro→Upload proof→Admin approve/reject",Testing
